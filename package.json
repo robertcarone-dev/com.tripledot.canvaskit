@@ -1,0 +1,33 @@
+{
+  "name": "com.tripledot.canvaskit",
+  "displayName": "Tripledot Canvas Kit",
+  "version": "0.4.0-preview",
+  "unity": "6000.0",
+  "description": "Unity components and editor tooling for Canvas and TextMeshPro.",
+  "keywords": [
+    "ui",
+    "ugui",
+    "text",
+    "style",
+    "graphic",
+    "shape",
+    "textmeshpro",
+    "canvas",
+    "experimental"
+  ],
+  "author": {
+    "name": "Tripledot Studios"
+  },
+  "dependencies": {
+    "com.unity.ugui": "2.0.0",
+    "com.unity.render-pipelines.universal": "17.3.0",
+    "com.unity.shadergraph": "17.3.0"
+  },
+  "samples": [
+    {
+      "displayName": "Canvas Kit Samples",
+      "description": "Sample scenes and assets showing Canvas Kit features.",
+      "path": "Samples~"
+    }
+  ]
+}

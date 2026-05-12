@@ -1,0 +1,40 @@
+# Normalize text files for consistent diffs across Unity, macOS, and CI.
+* text=auto eol=lf
+
+# Unity/package source and serialized YAML assets stay reviewable in Git.
+*.asmdef text eol=lf
+*.asmref text eol=lf
+*.cs text eol=lf
+*.hlsl text eol=lf
+*.shader text eol=lf
+*.shadergraph text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.meta text eol=lf
+*.asset text eol=lf
+*.unity text eol=lf
+*.prefab text eol=lf
+*.mat text eol=lf
+*.uss text eol=lf
+*.uxml text eol=lf
+*.cginc text eol=lf
+
+# True binary/media assets use Git LFS.
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.hdr filter=lfs diff=lfs merge=lfs -text
+*.ttf filter=lfs diff=lfs merge=lfs -text
+*.otf filter=lfs diff=lfs merge=lfs -text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.glb filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.unitypackage filter=lfs diff=lfs merge=lfs -text

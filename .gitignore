@@ -1,0 +1,48 @@
+# Unity package source should track .meta files.
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Local Unity/editor output.
+Library/
+Temp/
+Obj/
+Logs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+*.stackdump
+sysinfo.txt
+
+# Build, test, and coverage output.
+Build/
+Builds/
+coverage/
+Coverage/
+TestResults/
+*.log
+*.tmp
+*.bak
+
+# IDE files.
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.sln.DotSettings.user
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+
+# Rider/Visual Studio caches.
+.vs/
+*.VC.db
+*.opendb
+
+# Brainstorming companion output.
+.superpowers/
