@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Tripledot.CanvasKit.Editor.Tests")]
+[assembly: InternalsVisibleTo("Unity.InternalAPIEditorBridge.017")]

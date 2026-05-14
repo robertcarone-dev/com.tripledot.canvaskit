@@ -1,0 +1,18 @@
+{
+    "name": "Unity.InternalAPIEditorBridge.017",
+    "rootNamespace": "",
+    "references": [
+        "Tripledot.CanvasKit.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
