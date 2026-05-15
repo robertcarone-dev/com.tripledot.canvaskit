@@ -267,21 +267,29 @@ namespace Tripledot.CanvasKit.Editor
             private readonly int width;
             private readonly int height;
             private readonly int settingsRevision;
+            private readonly CanvasPreviewEnvironmentKey environmentKey;
 
-            private StaticPreviewKey(string assetPath, Hash128 assetHash, int width, int height, int settingsRevision)
+            private StaticPreviewKey(
+                string assetPath,
+                Hash128 assetHash,
+                int width,
+                int height,
+                int settingsRevision,
+                CanvasPreviewEnvironmentKey environmentKey)
             {
                 this.assetPath = assetPath;
                 this.assetHash = assetHash;
                 this.width = width;
                 this.height = height;
                 this.settingsRevision = settingsRevision;
+                this.environmentKey = environmentKey;
             }
 
             internal static StaticPreviewKey Create(GameObject prefabAsset, int width, int height)
             {
                 var assetPath = AssetDatabase.GetAssetPath(prefabAsset);
                 var assetHash = !string.IsNullOrEmpty(assetPath) ? AssetDatabase.GetAssetDependencyHash(assetPath) : default;
-                return new StaticPreviewKey(assetPath, assetHash, width, height, CanvasPreviewSettings.Revision);
+                return new StaticPreviewKey(assetPath, assetHash, width, height, CanvasPreviewSettings.Revision, CanvasPreviewEnvironment.CreateCacheKey());
             }
 
             public bool Equals(StaticPreviewKey other)
@@ -290,7 +298,8 @@ namespace Tripledot.CanvasKit.Editor
                     && assetHash == other.assetHash
                     && width == other.width
                     && height == other.height
-                    && settingsRevision == other.settingsRevision;
+                    && settingsRevision == other.settingsRevision
+                    && environmentKey == other.environmentKey;
             }
 
             public override bool Equals(object obj)
@@ -306,6 +315,7 @@ namespace Tripledot.CanvasKit.Editor
                     hashCode = (hashCode * 397) ^ width;
                     hashCode = (hashCode * 397) ^ height;
                     hashCode = (hashCode * 397) ^ settingsRevision;
+                    hashCode = (hashCode * 397) ^ environmentKey.GetHashCode();
                     return hashCode;
                 }
             }
@@ -407,6 +417,7 @@ namespace Tripledot.CanvasKit.Editor
         private Hash128 previewHash;
         private string previewAssetPath;
         private int previewSettingsRevision;
+        private CanvasPreviewEnvironmentKey previewEnvironmentKey;
 
         internal Texture2D EnsurePreviewTexture(
             GameObject prefabAsset,
@@ -423,6 +434,7 @@ namespace Tripledot.CanvasKit.Editor
             var assetPath = AssetDatabase.GetAssetPath(prefabAsset);
             var assetHash = !string.IsNullOrEmpty(assetPath) ? AssetDatabase.GetAssetDependencyHash(assetPath) : default;
             var settingsRevision = CanvasPreviewSettings.Revision;
+            var environmentKey = CanvasPreviewEnvironment.CreateCacheKey();
             var renderSize = GetRenderSize(previewSize);
             if (previewTexture != null
                 && previewWidth == renderSize.x
@@ -430,7 +442,8 @@ namespace Tripledot.CanvasKit.Editor
                 && previewSizeIndex == selectedSizeIndex
                 && previewHash == assetHash
                 && previewAssetPath == assetPath
-                && previewSettingsRevision == settingsRevision) {
+                && previewSettingsRevision == settingsRevision
+                && previewEnvironmentKey == environmentKey) {
                 return previewTexture;
             }
 
@@ -448,6 +461,7 @@ namespace Tripledot.CanvasKit.Editor
             previewHash = assetHash;
             previewAssetPath = assetPath;
             previewSettingsRevision = settingsRevision;
+            previewEnvironmentKey = environmentKey;
             return previewTexture;
         }
 
@@ -464,6 +478,7 @@ namespace Tripledot.CanvasKit.Editor
             previewHash = default;
             previewAssetPath = null;
             previewSettingsRevision = 0;
+            previewEnvironmentKey = default;
         }
 
         private static Vector2Int GetRenderSize(CanvasPreviewSize previewSize)

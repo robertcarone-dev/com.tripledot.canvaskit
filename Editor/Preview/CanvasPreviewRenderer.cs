@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Tripledot.CanvasKit.Editor
@@ -11,10 +14,10 @@ namespace Tripledot.CanvasKit.Editor
     {
         private const int PreviewLayer = 31;
         private const float ElementPadding = 5f;
-        private const float ElementPreviewRenderScale = 2f;
         private static readonly Color PreviewBackgroundColor = new Color(0.12f, 0.12f, 0.12f, 1f);
         private static readonly Vector2 FallbackElementReferenceSize = new Vector2(100f, 100f);
         private static readonly List<Canvas> CanvasBuffer = new List<Canvas>(8);
+        private static readonly List<CanvasScaler> ScalerBuffer = new List<CanvasScaler>(4);
         private static readonly List<Graphic> GraphicBuffer = new List<Graphic>(32);
         private static readonly List<Transform> TransformBuffer = new List<Transform>(64);
         private static readonly Vector3[] CornerBuffer = new Vector3[4];
@@ -43,12 +46,24 @@ namespace Tripledot.CanvasKit.Editor
                 return PreviewResult.Empty;
             }
 
+            var prefabPath = AssetDatabase.GetAssetPath(prefabAsset);
+            if (string.IsNullOrEmpty(prefabPath)) {
+                return PreviewResult.Empty;
+            }
+
             GameObject prefabRoot = null;
             GameObject canvasObject = null;
             GameObject cameraObject = null;
+            Scene previewScene = default;
             try {
+                var usesEnvironmentScene = false;
                 using (new SampleScope("CanvasPreview.Instantiate")) {
-                    prefabRoot = UnityEngine.Object.Instantiate(prefabAsset);
+                    previewScene = CanvasPreviewEnvironment.OpenPreviewScene(out usesEnvironmentScene);
+                    PrefabUtility.LoadPrefabContentsIntoPreviewScene(prefabPath, previewScene, out prefabRoot);
+                    if (prefabRoot == null) {
+                        return PreviewResult.Empty;
+                    }
+
                     prefabRoot.name = prefabAsset.name + " Preview";
                     prefabRoot.hideFlags = HideFlags.HideAndDontSave;
                 }
@@ -62,8 +77,23 @@ namespace Tripledot.CanvasKit.Editor
                 var previewRootRect = GetPreviewRootRect(target);
                 var referenceSize = GetReferenceSize(roleResult.Role, previewSize, previewRootRect);
 
-                canvasObject = CreateReferenceCanvas(referenceSize);
+                var environmentCanvas = usesEnvironmentScene
+                    ? CanvasPreviewEnvironment.SelectEnvironmentCanvas(previewScene.GetRootGameObjects(), prefabRoot.transform)
+                    : null;
+                if (environmentCanvas != null) {
+                    canvasObject = UnityEngine.Object.Instantiate(environmentCanvas.gameObject);
+                    canvasObject.name = environmentCanvas.gameObject.name + " Preview";
+                    canvasObject.hideFlags = HideFlags.HideAndDontSave;
+                } else {
+                    canvasObject = CreateReferenceCanvas(referenceSize);
+                }
+
                 var canvasRect = canvasObject.GetComponent<RectTransform>();
+                ConfigureBaseCanvasRect(canvasRect, referenceSize);
+                if (!usesPreset) {
+                    ConfigureElementPreviewScalers(canvasObject);
+                }
+
                 PreparePreviewRootRect(previewRootRect, canvasRect, referenceSize, roleResult.Role, 
                     preserveRootRectSettings: target.Kind == CanvasPreviewTargetKind.Canvas);
 
@@ -107,7 +137,7 @@ namespace Tripledot.CanvasKit.Editor
                 var frameBounds = ExpandBounds(contentBounds, ElementPadding);
                 var outputSize = usesPreset || preserveRequestedOutputSize
                     ? new Vector2Int(width, height)
-                    : GetScaledElementRenderSize(GetElementRenderSize(contentBounds));
+                    : GetElementRenderSize(contentBounds);
 
                 return RenderCanvas(
                     camera: camera,
@@ -126,10 +156,17 @@ namespace Tripledot.CanvasKit.Editor
                     UnityEngine.Object.DestroyImmediate(canvasObject);
                 }
 
-                if (prefabRoot != null) {
+                if (previewScene.IsValid()) {
+                    EditorSceneManager.ClosePreviewScene(previewScene);
+                } else if (prefabRoot != null) {
                     UnityEngine.Object.DestroyImmediate(prefabRoot);
                 }
             }
+        }
+
+        internal static Canvas SelectBaseCanvasForTests(GameObject[] sceneRoots, Transform previewRoot)
+        {
+            return CanvasPreviewEnvironment.SelectEnvironmentCanvas(sceneRoots, previewRoot);
         }
 
         private static GameObject CreateReferenceCanvas(Vector2 referenceSize)
@@ -160,6 +197,44 @@ namespace Tripledot.CanvasKit.Editor
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
 
             return canvasObject;
+        }
+
+        private static void ConfigureBaseCanvasRect(RectTransform canvasRect, Vector2 referenceSize)
+        {
+            if (canvasRect == null) {
+                return;
+            }
+
+            canvasRect.anchorMin = new Vector2(0.5f, 0.5f);
+            canvasRect.anchorMax = new Vector2(0.5f, 0.5f);
+            canvasRect.pivot = new Vector2(0.5f, 0.5f);
+            canvasRect.anchoredPosition = Vector2.zero;
+            canvasRect.sizeDelta = referenceSize;
+            canvasRect.localPosition = Vector3.zero;
+            canvasRect.localRotation = Quaternion.identity;
+            canvasRect.localScale = Vector3.one;
+        }
+
+        private static void ConfigureElementPreviewScalers(GameObject root)
+        {
+            if (root == null) {
+                return;
+            }
+
+            root.GetComponentsInChildren(true, ScalerBuffer);
+            try {
+                for (int i = 0; i < ScalerBuffer.Count; i++) {
+                    var scaler = ScalerBuffer[i];
+                    if (scaler == null) {
+                        continue;
+                    }
+
+                    scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+                    scaler.scaleFactor = 1f;
+                }
+            } finally {
+                ScalerBuffer.Clear();
+            }
         }
 
         private static RectTransform GetPreviewRootRect(CanvasPreviewTarget target)
@@ -231,28 +306,6 @@ namespace Tripledot.CanvasKit.Editor
             return new Vector2Int(
                 Mathf.Max(1, Mathf.CeilToInt(contentBounds.size.x + ElementPadding * 2f)),
                 Mathf.Max(1, Mathf.CeilToInt(contentBounds.size.y + ElementPadding * 2f)));
-        }
-
-        private static Vector2Int CapRenderSize(Vector2Int desiredSize, int maxWidth, int maxHeight)
-        {
-            var width = Mathf.Max(1, desiredSize.x);
-            var height = Mathf.Max(1, desiredSize.y);
-            var widthScale = Mathf.Max(1, maxWidth) / (float)width;
-            var heightScale = Mathf.Max(1, maxHeight) / (float)height;
-            var scale = Mathf.Min(1f, widthScale, heightScale);
-            return new Vector2Int(
-                Mathf.Max(1, Mathf.RoundToInt(width * scale)),
-                Mathf.Max(1, Mathf.RoundToInt(height * scale)));
-        }
-
-        private static Vector2Int GetScaledElementRenderSize(Vector2Int logicalSize)
-        {
-            return CapRenderSize(
-                new Vector2Int(
-                    Mathf.Max(1, Mathf.RoundToInt(logicalSize.x * ElementPreviewRenderScale)),
-                    Mathf.Max(1, Mathf.RoundToInt(logicalSize.y * ElementPreviewRenderScale))),
-                CanvasPreviewCache.MaxPreviewTextureSize,
-                CanvasPreviewCache.MaxPreviewTextureSize);
         }
 
         private static void CenterPreviewRootRect(RectTransform rootRect, Bounds contentBounds)
