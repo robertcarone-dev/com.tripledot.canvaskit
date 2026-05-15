@@ -6,8 +6,25 @@ Canvas Kit is an experimental Unity package for authoring UGUI TextMeshPro style
 <img src="Documentation~/Readme/text-output-hero.png" width="900" alt="Canvas Kit text rendered with gradient fill, stroke, and shadow">
 </p>
 
+## Installation
+
+Canvas Kit is distributed as a Unity Package Manager Git package. Install a released version by adding the package Git URL and tag to your Unity project's `Packages/manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "com.tripledot.canvaskit": "https://github.com/robertcarone-dev/com.tripledot.canvaskit.git#v0.4.1-preview"
+  }
+}
+```
+
+The package manifest is at the repository root, so the URL does not need a `?path=` query. Pinning a tag keeps project installs deterministic; update the tag when moving to a newer release.
+
+Release tags use the package version with a leading `v`, for example `v0.4.1-preview` for package version `0.4.1-preview`.
+
 # Table of Contents
 
+- [Installation](#installation)
 - [Features](#features)
   - [TextMeshPro Layer Stack](#textmeshpro-layer-stack)
     - [Getting Started](#getting-started)
@@ -19,6 +36,7 @@ Canvas Kit is an experimental Unity package for authoring UGUI TextMeshPro style
     - [Upgrading Existing Text](#upgrading-existing-text)
     - [Performance](#performance)
     - [Limitations](#limitations)
+  - [Canvas Prefab Preview](#canvas-prefab-preview)
   - [Canvas Shader Graph Blend Modes](#canvas-shader-graph-blend-modes)
 
 ## Features
@@ -182,6 +200,32 @@ Shared presets are useful for consistency and predictable authoring, but they do
 - Large combined face, stroke, shadow, and glow widths may be clamped by the shared SDF budget
 - Gradient, texture, blend, mask, clipping, and instance workflows can affect batching
 - Instance rows are useful for object-specific animation but require a unique material
+
+### Canvas Prefab Preview
+
+<img src="Documentation~/Readme/canvas-preview.png" width="900" alt="Canvas prefab preview in the Inspector and Project window">
+
+Canvas Kit adds Inspector and Project-window previews for eligible Canvas prefab assets. The preview renderer loads the prefab in an isolated preview scene, renders its visible UI graphics, and shows the result directly in Unity's preview panel or asset thumbnail.
+
+A prefab is previewable when its root asset contains one of the following:
+
+- An active root or child `Canvas` with a `RectTransform`
+- A `RectTransform` with at least one active, enabled, visible `Graphic`
+- A child `RectTransform` with at least one active, enabled, visible `Graphic`
+
+Preview role detection uses the prefab asset name first, then falls back to structure:
+
+| Role | Name keywords | Structural fallback |
+|:--|:--|:--|
+| Screen | `screen`, `page`, `view` | Screen Space Overlay or Screen Space Camera Canvas |
+| Popup | `popup`, `modal`, `dialog` | Stretch-anchored RectTransform |
+| Element | `button`, `btn`, `control`, `toggle`, `slider`, `cell`, `item`, `content`, `icon`, `image` | Any other eligible UI element |
+
+Screen and popup previews can be rendered at common reference sizes from the preview toolbar, including iPhone, iPad, and 16:9 landscape presets. Element previews crop to the visible UI bounds with a small amount of padding.
+
+Canvas preview settings live in `Edit > Project Settings > CanvasKit > Canvas Preview`. Use this panel to customize asset-name role keywords and the fallback reference `CanvasScaler` defaults used when Unity is not using a prefab UI environment scene.
+
+If `EditorSettings.prefabUIEnvironment` points to a valid scene with an active root Screen Space canvas, Canvas Kit uses that canvas as the preview environment. Otherwise, it creates an isolated reference canvas for rendering.
 
 ### Canvas Shader Graph Blend Modes
 
