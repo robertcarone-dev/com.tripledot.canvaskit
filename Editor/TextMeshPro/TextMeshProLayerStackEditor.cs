@@ -26,6 +26,11 @@ namespace Tripledot.CanvasKit.Editor
         private SerializedProperty localLayers;
         private SerializedProperty presetLayerOverrides;
         private ReorderableList localLayerList;
+        private TextMeshProLayerPreset linkedPreset;
+        private SerializedObject linkedPresetObject;
+        private SerializedProperty linkedPresetLayers;
+        private ReorderableList linkedLayerList;
+        private int linkedPresetLayerCount = -1;
 
         private void OnEnable()
         {
@@ -33,6 +38,11 @@ namespace Tripledot.CanvasKit.Editor
             localLayers = serializedObject.FindProperty("localLayers");
             presetLayerOverrides = serializedObject.FindProperty("presetLayerOverrides");
             localLayerList = TextMeshProLayerInspectorGUI.CreateLayerList(localLayers, MarkStackDirty, true);
+        }
+
+        private void OnDisable()
+        {
+            ClearLinkedPresetCache();
         }
 
         public override void OnInspectorGUI()
@@ -48,6 +58,7 @@ namespace Tripledot.CanvasKit.Editor
             if (preset.objectReferenceValue is TextMeshProLayerPreset layerPreset) {
                 DrawPresetLinkedLayers(layerPreset);
             } else {
+                ClearLinkedPresetCache();
                 TextMeshProLayerInspectorGUI.DoLayerList(localLayerList);
                 TextMeshProLayerInspectorGUI.DrawLayerInspectorBlocks(
                     localLayers,
@@ -72,35 +83,66 @@ namespace Tripledot.CanvasKit.Editor
 
         private void DrawPresetLinkedLayers(TextMeshProLayerPreset layerPreset)
         {
-            var presetObject = new SerializedObject(layerPreset);
-            presetObject.Update();
-            var presetLayers = presetObject.FindProperty("layers");
-            EnsureOverrideArraySize(presetLayers.arraySize);
+            EnsureLinkedPresetCache(layerPreset);
+            linkedPresetObject.Update();
+            EnsureOverrideArraySize(linkedPresetLayers.arraySize);
+            EnsureLinkedLayerList();
 
-            var linkedLayerList = TextMeshProLayerInspectorGUI.CreateLayerList(
-                presetLayers,
-                MarkPresetAndStackDirty,
-                false,
-                false,
-                index => GetLinkedRowLayer(presetLayers, index),
-                HandleLinkedLayerRowChanged,
-                DrawLayerModeControl);
             TextMeshProLayerInspectorGUI.DoLayerList(linkedLayerList);
             TextMeshProLayerInspectorGUI.DrawLayerInspectorBlocks(
-                presetLayers,
+                linkedPresetLayers,
                 MarkPresetAndStackDirty,
-                index => GetLinkedRowLayer(presetLayers, index),
+                index => GetLinkedRowLayer(linkedPresetLayers, index),
                 HandleLinkedLayerRowChanged,
                 GetLayerListContextKey("Linked." + layerPreset.GetInstanceID()),
                 GetAvailablePadding(),
                 target,
                 IsPresetLayerInstance);
 
-            if (presetObject.ApplyModifiedProperties()) {
+            if (linkedPresetObject.ApplyModifiedProperties()) {
                 EditorUtility.SetDirty(layerPreset);
                 layerPreset.NotifyChanged();
                 MarkStackDirty();
             }
+        }
+
+        private void EnsureLinkedPresetCache(TextMeshProLayerPreset layerPreset)
+        {
+            if (linkedPreset == layerPreset && linkedPresetObject != null && linkedPresetLayers != null) {
+                return;
+            }
+
+            linkedPreset = layerPreset;
+            linkedPresetObject = new SerializedObject(layerPreset);
+            linkedPresetLayers = linkedPresetObject.FindProperty("layers");
+            linkedLayerList = null;
+            linkedPresetLayerCount = -1;
+        }
+
+        private void EnsureLinkedLayerList()
+        {
+            if (linkedLayerList != null && linkedPresetLayerCount == linkedPresetLayers.arraySize) {
+                return;
+            }
+
+            linkedPresetLayerCount = linkedPresetLayers.arraySize;
+            linkedLayerList = TextMeshProLayerInspectorGUI.CreateLayerList(
+                linkedPresetLayers,
+                MarkPresetAndStackDirty,
+                false,
+                false,
+                index => GetLinkedRowLayer(linkedPresetLayers, index),
+                HandleLinkedLayerRowChanged,
+                DrawLayerModeControl);
+        }
+
+        private void ClearLinkedPresetCache()
+        {
+            linkedPreset = null;
+            linkedPresetObject = null;
+            linkedPresetLayers = null;
+            linkedLayerList = null;
+            linkedPresetLayerCount = -1;
         }
 
         private SerializedProperty GetLinkedRowLayer(SerializedProperty presetLayers, int index)
@@ -268,6 +310,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             preset.objectReferenceValue = layerPreset;
+            ClearLinkedPresetCache();
             MarkStackDirty();
         }
 
@@ -289,6 +332,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             preset.objectReferenceValue = layerPreset;
+            ClearLinkedPresetCache();
             serializedObject.Update();
             MarkStackDirty();
         }
@@ -296,6 +340,7 @@ namespace Tripledot.CanvasKit.Editor
         private void ClearPreset()
         {
             preset.objectReferenceValue = null;
+            ClearLinkedPresetCache();
             MarkStackDirty();
         }
 
