@@ -503,7 +503,7 @@ namespace Tripledot.CanvasKit
 
         private void QueueGraphicRebuild()
         {
-            if (!isActiveAndEnabled || isRendering) {
+            if (!isActiveAndEnabled || !text.enabled || isRendering) {
                 return;
             }
 
@@ -547,7 +547,7 @@ namespace Tripledot.CanvasKit
         private void OnWillRenderCanvases()
         {
             UnregisterDeferredGraphicRebuild();
-            if (!isActiveAndEnabled || isRendering) {
+            if (!isActiveAndEnabled || !text.enabled || isRendering) {
                 return;
             }
 
@@ -562,7 +562,7 @@ namespace Tripledot.CanvasKit
 
         private void RenderTextMeshProLayers()
         {
-            if (!isActiveAndEnabled || isRendering) {
+            if (!isActiveAndEnabled || !text.enabled || isRendering) {
                 return;
             }
 
@@ -1385,11 +1385,7 @@ namespace Tripledot.CanvasKit
 
             internal TextMeshProLayerMaterialCacheKey CreateCacheKey(TextMeshProLayerMaterialContext context)
             {
-                return new TextMeshProLayerMaterialCacheKey(
-                    preset,
-                    presetVersion,
-                    layerIndex,
-                    context);
+                return new TextMeshProLayerMaterialCacheKey(preset, layerIndex, context);
             }
         }
 

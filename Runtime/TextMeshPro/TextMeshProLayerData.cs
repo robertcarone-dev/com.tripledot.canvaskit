@@ -164,13 +164,15 @@ namespace Tripledot.CanvasKit
 
         internal void ApplyMaterial(Material material, TextMeshProLayerMaterialContext context)
         {
+            material.SetInteger(ShaderIds.FaceEnabled, face.Enabled ? 1 : 0);
             var faceUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
                 material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled);
             material.SetFloat(ShaderIds.FaceDilate, TextMeshProUtility.PixelsToFaceDilate(face.Dilate, context.GradientScale));
 
             TextMeshProUtility.ClampStrokeEffect(
-                stroke.EffectiveWidth, stroke.EffectiveFeather, stroke.Position, context.AppliedSdfPadding, face.Dilate, 
+                stroke.Width, stroke.Feather, stroke.Position, context.AppliedSdfPadding, face.Dilate, 
                 out var strokeWidth, out var strokeFeather);
+            material.SetInteger(ShaderIds.StrokeEnabled, stroke.Enabled ? 1 : 0);
             material.SetFloat(ShaderIds.StrokeWeight, strokeWidth);
             material.SetFloat(ShaderIds.StrokeSoftness, strokeFeather);
             material.SetInteger(ShaderIds.StrokePosition, (int)stroke.Position);
@@ -179,18 +181,16 @@ namespace Tripledot.CanvasKit
                 material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled);
             
             TextMeshProUtility.ClampShadowEffect(
-                shadow.Spread, shadow.EffectiveBlur, context.AppliedSdfPadding, face.Dilate,
+                shadow.Spread, shadow.Blur, context.AppliedSdfPadding, face.Dilate,
                 out var shadowSpread, out var shadowBlur);
+            material.SetInteger(ShaderIds.ShadowEnabled, shadow.Enabled ? 1 : 0);
             material.SetFloat(ShaderIds.ShadowWeight, shadowBlur);
             material.SetFloat(ShaderIds.ShadowSpread, shadowSpread);
             material.SetVector(ShaderIds.ShadowOffset, new Vector4(shadow.Offset.x, shadow.Offset.y, 0f, 0f));
             var shadowUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
                 material, shadow.Paint, ShaderIds.ShadowPaint, ShaderKeywords.ShadowTexture, shadow.Enabled);
 
-            TextMeshProLayerMaterial.SetKeyword(material, ShaderKeywords.Face, face.Enabled);
-            TextMeshProLayerMaterial.SetKeyword(material, ShaderKeywords.Stroke, stroke.Enabled);
-            TextMeshProLayerMaterial.SetKeyword(material, ShaderKeywords.Shadow, shadow.Enabled);
-            TextMeshProLayerMaterial.SetKeyword(material, ShaderKeywords.GradientAtlas, faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
+            CanvasUtility.SetKeyword(material, ShaderKeywords.GradientAtlas, faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
             
             TextMeshProLayerMaterial.ApplySharedTextProperties(material, context, blendMode, Opacity);
         }
@@ -226,9 +226,6 @@ namespace Tripledot.CanvasKit
 
         private static class ShaderKeywords
         {
-            public const string Face = "FACE_ON";
-            public const string Stroke = "STROKE_ON";
-            public const string Shadow = "SHADOW_ON";
             public const string FaceTexture = "FACE_TEXTURE_ON";
             public const string StrokeTexture = "STROKE_TEXTURE_ON";
             public const string ShadowTexture = "SHADOW_TEXTURE_ON";
@@ -237,6 +234,7 @@ namespace Tripledot.CanvasKit
 
         private static class ShaderIds
         {
+            public static readonly int FaceEnabled = Shader.PropertyToID("_FaceEnabled");
             public static readonly int FaceColor = Shader.PropertyToID("_FaceColor");
             public static readonly int FaceColorB = Shader.PropertyToID("_FaceColorB");
             public static readonly int FaceDilate = Shader.PropertyToID("_FaceDilate");
@@ -252,6 +250,7 @@ namespace Tripledot.CanvasKit
                 Shader.PropertyToID("_FacePaintTransform0"),
                 Shader.PropertyToID("_FacePaintTransform1"));
 
+            public static readonly int StrokeEnabled = Shader.PropertyToID("_StrokeEnabled");
             public static readonly int StrokeWeight = Shader.PropertyToID("_StrokeWeight");
             public static readonly int StrokeSoftness = Shader.PropertyToID("_StrokeSoftness");
             public static readonly int StrokePosition = Shader.PropertyToID("_StrokePosition");
@@ -268,6 +267,7 @@ namespace Tripledot.CanvasKit
                 Shader.PropertyToID("_StrokePaintTransform0"),
                 Shader.PropertyToID("_StrokePaintTransform1"));
 
+            public static readonly int ShadowEnabled = Shader.PropertyToID("_ShadowEnabled");
             public static readonly int ShadowWeight = Shader.PropertyToID("_ShadowWeight");
             public static readonly int ShadowSpread = Shader.PropertyToID("_ShadowSpread");
             public static readonly int ShadowOffset = Shader.PropertyToID("_ShadowOffset");

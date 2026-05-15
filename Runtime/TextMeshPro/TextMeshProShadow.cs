@@ -16,8 +16,6 @@ namespace Tripledot.CanvasKit
         public float Blur;
         public TextMeshProSdfLengthUnit BlurUnit;
 
-        internal float EffectiveBlur => Mathf.Max(0f, Blur);
-
         public static TextMeshProShadow Default => new TextMeshProShadow {
             Enabled = true,
             Paint = CanvasPaint.Solid(new Color(0f, 0f, 0f, 0.5f)),
@@ -27,7 +25,7 @@ namespace Tripledot.CanvasKit
 
         internal float GetSdfRange()
         {
-            return !Enabled ? 0f : TextMeshProUtility.GetShadowSdfRange(Spread, EffectiveBlur);
+            return !Enabled ? 0f : TextMeshProUtility.GetShadowSdfRange(Spread, Blur);
         }
 
         internal Vector4 GetVisualPadding(float sdfPaddingLimit, float baseSdfRange, bool includeDirectionalOffset, Vector2 localUnitsPerAtlasPixel)
@@ -36,7 +34,7 @@ namespace Tripledot.CanvasKit
                 return Vector4.zero;
             }
             
-            var effectRange = baseSdfRange + TextMeshProUtility.GetShadowOutwardRange(Spread, EffectiveBlur);
+            var effectRange = baseSdfRange + TextMeshProUtility.GetShadowOutwardRange(Spread, Blur);
             var range = Mathf.Min(TextMeshProUtility.SdfPixelsToPaddingPixels(effectRange), sdfPaddingLimit);
             var padding = range > 0f ? TextMeshProUtility.PaddingUniform(range) : Vector4.zero;
             

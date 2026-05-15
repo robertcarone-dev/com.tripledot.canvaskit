@@ -22,9 +22,6 @@ namespace Tripledot.CanvasKit
         public TextMeshProSdfLengthUnit FeatherUnit;
         public Vector2 Offset;
 
-        internal float EffectiveWidth => Mathf.Max(0f, Width);
-        internal float EffectiveFeather => Mathf.Max(0f, Feather);
-
         public static TextMeshProStroke Default => new TextMeshProStroke {
             Enabled = true,
             Paint = CanvasPaint.Solid(Color.black),
@@ -38,7 +35,7 @@ namespace Tripledot.CanvasKit
                 return 0f;
             }
 
-            return EffectiveWidth * TextMeshProUtility.GetStrokeVisualPaddingFactor(Position) + EffectiveFeather;
+            return Width * TextMeshProUtility.GetStrokeVisualPaddingFactor(Position) + Feather;
         }
 
         internal Vector4 GetVisualPadding(float sdfPaddingLimit, float baseSdfRange, bool includeDirectionalOffset, Vector2 localUnitsPerAtlasPixel)

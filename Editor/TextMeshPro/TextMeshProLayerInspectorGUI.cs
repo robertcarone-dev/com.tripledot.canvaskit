@@ -8,7 +8,7 @@ namespace Tripledot.CanvasKit.Editor
 {
     internal static class TextMeshProLayerInspectorGUI
     {
-        private static class Styles
+        public static class Styles
         {
             public static readonly GUIContent BlendMode = L10n.TextContent("Blend Mode", "Choose how this layer is composited with layers below it.");
             public static readonly GUIContent Blur = L10n.TextContent("Blur", "Soften the shadow edge within the available SDF padding.");
@@ -64,8 +64,13 @@ namespace Tripledot.CanvasKit.Editor
             public const float HeaderControlGap = 6f;
             public const float TrailingControlWidth = 126f;
             public const float FillSectionHeaderHeight = 25f;
-
-            private static GUIStyle instanceMarkerStyle;
+            
+            private static GUIStyle _instanceMarkerStyle;
+            public static GUIStyle InstanceMarkerStyle => _instanceMarkerStyle ??= new GUIStyle(EditorStyles.miniLabel) {
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = EditorGUIUtility.isProSkin ? InstanceMarkerTextColorDark : InstanceMarkerTextColorLight }
+            };
 
             static Styles()
             {
@@ -76,12 +81,6 @@ namespace Tripledot.CanvasKit.Editor
                 Outline.image = StrokeLayerIcon;
                 Underlay.image = ShadowLayerIcon;
             }
-
-            public static GUIStyle InstanceMarkerStyle => instanceMarkerStyle ??= new GUIStyle(EditorStyles.miniLabel) {
-                alignment = TextAnchor.MiddleCenter,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = EditorGUIUtility.isProSkin ? InstanceMarkerTextColorDark : InstanceMarkerTextColorLight }
-            };
 
             public static GUIContent GetLayerDisplayContent(string text)
             {
@@ -100,7 +99,7 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        internal readonly struct LayerSwatchDescriptor
+        public readonly struct LayerSwatchDescriptor
         {
             public readonly bool HasFill;
             public readonly CanvasPaint Fill;
@@ -177,25 +176,13 @@ namespace Tripledot.CanvasKit.Editor
                 get
                 {
                     var flags = LayerFeatureFlags.None;
-                    if (Face.Enabled.boolValue) {
-                        flags |= LayerFeatureFlags.Face;
-                    }
-
-                    if (Stroke.Enabled.boolValue) {
-                        flags |= LayerFeatureFlags.Stroke;
-                    }
-
-                    if (Shadow.Enabled.boolValue) {
-                        flags |= LayerFeatureFlags.Shadow;
-                    }
-
+                    if (Face.Enabled.boolValue) { flags |= LayerFeatureFlags.Face; }
+                    if (Stroke.Enabled.boolValue) { flags |= LayerFeatureFlags.Stroke; }
+                    if (Shadow.Enabled.boolValue) { flags |= LayerFeatureFlags.Shadow; }
                     return flags;
                 }
             }
         }
-
-        internal static GUIContent InstanceLayerMarkerContent => Styles.InstanceLayer;
-        internal static GUIContent SharedLayerMarkerContent => Styles.SharedLayer;
 
         public static ReorderableList CreateLayerList(
             SerializedProperty layers,
@@ -402,7 +389,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             if (showPresetModeMarker) {
-                DrawPresetModeMarker(instanceMarkerRect, instance ? InstanceLayerMarkerContent : SharedLayerMarkerContent);
+                DrawPresetModeMarker(instanceMarkerRect, instance ? Styles.InstanceLayer : Styles.SharedLayer);
             }
 
             var currentEvent = Event.current;

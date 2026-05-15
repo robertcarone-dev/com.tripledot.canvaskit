@@ -7,7 +7,7 @@ namespace Tripledot.CanvasKit.Editor
 {
     internal static class CanvasEditorGUI
     {
-        private static class Content
+        private static class Styles
         {
             public static readonly GUIContent X = L10n.TextContent("X", "Adjust the horizontal component.");
             public static readonly GUIContent Y = L10n.TextContent("Y", "Adjust the vertical component.");
@@ -140,14 +140,6 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        public static void SdfLengthSlider(SerializedProperty pixelProperty, SerializedProperty unitProperty, GUIContent label, float availablePadding, bool allowNegative)
-        {
-            var currentPixels = pixelProperty.floatValue;
-            var sliderPadding = float.IsPositiveInfinity(availablePadding) ? 0f : availablePadding;
-            var max = TextMeshProUtility.GetEditorSliderMax(sliderPadding, currentPixels);
-            SdfLengthSlider(pixelProperty, unitProperty, label, availablePadding, allowNegative ? -max : 0f, max);
-        }
-
         public static void SdfLengthSlider(SerializedProperty pixelProperty, SerializedProperty unitProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels)
         {
             SdfLengthSlider(pixelProperty, unitProperty, label, availablePadding, minPixels, maxPixels, false);
@@ -221,9 +213,7 @@ namespace Tripledot.CanvasKit.Editor
         internal static float GetConstrainedSdfLengthEditedPixels(float displayValue, TextMeshProSdfLengthUnit unit, float percentBasis, float minPixels, float maxPixels)
         {
             NormalizeSdfLengthRange(ref minPixels, ref maxPixels);
-            var pixels = unit == TextMeshProSdfLengthUnit.Percent
-                ? TextMeshProUtility.PercentToPixels(displayValue, percentBasis)
-                : displayValue;
+            var pixels = unit == TextMeshProSdfLengthUnit.Percent ? TextMeshProUtility.PercentToPixels(displayValue, percentBasis) : displayValue;
             return Mathf.Clamp(pixels, minPixels, maxPixels);
         }
 
@@ -236,8 +226,8 @@ namespace Tripledot.CanvasKit.Editor
                 var x = UnitToPercentDisplay(value.x);
                 var y = UnitToPercentDisplay(value.y);
                 var changed = false;
-                changed |= ChildSliderValue(Content.X, ref x, min, max, property.hasMultipleDifferentValues);
-                changed |= ChildSliderValue(Content.Y, ref y, min, max, property.hasMultipleDifferentValues);
+                changed |= ChildSliderValue(Styles.X, ref x, min, max, property.hasMultipleDifferentValues);
+                changed |= ChildSliderValue(Styles.Y, ref y, min, max, property.hasMultipleDifferentValues);
                 if (changed) {
                     property.vector2Value = new Vector2(PercentDisplayToUnit(x), PercentDisplayToUnit(y));
                 }
@@ -623,22 +613,18 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void DrawGradientSwatch(Rect rect, Gradient gradient, float alphaScale)
         {
-            if (Event.current.type != EventType.Repaint) {
-                return;
+            if (Event.current.type == EventType.Repaint) {
+                DrawCheckerboard(rect);
+                DrawGradientRange(rect, gradient, alphaScale, false);
             }
-
-            DrawCheckerboard(rect);
-            DrawGradientRange(rect, gradient, alphaScale, false);
         }
 
         private static void DrawGradientColorSwatch(Rect rect, Color left, Color right, float alphaScale)
         {
-            if (Event.current.type != EventType.Repaint) {
-                return;
+            if (Event.current.type == EventType.Repaint) {
+                DrawCheckerboard(rect);
+                DrawColorRange(rect, left, right, alphaScale, false);
             }
-
-            DrawCheckerboard(rect);
-            DrawColorRange(rect, left, right, alphaScale, false);
         }
 
         private static void DrawGradientRange(Rect rect, Gradient gradient, float alphaScale, bool opaque)

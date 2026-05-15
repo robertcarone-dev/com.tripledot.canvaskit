@@ -47,8 +47,8 @@ namespace Tripledot.CanvasKit
             var secondaryColor = paint.HasFullGradient ? Color.white : GetSecondaryPaintColor(paint);
             
             material.SetInteger(ids.PaintMode, (int)paint.Type);
-            material.SetColor(ids.Color, WithOpacity(primaryColor, paint.Opacity));
-            material.SetColor(ids.ColorB, WithOpacity(secondaryColor, paint.Opacity));
+            material.SetColor(ids.Color, CanvasUtility.WithOpacity(primaryColor, paint.Opacity));
+            material.SetColor(ids.ColorB, CanvasUtility.WithOpacity(secondaryColor, paint.Opacity));
             material.SetTexture(ids.Texture, paint.Texture);
             material.SetFloat(ids.GradientAngle, transform.Rotation);
             material.SetVector(ids.TextureTransform, new Vector4(transform.Offset.x, transform.Offset.y, transform.Scale.x, transform.Scale.y));
@@ -56,18 +56,9 @@ namespace Tripledot.CanvasKit
 
             var textureEnabled = resourcesEnabled && paint.Type == CanvasPaintType.Texture;
             var gradientAtlasEnabled = resourcesEnabled && SetGradientAtlas(material, ids.GradientAtlasRect, paint);
-            SetKeyword(material, textureKeyword, textureEnabled);
+            CanvasUtility.SetKeyword(material, textureKeyword, textureEnabled);
             
             return gradientAtlasEnabled;
-        }
-
-        public static void SetKeyword(Material material, string keyword, bool enabled)
-        {
-            if (enabled) {
-                material.EnableKeyword(keyword);
-            } else {
-                material.DisableKeyword(keyword);
-            }
         }
 
         public static Shader ResolveCoreShader()
@@ -132,12 +123,6 @@ namespace Tripledot.CanvasKit
 
             material.SetVector(rectId, Vector4.zero);
             return false;
-        }
-
-        private static Color WithOpacity(Color color, float opacity)
-        {
-            color.a *= opacity;
-            return color;
         }
 
         private static Color GetPrimaryPaintColor(CanvasPaint paint)
@@ -321,7 +306,11 @@ namespace Tripledot.CanvasKit
 
         private static int GetInteger(Material material, int id, int fallback)
         {
-            return material != null && material.HasProperty(id) ? Mathf.RoundToInt(material.GetFloat(id)) : fallback;
+            if (material == null || !material.HasProperty(id)) {
+                return fallback;
+            }
+
+            return material.HasInteger(id) ? material.GetInteger(id) : Mathf.RoundToInt(material.GetFloat(id));
         }
 
         private static Vector4 GetVector(Material material, int id, Vector4 fallback)

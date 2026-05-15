@@ -221,40 +221,40 @@ half4 Fragment(Varyings input) : SV_Target
     float2 paintUV = input.paintUV;
     half4 result = half4(0.0, 0.0, 0.0, 0.0);
 
-#if defined(SHADOW_ON)
-    float2 shadowUV = OffsetTextAtlasUV(input.atlasUV, input.localPosition, _ShadowOffset.xy);
-    half shadowSDF = SampleTextAtlasSDF(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), shadowUV, input.atlasSafeRect);
-    float shadowSignedDistance = GetTextSignedDistance(shadowSDF, sdfParams);
-    half shadowCoverage = GetTextOutsideRamp(shadowSignedDistance, _ShadowSpread, _ShadowWeight, sdfParams, _GradientScale, _ScaleRatioA);
-    shadowCoverage = GetTextCoverageWithAtlasSafeMask(shadowCoverage, shadowUV, input.atlasSafeRect);
-    if (shadowCoverage > 0.0) {
-        half4 shadowPaint = SampleShadowCanvasPaint(paintUV, input.paintBoundsSize);
-        shadowPaint *= input.color;
-        result = CompositePremultiplied(result, shadowPaint, shadowCoverage);
+    if (_ShadowEnabled != 0) {
+        float2 shadowUV = OffsetTextAtlasUV(input.atlasUV, input.localPosition, _ShadowOffset.xy);
+        half shadowSDF = SampleTextAtlasSDF(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), shadowUV, input.atlasSafeRect);
+        float shadowSignedDistance = GetTextSignedDistance(shadowSDF, sdfParams);
+        half shadowCoverage = GetTextOutsideRamp(shadowSignedDistance, _ShadowSpread, _ShadowWeight, sdfParams, _GradientScale, _ScaleRatioA);
+        shadowCoverage = GetTextCoverageWithAtlasSafeMask(shadowCoverage, shadowUV, input.atlasSafeRect);
+        if (shadowCoverage > 0.0) {
+            half4 shadowPaint = SampleShadowCanvasPaint(paintUV, input.paintBoundsSize);
+            shadowPaint *= input.color;
+            result = CompositePremultiplied(result, shadowPaint, shadowCoverage);
+        }
     }
-#endif
 
-#if defined(FACE_ON)
-    half faceCoverage = GetTextFaceCoverage(sdf, sdfParams);
-    faceCoverage = GetTextCoverageWithAtlasSafeMask(faceCoverage, input.atlasUV, input.atlasSafeRect);
-    if (faceCoverage > 0.0) {
-        half4 facePaint = SampleFaceCanvasPaint(paintUV, input.paintBoundsSize);
-        facePaint *= input.color;
-        result = CompositePremultiplied(result, facePaint, faceCoverage);
+    if (_FaceEnabled != 0) {
+        half faceCoverage = GetTextFaceCoverage(sdf, sdfParams);
+        faceCoverage = GetTextCoverageWithAtlasSafeMask(faceCoverage, input.atlasUV, input.atlasSafeRect);
+        if (faceCoverage > 0.0) {
+            half4 facePaint = SampleFaceCanvasPaint(paintUV, input.paintBoundsSize);
+            facePaint *= input.color;
+            result = CompositePremultiplied(result, facePaint, faceCoverage);
+        }
     }
-#endif
 
-#if defined(STROKE_ON)
-    float2 strokeUV = OffsetTextAtlasUV(input.atlasUV, input.localPosition, _StrokeOffset.xy);
-    half strokeSDF = SampleTextAtlasSDF(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), strokeUV, input.atlasSafeRect);
-    half strokeCoverage = GetTextStrokeCoverage(strokeSDF, sdfParams, _GradientScale, _ScaleRatioA, _StrokeWeight, _StrokeSoftness, _StrokePosition);
-    strokeCoverage = GetTextCoverageWithAtlasSafeMask(strokeCoverage, strokeUV, input.atlasSafeRect);
-    if (strokeCoverage > 0.0) {
-        half4 strokePaint = SampleStrokeCanvasPaint(paintUV, input.paintBoundsSize);
-        strokePaint *= input.color;
-        result = CompositePremultiplied(result, strokePaint, strokeCoverage);
+    if (_StrokeEnabled != 0) {
+        float2 strokeUV = OffsetTextAtlasUV(input.atlasUV, input.localPosition, _StrokeOffset.xy);
+        half strokeSDF = SampleTextAtlasSDF(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), strokeUV, input.atlasSafeRect);
+        half strokeCoverage = GetTextStrokeCoverage(strokeSDF, sdfParams, _GradientScale, _ScaleRatioA, _StrokeWeight, _StrokeSoftness, _StrokePosition);
+        strokeCoverage = GetTextCoverageWithAtlasSafeMask(strokeCoverage, strokeUV, input.atlasSafeRect);
+        if (strokeCoverage > 0.0) {
+            half4 strokePaint = SampleStrokeCanvasPaint(paintUV, input.paintBoundsSize);
+            strokePaint *= input.color;
+            result = CompositePremultiplied(result, strokePaint, strokeCoverage);
+        }
     }
-#endif
 
 #if UNITY_UI_CLIP_RECT
     result *= GetCanvasMaskFactor(input.mask, _ClipRect);

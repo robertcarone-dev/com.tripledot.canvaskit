@@ -34,10 +34,12 @@ CBUFFER_START(UnityPerMaterial)
     float4 _FaceTextureTransform;
     float4 _FacePaintTransform0;
     float4 _FacePaintTransform1;
+    int _FaceEnabled;
     float _FaceDilate;
     float4 _PaintBounds;
     float _LayerOpacity;
     int _BlendMode;
+    int _StrokeEnabled;
     float _StrokeWeight;
     float _StrokeSoftness;
     int _StrokePosition;
@@ -50,6 +52,7 @@ CBUFFER_START(UnityPerMaterial)
     float4 _StrokeTextureTransform;
     float4 _StrokePaintTransform0;
     float4 _StrokePaintTransform1;
+    int _ShadowEnabled;
     float _ShadowWeight;
     float _ShadowSpread;
     float4 _ShadowOffset;

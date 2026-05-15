@@ -113,16 +113,10 @@ Shader "TextMeshPro/Tripledot/Text Core"
             #pragma fragment Fragment
             #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
             #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local _ FACE_ON
-            #pragma shader_feature_local _ STROKE_ON
-            #pragma shader_feature_local _ SHADOW_ON
-            #pragma shader_feature_local _ FACE_TEXTURE_ON
-            #pragma shader_feature_local _ STROKE_TEXTURE_ON
-            #pragma shader_feature_local _ SHADOW_TEXTURE_ON
-            #pragma shader_feature_local _ FACE_GRADIENT_ATLAS_ON
-            #pragma shader_feature_local _ STROKE_GRADIENT_ATLAS_ON
-            #pragma shader_feature_local _ SHADOW_GRADIENT_ATLAS_ON
-            #pragma shader_feature_local _ GRADIENT_ATLAS_ON
+            #pragma multi_compile_local_fragment _ FACE_TEXTURE_ON
+            #pragma multi_compile_local_fragment _ STROKE_TEXTURE_ON
+            #pragma multi_compile_local_fragment _ SHADOW_TEXTURE_ON
+            #pragma multi_compile_local_fragment _ GRADIENT_ATLAS_ON
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"

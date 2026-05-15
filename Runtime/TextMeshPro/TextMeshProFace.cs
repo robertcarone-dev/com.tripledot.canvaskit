@@ -6,15 +6,15 @@ namespace Tripledot.CanvasKit
     [Serializable]
     public struct TextMeshProFace : IEquatable<TextMeshProFace>
     {
-        public bool Enabled;
-        public CanvasPaint Paint;
-        public float Dilate;
-        public TextMeshProSdfLengthUnit DilateUnit;
-
         public static TextMeshProFace Default => new TextMeshProFace {
             Enabled = true,
             Paint = CanvasPaint.Solid(Color.white)
         };
+        
+        public bool Enabled;
+        public CanvasPaint Paint;
+        public float Dilate;
+        public TextMeshProSdfLengthUnit DilateUnit;
 
         internal float GetSdfRange()
         {
