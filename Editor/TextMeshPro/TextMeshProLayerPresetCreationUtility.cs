@@ -86,7 +86,7 @@ namespace Tripledot.CanvasKit.Editor
             if (materialPreset != null) {
                 preset.CopyFrom(TextMeshProLayerUpgradeUtility.ConvertMaterial(materialPreset), TextMeshProLayerUpgradeUtility.ResolveFontAsset(materialPreset) ?? selectedFont);
             } else {
-                preset.CopyFrom(new[] { TextMeshProLayerData.Layer() }, selectedFont);
+                preset.CopyFrom(new[] { TextMeshProLayerData.Default() }, selectedFont);
             }
 
             AssetDatabase.CreateAsset(preset, AssetDatabase.GenerateUniqueAssetPath(assetPath));

@@ -394,7 +394,7 @@ namespace Tripledot.CanvasKit
                 return;
             }
 
-            localLayers.Add(TextMeshProLayerData.Layer());
+            localLayers.Add(TextMeshProLayerData.Default());
             SetLayerStackDirty();
         }
 
@@ -1243,7 +1243,7 @@ namespace Tripledot.CanvasKit
             private bool overrideLayer;
 
             [SerializeField]
-            private TextMeshProLayerData layer = TextMeshProLayerData.Layer();
+            private TextMeshProLayerData layer = TextMeshProLayerData.Default();
 
             public bool OverrideLayer
             {
@@ -1256,7 +1256,7 @@ namespace Tripledot.CanvasKit
             internal void EnsureLayerCopy(TextMeshProLayerData source)
             {
                 if (layer == null) {
-                    layer = source != null ? source.Clone() : TextMeshProLayerData.Layer();
+                    layer = source != null ? source.Clone() : TextMeshProLayerData.Default();
                     return;
                 }
 
@@ -1268,7 +1268,7 @@ namespace Tripledot.CanvasKit
             internal void CopyFromPreset(TextMeshProLayerData source)
             {
                 if (layer == null) {
-                    layer = source != null ? source.Clone() : TextMeshProLayerData.Layer();
+                    layer = source != null ? source.Clone() : TextMeshProLayerData.Default();
                     return;
                 }
 
@@ -1318,8 +1318,8 @@ namespace Tripledot.CanvasKit
             {
                 if (uniqueMaterial == null) {
                     ReleaseUniqueMaterial();
-                    uniqueMaterial = TextMeshProLayerMaterial.CreateMaterial(TextMeshProLayerMaterial.ResolveCoreShader(), layer.MaterialName);
-                    uniqueMaterial.name = ownerName + " (" + layer.MaterialName + ")";
+                    uniqueMaterial = TextMeshProLayerMaterial.CreateMaterial(TextMeshProLayerMaterial.ResolveCoreShader());
+                    uniqueMaterial.name = ownerName + " (TextMeshPro Layer Material)";
                 }
 
                 if (uniqueMaterialDirty || !hasUniqueMaterialContext || !uniqueMaterialContext.Equals(context)) {

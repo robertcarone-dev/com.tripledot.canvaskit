@@ -7,15 +7,14 @@ namespace Tripledot.CanvasKit
 {
     internal static class TextMeshProLayerMaterial
     {
-        internal static Material CreateMaterial(Shader shader, string name)
+        public static Material CreateMaterial(Shader shader)
         {
             return new Material(shader) {
-                name = name,
                 hideFlags = HideFlags.HideAndDontSave
             };
         }
 
-        internal static void ApplySharedTextProperties(Material material, TextMeshProLayerMaterialContext context, CanvasBlendMode blendPreset, float layerOpacity)
+        public static void ApplySharedTextProperties(Material material, TextMeshProLayerMaterialContext context, CanvasBlendMode blendPreset, float layerOpacity)
         {
             material.SetTexture(ShaderIds.MainTex, context.FontAtlas);
             material.SetVector(ShaderIds.PaintBounds, context.PaintBounds);
@@ -41,12 +40,13 @@ namespace Tripledot.CanvasKit
             ApplyBlend(material, blendPreset);
         }
 
-        internal static bool ApplyPaint(Material material, CanvasPaint paint, PaintShaderIds ids, string textureKeyword, string gradientAtlasKeyword, bool resourcesEnabled)
+        public static bool ApplyPaint(Material material, CanvasPaint paint, PaintShaderIds ids, string textureKeyword, bool resourcesEnabled)
         {
             var transform = paint.Transform;
-            material.SetInteger(ids.PaintMode, (int)paint.Type);
             var primaryColor = paint.HasFullGradient ? Color.white : GetPrimaryPaintColor(paint);
             var secondaryColor = paint.HasFullGradient ? Color.white : GetSecondaryPaintColor(paint);
+            
+            material.SetInteger(ids.PaintMode, (int)paint.Type);
             material.SetColor(ids.Color, WithOpacity(primaryColor, paint.Opacity));
             material.SetColor(ids.ColorB, WithOpacity(secondaryColor, paint.Opacity));
             material.SetTexture(ids.Texture, paint.Texture);
@@ -57,11 +57,11 @@ namespace Tripledot.CanvasKit
             var textureEnabled = resourcesEnabled && paint.Type == CanvasPaintType.Texture;
             var gradientAtlasEnabled = resourcesEnabled && SetGradientAtlas(material, ids.GradientAtlasRect, paint);
             SetKeyword(material, textureKeyword, textureEnabled);
-            SetKeyword(material, gradientAtlasKeyword, gradientAtlasEnabled);
+            
             return gradientAtlasEnabled;
         }
 
-        internal static void SetKeyword(Material material, string keyword, bool enabled)
+        public static void SetKeyword(Material material, string keyword, bool enabled)
         {
             if (enabled) {
                 material.EnableKeyword(keyword);
@@ -70,7 +70,7 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        internal static Shader ResolveCoreShader()
+        public static Shader ResolveCoreShader()
         {
             GraphicsSettings.TryGetRenderPipelineSettings<CanvasKitResourcesURP>(out var resources);
             if (resources == null) {
@@ -152,17 +152,17 @@ namespace Tripledot.CanvasKit
 
         internal readonly struct PaintShaderIds
         {
-            internal readonly int PaintMode;
-            internal readonly int Color;
-            internal readonly int ColorB;
-            internal readonly int Texture;
-            internal readonly int GradientAngle;
-            internal readonly int GradientAtlasRect;
-            internal readonly int TextureTransform;
-            internal readonly int PaintTransform0;
-            internal readonly int PaintTransform1;
+            public readonly int PaintMode;
+            public readonly int Color;
+            public readonly int ColorB;
+            public readonly int Texture;
+            public readonly int GradientAngle;
+            public readonly int GradientAtlasRect;
+            public readonly int TextureTransform;
+            public readonly int PaintTransform0;
+            public readonly int PaintTransform1;
 
-            internal PaintShaderIds(int paintMode, int color, int colorB, int texture, int gradientAngle, int gradientAtlasRect,
+            public PaintShaderIds(int paintMode, int color, int colorB, int texture, int gradientAngle, int gradientAtlasRect,
                 int textureTransform, int paintTransform0, int paintTransform1)
             {
                 PaintMode = paintMode;
@@ -179,50 +179,50 @@ namespace Tripledot.CanvasKit
 
         private static class ShaderIds
         {
-            internal static readonly int MainTex = Shader.PropertyToID("_MainTex");
-            internal static readonly int GradientAtlas = Shader.PropertyToID("_GradientAtlas");
-            internal static readonly int PaintBounds = Shader.PropertyToID("_PaintBounds");
-            internal static readonly int LayerOpacity = Shader.PropertyToID("_LayerOpacity");
-            internal static readonly int BlendMode = Shader.PropertyToID("_BlendMode");
-            internal static readonly int StyleBlendSrc = Shader.PropertyToID("_StyleBlendSrc");
-            internal static readonly int StyleBlendDst = Shader.PropertyToID("_StyleBlendDst");
-            internal static readonly int StyleBlendSrcAlpha = Shader.PropertyToID("_StyleBlendSrcAlpha");
-            internal static readonly int StyleBlendDstAlpha = Shader.PropertyToID("_StyleBlendDstAlpha");
-            internal static readonly int StyleBlendOp = Shader.PropertyToID("_StyleBlendOp");
-            internal static readonly int ScaleRatioA = Shader.PropertyToID("_ScaleRatioA");
-            internal static readonly int GradientScale = Shader.PropertyToID("_GradientScale");
-            internal static readonly int Sharpness = Shader.PropertyToID("_Sharpness");
-            internal static readonly int ScaleX = Shader.PropertyToID("_ScaleX");
-            internal static readonly int ScaleY = Shader.PropertyToID("_ScaleY");
-            internal static readonly int PerspectiveFilter = Shader.PropertyToID("_PerspectiveFilter");
-            internal static readonly int WeightNormal = Shader.PropertyToID("_WeightNormal");
-            internal static readonly int WeightBold = Shader.PropertyToID("_WeightBold");
+            public static readonly int MainTex = Shader.PropertyToID("_MainTex");
+            public static readonly int GradientAtlas = Shader.PropertyToID("_GradientAtlas");
+            public static readonly int PaintBounds = Shader.PropertyToID("_PaintBounds");
+            public static readonly int LayerOpacity = Shader.PropertyToID("_LayerOpacity");
+            public static readonly int BlendMode = Shader.PropertyToID("_BlendMode");
+            public static readonly int StyleBlendSrc = Shader.PropertyToID("_StyleBlendSrc");
+            public static readonly int StyleBlendDst = Shader.PropertyToID("_StyleBlendDst");
+            public static readonly int StyleBlendSrcAlpha = Shader.PropertyToID("_StyleBlendSrcAlpha");
+            public static readonly int StyleBlendDstAlpha = Shader.PropertyToID("_StyleBlendDstAlpha");
+            public static readonly int StyleBlendOp = Shader.PropertyToID("_StyleBlendOp");
+            public static readonly int ScaleRatioA = Shader.PropertyToID("_ScaleRatioA");
+            public static readonly int GradientScale = Shader.PropertyToID("_GradientScale");
+            public static readonly int Sharpness = Shader.PropertyToID("_Sharpness");
+            public static readonly int ScaleX = Shader.PropertyToID("_ScaleX");
+            public static readonly int ScaleY = Shader.PropertyToID("_ScaleY");
+            public static readonly int PerspectiveFilter = Shader.PropertyToID("_PerspectiveFilter");
+            public static readonly int WeightNormal = Shader.PropertyToID("_WeightNormal");
+            public static readonly int WeightBold = Shader.PropertyToID("_WeightBold");
         }
     }
 
     internal readonly struct TextMeshProLayerMaterialContext : IEquatable<TextMeshProLayerMaterialContext>
     {
-        internal readonly Texture FontAtlas;
-        internal readonly Vector4 PaintBounds;
-        internal readonly float ScaleRatioA;
-        internal readonly float GradientScale;
-        internal readonly float Sharpness;
-        internal readonly float ScaleX;
-        internal readonly float ScaleY;
-        internal readonly float PerspectiveFilter;
-        internal readonly float WeightNormal;
-        internal readonly float WeightBold;
-        internal readonly float AppliedSdfPadding;
-        internal readonly Vector4 ClipRect;
-        internal readonly float MaskSoftnessX;
-        internal readonly float MaskSoftnessY;
-        internal readonly int StencilComp;
-        internal readonly int Stencil;
-        internal readonly int StencilOp;
-        internal readonly int StencilWriteMask;
-        internal readonly int StencilReadMask;
-        internal readonly int CullMode;
-        internal readonly int ColorMask;
+        public readonly Texture FontAtlas;
+        public readonly Vector4 PaintBounds;
+        public readonly float ScaleRatioA;
+        public readonly float GradientScale;
+        public readonly float Sharpness;
+        public readonly float ScaleX;
+        public readonly float ScaleY;
+        public readonly float PerspectiveFilter;
+        public readonly float WeightNormal;
+        public readonly float WeightBold;
+        public readonly float AppliedSdfPadding;
+        public readonly Vector4 ClipRect;
+        public readonly float MaskSoftnessX;
+        public readonly float MaskSoftnessY;
+        public readonly int StencilComp;
+        public readonly int Stencil;
+        public readonly int StencilOp;
+        public readonly int StencilWriteMask;
+        public readonly int StencilReadMask;
+        public readonly int CullMode;
+        public readonly int ColorMask;
 
         private TextMeshProLayerMaterialContext(Texture fontAtlas, Vector4 paintBounds, Material sourceMaterial, Material renderMaterial, float appliedSdfPadding)
         {
@@ -249,7 +249,7 @@ namespace Tripledot.CanvasKit
             ColorMask = GetInteger(renderMaterial, CanvasShaderIds.ColorMask, 15);
         }
 
-        internal static TextMeshProLayerMaterialContext Capture(TextMeshProUGUI text, Material sourceMaterial, Material renderMaterial, Vector4 paintBounds, float appliedSdfPadding)
+        public static TextMeshProLayerMaterialContext Capture(TextMeshProUGUI text, Material sourceMaterial, Material renderMaterial, Vector4 paintBounds, float appliedSdfPadding)
         {
             var fontAtlas = text?.font?.atlasTexture
                 ?? GetTexture(sourceMaterial, ShaderUtilities.ID_MainTex)

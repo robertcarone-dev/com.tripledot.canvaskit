@@ -41,15 +41,6 @@ namespace Tripledot.CanvasKit
             return EffectiveWidth * TextMeshProUtility.GetStrokeVisualPaddingFactor(Position) + EffectiveFeather;
         }
 
-        internal float GetEffectSdfRange()
-        {
-            if (!Enabled) {
-                return 0f;
-            }
-
-            return EffectiveWidth * TextMeshProUtility.GetStrokeEffectPaddingFactor(Position) + EffectiveFeather;
-        }
-
         internal Vector4 GetVisualPadding(float sdfPaddingLimit, float baseSdfRange, bool includeDirectionalOffset, Vector2 localUnitsPerAtlasPixel)
         {
             if (!Enabled) {
@@ -57,7 +48,7 @@ namespace Tripledot.CanvasKit
             }
             
             var effectRange = baseSdfRange + GetSdfRange();
-            var range = Mathf.Min(TextMeshProUtility.SdfPixelsToPaddingPixels(effectRange) + TextMeshProUtility.SampleGuardPadding, sdfPaddingLimit);
+            var range = Mathf.Min(TextMeshProUtility.SdfPixelsToPaddingPixels(effectRange), sdfPaddingLimit);
             var padding = range > 0f ? TextMeshProUtility.PaddingUniform(range) : Vector4.zero;
             
             return includeDirectionalOffset ? TextMeshProUtility.PaddingWithDirectionalOffset(padding, Offset, localUnitsPerAtlasPixel) : padding;

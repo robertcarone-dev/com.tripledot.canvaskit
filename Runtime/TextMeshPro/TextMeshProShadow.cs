@@ -37,7 +37,7 @@ namespace Tripledot.CanvasKit
             }
             
             var effectRange = baseSdfRange + TextMeshProUtility.GetShadowOutwardRange(Spread, EffectiveBlur);
-            var range = Mathf.Min(TextMeshProUtility.SdfPixelsToPaddingPixels(effectRange) + TextMeshProUtility.SampleGuardPadding, sdfPaddingLimit);
+            var range = Mathf.Min(TextMeshProUtility.SdfPixelsToPaddingPixels(effectRange), sdfPaddingLimit);
             var padding = range > 0f ? TextMeshProUtility.PaddingUniform(range) : Vector4.zero;
             
             return includeDirectionalOffset ? TextMeshProUtility.PaddingWithDirectionalOffset(padding, Offset, localUnitsPerAtlasPixel) : padding;

@@ -11,7 +11,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var layers = new List<TextMeshProLayerData>();
             if (material == null) {
-                layers.Add(TextMeshProLayerData.Layer());
+                layers.Add(TextMeshProLayerData.Default());
                 return layers;
             }
 
@@ -113,7 +113,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private static TextMeshProLayerData CreateFaceLayer(Material material, float gradientScale)
         {
-            var layer = TextMeshProLayerData.Layer();
+            var layer = TextMeshProLayerData.Default();
             layer.Face = new TextMeshProFace {
                 Enabled = true,
                 Paint = CanvasPaint.Solid(GetColor(material, ShaderUtilities.ID_FaceColor, Color.white)),

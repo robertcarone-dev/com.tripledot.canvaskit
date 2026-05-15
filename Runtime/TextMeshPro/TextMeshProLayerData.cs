@@ -9,11 +9,13 @@ namespace Tripledot.CanvasKit
         [SerializeField]
         private bool enabled = true;
         [SerializeField]
-        private string label = string.Empty;
+        private string label = "Layer";
         [SerializeField]
         private CanvasBlendMode blendMode = CanvasBlendMode.PremultipliedAlpha;
         [SerializeField]
         private float opacity = 1f;
+        [SerializeField]
+        public Vector3 offset = Vector3.zero;
         [SerializeField]
         private TextMeshProFace face = TextMeshProFace.Default;
         [SerializeField]
@@ -63,10 +65,13 @@ namespace Tripledot.CanvasKit
             set => shadow = value;
         }
 
-        public static TextMeshProLayerData Layer()
+        public static TextMeshProLayerData Default()
         {
             return new TextMeshProLayerData {
-                label = "Layer"
+                label = "Layer",
+                face = TextMeshProFace.Default,
+                stroke = DisabledStroke(),
+                shadow = DisabledShadow()
             };
         }
 
@@ -129,14 +134,7 @@ namespace Tripledot.CanvasKit
 
         #region Internal
 
-        internal Vector2 GeometryOffset => Vector2.zero;
-
-        internal string MaterialName => "TextMeshPro Layer";
-
-        internal Vector4 GetVisualPadding(float sdfPaddingLimit)
-        {
-            return GetVisualPadding(sdfPaddingLimit, Vector2.one);
-        }
+        internal Vector2 GeometryOffset => offset;
 
         internal Vector4 GetVisualPadding(float sdfPaddingLimit, Vector2 localUnitsPerAtlasPixel)
         {
@@ -144,11 +142,10 @@ namespace Tripledot.CanvasKit
                 return Vector4.zero;
             }
 
-            var faceRange = face.Enabled ? Mathf.Max(0f, face.Dilate) : 0f;
             var padding = Vector4.zero;
             padding = TextMeshProUtility.PaddingMax(padding, face.GetVisualPadding(sdfPaddingLimit));
-            padding = TextMeshProUtility.PaddingMax(padding, stroke.GetVisualPadding(sdfPaddingLimit, faceRange, true, localUnitsPerAtlasPixel));
-            padding = TextMeshProUtility.PaddingMax(padding, shadow.GetVisualPadding(sdfPaddingLimit, faceRange, true, localUnitsPerAtlasPixel));
+            padding = TextMeshProUtility.PaddingMax(padding, stroke.GetVisualPadding(sdfPaddingLimit, face.Dilate, true, localUnitsPerAtlasPixel));
+            padding = TextMeshProUtility.PaddingMax(padding, shadow.GetVisualPadding(sdfPaddingLimit, face.Dilate, true, localUnitsPerAtlasPixel));
             return padding;
         }
 
@@ -158,69 +155,43 @@ namespace Tripledot.CanvasKit
                 return 0f;
             }
 
-            var faceRange = face.Enabled ? Mathf.Max(0f, face.Dilate) : 0f;
-            return faceRange + Mathf.Max(stroke.GetEffectSdfRange(), shadow.GetSdfRange());
+            return face.Dilate + Mathf.Max(stroke.GetSdfRange(), shadow.GetSdfRange());
         }
-
-        internal void ApplyMaterial(Material material, TextMeshProLayerMaterialContext context)
-        {
-            ApplyLayerMaterial(material, context);
-        }
-
+        
         #endregion
 
         #region Material
 
-        private void ApplyLayerMaterial(Material material, TextMeshProLayerMaterialContext context)
+        internal void ApplyMaterial(Material material, TextMeshProLayerMaterialContext context)
         {
-            material.SetInteger(ShaderIds.FaceEnabled, face.Enabled ? 1 : 0);
             var faceUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material,
-                face.Paint,
-                ShaderIds.FacePaint,
-                ShaderKeywords.FaceTexture,
-                ShaderKeywords.FaceGradientAtlas,
-                face.Enabled);
-
-            if (!face.Enabled) {
-                material.SetColor(ShaderIds.FaceColor, default);
-                material.SetColor(ShaderIds.FaceColorB, default);
-            }
-
+                material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled);
             material.SetFloat(ShaderIds.FaceDilate, TextMeshProUtility.PixelsToFaceDilate(face.Dilate, context.GradientScale));
 
-            var facePadding = face.Enabled ? Mathf.Max(0f, face.Dilate) : 0f;
-            TextMeshProUtility.ClampStrokeEffect(stroke.EffectiveWidth, stroke.EffectiveFeather, stroke.Position, context.AppliedSdfPadding, facePadding, out var strokeWidth, out var strokeFeather);
-            material.SetInteger(ShaderIds.StrokeEnabled, stroke.Enabled ? 1 : 0);
+            TextMeshProUtility.ClampStrokeEffect(
+                stroke.EffectiveWidth, stroke.EffectiveFeather, stroke.Position, context.AppliedSdfPadding, face.Dilate, 
+                out var strokeWidth, out var strokeFeather);
             material.SetFloat(ShaderIds.StrokeWeight, strokeWidth);
             material.SetFloat(ShaderIds.StrokeSoftness, strokeFeather);
             material.SetInteger(ShaderIds.StrokePosition, (int)stroke.Position);
             material.SetVector(ShaderIds.StrokeOffset, new Vector4(stroke.Offset.x, stroke.Offset.y, 0f, 0f));
             var strokeUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material,
-                stroke.Paint,
-                ShaderIds.StrokePaint,
-                ShaderKeywords.StrokeTexture,
-                ShaderKeywords.StrokeGradientAtlas,
-                stroke.Enabled);
-
-            TextMeshProUtility.ClampShadowEffect(shadow.Spread, shadow.EffectiveBlur, context.AppliedSdfPadding, facePadding, out var shadowSpread, out var shadowBlur);
-            material.SetInteger(ShaderIds.ShadowEnabled, shadow.Enabled ? 1 : 0);
+                material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled);
+            
+            TextMeshProUtility.ClampShadowEffect(
+                shadow.Spread, shadow.EffectiveBlur, context.AppliedSdfPadding, face.Dilate,
+                out var shadowSpread, out var shadowBlur);
             material.SetFloat(ShaderIds.ShadowWeight, shadowBlur);
             material.SetFloat(ShaderIds.ShadowSpread, shadowSpread);
             material.SetVector(ShaderIds.ShadowOffset, new Vector4(shadow.Offset.x, shadow.Offset.y, 0f, 0f));
             var shadowUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material,
-                shadow.Paint,
-                ShaderIds.ShadowPaint,
-                ShaderKeywords.ShadowTexture,
-                ShaderKeywords.ShadowGradientAtlas,
-                shadow.Enabled);
+                material, shadow.Paint, ShaderIds.ShadowPaint, ShaderKeywords.ShadowTexture, shadow.Enabled);
 
             TextMeshProLayerMaterial.SetKeyword(material, ShaderKeywords.Face, face.Enabled);
             TextMeshProLayerMaterial.SetKeyword(material, ShaderKeywords.Stroke, stroke.Enabled);
             TextMeshProLayerMaterial.SetKeyword(material, ShaderKeywords.Shadow, shadow.Enabled);
             TextMeshProLayerMaterial.SetKeyword(material, ShaderKeywords.GradientAtlas, faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
+            
             TextMeshProLayerMaterial.ApplySharedTextProperties(material, context, blendMode, Opacity);
         }
 
@@ -255,26 +226,22 @@ namespace Tripledot.CanvasKit
 
         private static class ShaderKeywords
         {
-            internal const string Face = "FACE_ON";
-            internal const string Stroke = "STROKE_ON";
-            internal const string Shadow = "SHADOW_ON";
-            internal const string FaceTexture = "FACE_TEXTURE_ON";
-            internal const string StrokeTexture = "STROKE_TEXTURE_ON";
-            internal const string ShadowTexture = "SHADOW_TEXTURE_ON";
-            internal const string FaceGradientAtlas = "FACE_GRADIENT_ATLAS_ON";
-            internal const string StrokeGradientAtlas = "STROKE_GRADIENT_ATLAS_ON";
-            internal const string ShadowGradientAtlas = "SHADOW_GRADIENT_ATLAS_ON";
-            internal const string GradientAtlas = "GRADIENT_ATLAS_ON";
+            public const string Face = "FACE_ON";
+            public const string Stroke = "STROKE_ON";
+            public const string Shadow = "SHADOW_ON";
+            public const string FaceTexture = "FACE_TEXTURE_ON";
+            public const string StrokeTexture = "STROKE_TEXTURE_ON";
+            public const string ShadowTexture = "SHADOW_TEXTURE_ON";
+            public const string GradientAtlas = "GRADIENT_ATLAS_ON";
         }
 
         private static class ShaderIds
         {
-            internal static readonly int FaceEnabled = Shader.PropertyToID("_FaceEnabled");
-            internal static readonly int FaceColor = Shader.PropertyToID("_FaceColor");
-            internal static readonly int FaceColorB = Shader.PropertyToID("_FaceColorB");
-            internal static readonly int FaceDilate = Shader.PropertyToID("_FaceDilate");
+            public static readonly int FaceColor = Shader.PropertyToID("_FaceColor");
+            public static readonly int FaceColorB = Shader.PropertyToID("_FaceColorB");
+            public static readonly int FaceDilate = Shader.PropertyToID("_FaceDilate");
 
-            internal static readonly TextMeshProLayerMaterial.PaintShaderIds FacePaint = new TextMeshProLayerMaterial.PaintShaderIds(
+            public static readonly TextMeshProLayerMaterial.PaintShaderIds FacePaint = new TextMeshProLayerMaterial.PaintShaderIds(
                 Shader.PropertyToID("_FacePaintMode"),
                 FaceColor,
                 FaceColorB,
@@ -285,13 +252,12 @@ namespace Tripledot.CanvasKit
                 Shader.PropertyToID("_FacePaintTransform0"),
                 Shader.PropertyToID("_FacePaintTransform1"));
 
-            internal static readonly int StrokeEnabled = Shader.PropertyToID("_StrokeEnabled");
-            internal static readonly int StrokeWeight = Shader.PropertyToID("_StrokeWeight");
-            internal static readonly int StrokeSoftness = Shader.PropertyToID("_StrokeSoftness");
-            internal static readonly int StrokePosition = Shader.PropertyToID("_StrokePosition");
-            internal static readonly int StrokeOffset = Shader.PropertyToID("_StrokeOffset");
+            public static readonly int StrokeWeight = Shader.PropertyToID("_StrokeWeight");
+            public static readonly int StrokeSoftness = Shader.PropertyToID("_StrokeSoftness");
+            public static readonly int StrokePosition = Shader.PropertyToID("_StrokePosition");
+            public static readonly int StrokeOffset = Shader.PropertyToID("_StrokeOffset");
 
-            internal static readonly TextMeshProLayerMaterial.PaintShaderIds StrokePaint = new TextMeshProLayerMaterial.PaintShaderIds(
+            public static readonly TextMeshProLayerMaterial.PaintShaderIds StrokePaint = new TextMeshProLayerMaterial.PaintShaderIds(
                 Shader.PropertyToID("_StrokePaintMode"),
                 Shader.PropertyToID("_StrokeColor"),
                 Shader.PropertyToID("_StrokeColorB"),
@@ -302,12 +268,11 @@ namespace Tripledot.CanvasKit
                 Shader.PropertyToID("_StrokePaintTransform0"),
                 Shader.PropertyToID("_StrokePaintTransform1"));
 
-            internal static readonly int ShadowEnabled = Shader.PropertyToID("_ShadowEnabled");
-            internal static readonly int ShadowWeight = Shader.PropertyToID("_ShadowWeight");
-            internal static readonly int ShadowSpread = Shader.PropertyToID("_ShadowSpread");
-            internal static readonly int ShadowOffset = Shader.PropertyToID("_ShadowOffset");
+            public static readonly int ShadowWeight = Shader.PropertyToID("_ShadowWeight");
+            public static readonly int ShadowSpread = Shader.PropertyToID("_ShadowSpread");
+            public static readonly int ShadowOffset = Shader.PropertyToID("_ShadowOffset");
 
-            internal static readonly TextMeshProLayerMaterial.PaintShaderIds ShadowPaint = new TextMeshProLayerMaterial.PaintShaderIds(
+            public static readonly TextMeshProLayerMaterial.PaintShaderIds ShadowPaint = new TextMeshProLayerMaterial.PaintShaderIds(
                 Shader.PropertyToID("_ShadowPaintMode"),
                 Shader.PropertyToID("_ShadowColor"),
                 Shader.PropertyToID("_ShadowColorB"),

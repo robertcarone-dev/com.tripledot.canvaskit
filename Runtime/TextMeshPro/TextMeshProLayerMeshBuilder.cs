@@ -24,17 +24,17 @@ namespace Tripledot.CanvasKit
 
         #endregion
 
-        #region Nested Types
+        #region Types
 
         private readonly struct VisibleGlyph
         {
-            internal readonly TMP_MeshInfo MeshInfo;
-            internal readonly TMP_CharacterInfo Character;
-            internal readonly Rect GlyphUv;
-            internal readonly float AtlasWidth;
-            internal readonly float AtlasHeight;
+            public readonly TMP_MeshInfo MeshInfo;
+            public readonly TMP_CharacterInfo Character;
+            public readonly Rect GlyphUv;
+            public readonly float AtlasWidth;
+            public readonly float AtlasHeight;
 
-            internal VisibleGlyph(TMP_MeshInfo meshInfo, TMP_CharacterInfo character, Rect glyphUv, float atlasWidth, float atlasHeight)
+            public VisibleGlyph(TMP_MeshInfo meshInfo, TMP_CharacterInfo character, Rect glyphUv, float atlasWidth, float atlasHeight)
             {
                 MeshInfo = meshInfo;
                 Character = character;
@@ -46,9 +46,9 @@ namespace Tripledot.CanvasKit
 
         #endregion
 
-        #region Internal API
+        #region Public API
 
-        internal void Build(Mesh mesh, TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit)
+        public void Build(Mesh mesh, TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit)
         {
             mesh.Clear(false);
             
@@ -93,9 +93,7 @@ namespace Tripledot.CanvasKit
                 mesh.SetTriangles(submeshTriangles[i], i, false);
             }
 
-            mesh.bounds = hasBounds 
-                ? new Bounds((boundsMin + boundsMax) * 0.5f, boundsMax - boundsMin)
-                : default;
+            mesh.bounds = hasBounds ? new Bounds((boundsMin + boundsMax) * 0.5f, boundsMax - boundsMin) : default;
         }
 
         #endregion
@@ -173,7 +171,7 @@ namespace Tripledot.CanvasKit
             Encapsulate(vertex);
             
             normals.Add(sourceNormals != null && sourceNormals.Length > vertexIndex + cornerIndex ? sourceNormals[vertexIndex + cornerIndex] : Vector3.back);
-            colors.Add(sourceColors != null && sourceColors.Length > vertexIndex + cornerIndex ? sourceColors[vertexIndex + cornerIndex] : (Color32)Color.white);
+            colors.Add(sourceColors != null && sourceColors.Length > vertexIndex + cornerIndex ? sourceColors[vertexIndex + cornerIndex] : Color.white);
             
             var sourceUv = sourceUv0[vertexIndex + cornerIndex];
             uv0Upload.Add(new Vector4(targetUv.x, targetUv.y, sourceUv.z, sourceUv.w));
@@ -220,14 +218,14 @@ namespace Tripledot.CanvasKit
 
         private static float GetLocalUnitsPerAtlasPixel(float localSize, float atlasPixelSize)
         {
-            return atlasPixelSize > 0.000001f ? Mathf.Max(0.000001f, localSize / atlasPixelSize) : 1f;
+            return atlasPixelSize > 0.0f ? localSize / atlasPixelSize : 1f;
         }
 
         private static bool TryGetGlyphUvRect(TMP_CharacterInfo character, out Rect uvRect)
         {
             uvRect = default;
             
-            var glyph = character.alternativeGlyph != null ? character.alternativeGlyph : character.textElement?.glyph;
+            var glyph = character.alternativeGlyph ?? character.textElement?.glyph;
             var fontAsset = character.fontAsset;
             
             var atlasWidth = fontAsset != null ? fontAsset.atlasWidth : 0;

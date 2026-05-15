@@ -7,12 +7,12 @@ namespace Tripledot.CanvasKit
 {
     internal readonly struct TextMeshProLayerMaterialCacheKey : IEquatable<TextMeshProLayerMaterialCacheKey>
     {
-        internal readonly TextMeshProLayerPreset Preset;
-        internal readonly int PresetVersion;
-        internal readonly int LayerIndex;
-        internal readonly TextMeshProLayerMaterialContext MaterialContext;
+        public readonly TextMeshProLayerPreset Preset;
+        public readonly int PresetVersion;
+        public readonly int LayerIndex;
+        public readonly TextMeshProLayerMaterialContext MaterialContext;
 
-        internal TextMeshProLayerMaterialCacheKey(
+        public TextMeshProLayerMaterialCacheKey(
             TextMeshProLayerPreset preset,
             int presetVersion,
             int layerIndex,
@@ -54,7 +54,7 @@ namespace Tripledot.CanvasKit
     {
         private static readonly Dictionary<TextMeshProLayerMaterialCacheKey, Entry> Entries = new Dictionary<TextMeshProLayerMaterialCacheKey, Entry>();
 
-        internal static Entry Acquire(TextMeshProLayerMaterialCacheKey key, TextMeshProLayerData layer, TextMeshProLayerMaterialContext context)
+        public static Entry Acquire(TextMeshProLayerMaterialCacheKey key, TextMeshProLayerData layer, TextMeshProLayerMaterialContext context)
         {
             if (Entries.TryGetValue(key, out var entry)) {
                 if (entry.Material != null) {
@@ -65,8 +65,8 @@ namespace Tripledot.CanvasKit
                 Entries.Remove(key);
             }
 
-            var material = TextMeshProLayerMaterial.CreateMaterial(TextMeshProLayerMaterial.ResolveCoreShader(), layer.MaterialName);
-            material.name = GetSharedMaterialName(key, layer);
+            var material = TextMeshProLayerMaterial.CreateMaterial(TextMeshProLayerMaterial.ResolveCoreShader());
+            material.name = (key.Preset != null ? key.Preset.name : "Preset") + " (TextLayerCore Shared)";
             layer.ApplyMaterial(material, context);
 
             entry = new Entry(key, material);
@@ -74,7 +74,7 @@ namespace Tripledot.CanvasKit
             return entry;
         }
 
-        internal static void Release(Entry entry)
+        public static void Release(Entry entry)
         {
             if (entry == null) {
                 return;
@@ -89,22 +89,7 @@ namespace Tripledot.CanvasKit
             CoreUtils.Destroy(entry.Material);
         }
 
-        internal static void ClearForTests()
-        {
-            foreach (var entry in Entries.Values) {
-                CoreUtils.Destroy(entry.Material);
-            }
-
-            Entries.Clear();
-        }
-
-        private static string GetSharedMaterialName(TextMeshProLayerMaterialCacheKey key, TextMeshProLayerData layer)
-        {
-            var presetName = key.Preset != null ? key.Preset.name : "Preset";
-            return presetName + " (" + layer.MaterialName + " Shared)";
-        }
-
-        internal sealed class Entry
+        public sealed class Entry
         {
             internal readonly TextMeshProLayerMaterialCacheKey Key;
             internal readonly Material Material;

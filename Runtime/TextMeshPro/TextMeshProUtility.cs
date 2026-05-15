@@ -13,7 +13,6 @@ namespace Tripledot.CanvasKit
     internal static class TextMeshProUtility
     {
         internal const float DefaultEditorSliderPadding = 64f;
-        internal const float SampleGuardPadding = 1f;
         
         private const float SdfPixelsToPaddingPixelsScale = 2f;
         private const float SdfPixelsToPaddingPixelsScaleRcp = 1f / SdfPixelsToPaddingPixelsScale;
@@ -25,29 +24,6 @@ namespace Tripledot.CanvasKit
             return new Vector4(value, value, value, value);
         }
 
-        internal static float PaddingMaxComponent(Vector4 padding)
-        {
-            return Mathf.Max(Mathf.Max(padding.x, padding.y), Mathf.Max(padding.z, padding.w));
-        }
-
-        internal static Vector4 PaddingWithAdditionalPadding(Vector4 padding, float additional)
-        {
-            return new Vector4(
-                padding.x + additional,
-                padding.y + additional,
-                padding.z + additional,
-                padding.w + additional);
-        }
-
-        internal static Vector4 PaddingWithDirectionalOffset(Vector4 padding, Vector2 offset)
-        {
-            return new Vector4(
-                padding.x + (offset.x < 0f ? -offset.x : 0f),
-                padding.y + (offset.x > 0f ? offset.x : 0f),
-                padding.z + (offset.y > 0f ? offset.y : 0f),
-                padding.w + (offset.y < 0f ? -offset.y : 0f));
-        }
-
         internal static Vector4 PaddingWithDirectionalOffset(Vector4 padding, Vector2 offset, Vector2 localUnitsPerPaddingPixel)
         {
             var x = LocalOffsetToPaddingPixels(offset.x, localUnitsPerPaddingPixel.x);
@@ -57,15 +33,6 @@ namespace Tripledot.CanvasKit
                 padding.y + (offset.x > 0f ? x : 0f),
                 padding.z + (offset.y > 0f ? y : 0f),
                 padding.w + (offset.y < 0f ? y : 0f));
-        }
-
-        internal static Vector4 PaddingClamp(Vector4 padding, float max)
-        {
-            return new Vector4(
-                Mathf.Min(padding.x, max),
-                Mathf.Min(padding.y, max),
-                Mathf.Min(padding.z, max),
-                Mathf.Min(padding.w, max));
         }
 
         internal static Vector4 PaddingMax(Vector4 a, Vector4 b)
@@ -90,11 +57,6 @@ namespace Tripledot.CanvasKit
         {
             var textRect = text.rectTransform.rect;
             return new Vector4(textRect.xMin, textRect.yMin, Mathf.Max(0f, textRect.width), Mathf.Max(0f, textRect.height));
-        }
-
-        internal static Vector4 CalculateLayerBounds(TextMeshProUGUI text, IList<TextMeshProLayerData> layers, float sdfPaddingLimit)
-        {
-            return TryCalculateLayerBounds(text.textInfo, layers, sdfPaddingLimit, out var bounds) ? bounds : CalculateBounds(text);
         }
 
         internal static bool TryCalculateVisibleGlyphBounds(TMP_TextInfo textInfo, out Vector4 bounds)
@@ -190,12 +152,12 @@ namespace Tripledot.CanvasKit
         {
             var fontAsset = text.font;
             if (fontAsset != null && fontAsset.atlasPadding > 0) {
-                return PaddingPixelsToSdfPixels(Mathf.Max(0f, fontAsset.atlasPadding - SampleGuardPadding));
+                return PaddingPixelsToSdfPixels(Mathf.Max(0f, fontAsset.atlasPadding));
             }
 
             var gradientScale = GetGradientScale(sourceMaterial);
             if (gradientScale > 0f) {
-                return PaddingPixelsToSdfPixels(Mathf.Max(0f, gradientScale - GradientScalePackingPadding - SampleGuardPadding));
+                return PaddingPixelsToSdfPixels(Mathf.Max(0f, gradientScale - GradientScalePackingPadding));
             }
 
             return 0f;
@@ -231,7 +193,7 @@ namespace Tripledot.CanvasKit
         internal static void ClampStrokeEffect(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float clampedWidth, out float clampedFeather)
         {
             var available = GetRemainingPadding(availablePadding, reservedPadding);
-            var strokeWidthFactor = GetStrokeEffectPaddingFactor(position);
+            var strokeWidthFactor = GetStrokeVisualPaddingFactor(position);
             var maxWidth = strokeWidthFactor > 0.000001f ? available / strokeWidthFactor : available;
             clampedWidth = Mathf.Min(Mathf.Max(0f, width), maxWidth);
             clampedFeather = Mathf.Min(Mathf.Max(0f, feather), Mathf.Max(0f, available - clampedWidth * strokeWidthFactor));
@@ -264,17 +226,9 @@ namespace Tripledot.CanvasKit
             };
         }
 
-        internal static float GetStrokeEffectPaddingFactor(TextMeshProStrokePosition position)
-        {
-            return position switch {
-                TextMeshProStrokePosition.Center => 0.5f,
-                _ => 1f
-            };
-        }
-
         internal static float GetGeometryPaddingLimit(float effectPaddingBudget)
         {
-            return effectPaddingBudget > 0f ? SdfPixelsToPaddingPixels(effectPaddingBudget) + SampleGuardPadding : 0f;
+            return effectPaddingBudget > 0f ? SdfPixelsToPaddingPixels(effectPaddingBudget) : 0f;
         }
 
         internal static float PixelsToPercent(float pixels, float availablePadding)

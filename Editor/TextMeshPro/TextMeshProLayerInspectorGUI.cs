@@ -11,8 +11,6 @@ namespace Tripledot.CanvasKit.Editor
     {
         private static class Content
         {
-            public static readonly GUIContent Appearance = L10n.TextContent("Appearance", "Paint settings that control how this layer is rendered.");
-            public static readonly GUIContent Blend = L10n.TextContent("Blend", "Controls for layer opacity and how this layer blends with previous layers.");
             public static readonly GUIContent BlendMode = L10n.TextContent("Blend Mode", "Choose how this layer is composited with layers below it.");
             public static readonly GUIContent Blur = L10n.TextContent("Blur", "Soften the shadow edge within the available SDF padding.");
             public static readonly GUIContent Dilate = L10n.TextContent("Dilate", "Expand or contract the face shape within the available SDF padding.");
@@ -67,14 +65,14 @@ namespace Tripledot.CanvasKit.Editor
 
         internal readonly struct LayerSwatchDescriptor
         {
-            internal readonly bool HasFill;
-            internal readonly CanvasPaint Fill;
-            internal readonly Color FillFallback;
-            internal readonly bool HasInsetOutline;
-            internal readonly CanvasPaint InsetOutline;
-            internal readonly Color InsetOutlineFallback;
+            public readonly bool HasFill;
+            public readonly CanvasPaint Fill;
+            public readonly Color FillFallback;
+            public readonly bool HasInsetOutline;
+            public readonly CanvasPaint InsetOutline;
+            public readonly Color InsetOutlineFallback;
 
-            internal LayerSwatchDescriptor(
+            public LayerSwatchDescriptor(
                 bool hasFill,
                 CanvasPaint fill,
                 Color fillFallback,
@@ -93,8 +91,8 @@ namespace Tripledot.CanvasKit.Editor
 
         internal readonly struct LayerFeatureIconDescriptor
         {
-            internal readonly string Name;
-            internal readonly Texture2D Icon;
+            public readonly string Name;
+            public readonly Texture2D Icon;
 
             internal LayerFeatureIconDescriptor(string name, Texture2D icon)
             {
@@ -417,7 +415,7 @@ namespace Tripledot.CanvasKit.Editor
         private static void ShowAddLayerMenu(Rect rect, SerializedProperty layers, Action changed)
         {
             var menu = new GenericMenu();
-            menu.AddItem(Content.Layer, false, () => AddLayer(layers, TextMeshProLayerData.Layer, Content.Layer.text, changed));
+            menu.AddItem(Content.Layer, false, () => AddLayer(layers, TextMeshProLayerData.Default, Content.Layer.text, changed));
             menu.AddItem(Content.Stroke, false, () => AddLayer(layers, TextMeshProLayerData.StrokePreset, Content.Stroke.text, changed));
             menu.AddItem(Content.Shadow, false, () => AddLayer(layers, TextMeshProLayerData.ShadowPreset, Content.Shadow.text, changed));
             menu.AddItem(Content.Glow, false, () => AddLayer(layers, TextMeshProLayerData.GlowPreset, Content.Glow.text, changed));
@@ -664,8 +662,8 @@ namespace Tripledot.CanvasKit.Editor
         internal static void GetStrokeSliderBudgets(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float widthMax, out float featherMax)
         {
             var remainingBudget = GetRemainingSdfBudget(availablePadding, Mathf.Max(0f, reservedPadding));
-            var strokeWidthFactor = TextMeshProUtility.GetStrokeEffectPaddingFactor(position);
-            widthMax = strokeWidthFactor > 0.000001f ? remainingBudget / strokeWidthFactor : remainingBudget;
+            var strokeWidthFactor = TextMeshProUtility.GetStrokeVisualPaddingFactor(position);
+            widthMax = strokeWidthFactor > 0.0f ? remainingBudget / strokeWidthFactor : remainingBudget;
             TextMeshProUtility.ClampStrokeEffect(width, feather, position, availablePadding, reservedPadding, out var effectiveWidth, out _);
             featherMax = GetRemainingSdfBudget(remainingBudget, effectiveWidth * strokeWidthFactor);
         }
