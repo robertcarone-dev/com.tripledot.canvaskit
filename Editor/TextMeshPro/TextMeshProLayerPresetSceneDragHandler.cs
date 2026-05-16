@@ -19,12 +19,12 @@ namespace Tripledot.CanvasKit.Editor
             EditorApplication.hierarchyWindowItemOnGUI += OnHierarchyGUI;
         }
 
-        internal static GameObject CreateTextObjectForPreset(TextMeshProLayerPreset preset, Vector2? sceneMousePosition = null, SceneView sceneView = null)
+        public static GameObject CreateTextObjectForPreset(TextMeshProLayerPreset preset, Vector2? sceneMousePosition = null, SceneView sceneView = null)
         {
             return CreateTextObjectForPreset(preset, GetOrCreateCanvas().transform, sceneMousePosition, sceneView);
         }
 
-        internal static GameObject CreateTextObjectForPresetInHierarchy(TextMeshProLayerPreset preset, GameObject target)
+        public static GameObject CreateTextObjectForPresetInHierarchy(TextMeshProLayerPreset preset, GameObject target)
         {
             return CreateTextObjectForPreset(preset, GetHierarchyParent(target), null, null);
         }
@@ -98,7 +98,9 @@ namespace Tripledot.CanvasKit.Editor
                 return;
             }
 
+#pragma warning disable CS0618
             var target = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
+#pragma warning restore CS0618
             if (target == null) {
                 return;
             }

@@ -14,12 +14,12 @@ namespace Tripledot.CanvasKit.Editor
         
         private static readonly Color PreviewBackgroundColor = new Color(0.12f, 0.12f, 0.12f, 1f);
 
-        internal static bool CanPreview(TextMeshProLayerPreset preset)
+        public static bool CanPreview(TextMeshProLayerPreset preset)
         {
             return preset != null && preset.FontAsset != null && preset.LayerCount > 0;
         }
 
-        internal static Texture2D RenderPreviewTexture(TextMeshProLayerPreset preset, int width, int height)
+        public static Texture2D RenderPreviewTexture(TextMeshProLayerPreset preset, int width, int height)
         {
             if (!CanPreview(preset) || width <= 0 || height <= 0) {
                 return null;
@@ -84,6 +84,18 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
+        public static void DrawPreview(Rect rect, Texture texture, GUIStyle background)
+        {
+            if (Event.current.type != EventType.Repaint) {
+                return;
+            }
+
+            background?.Draw(rect, false, false, false, false);
+            if (texture != null) {
+                GUI.DrawTexture(rect, texture, ScaleMode.StretchToFill, false);
+            }
+        }
+
         private static TextMeshProUGUI CreateStackPreview(Transform parent, TextMeshProLayerPreset preset, int height)
         {
             var textObject = new GameObject("Preview Text") {
@@ -108,18 +120,6 @@ namespace Tripledot.CanvasKit.Editor
             var stack = textObject.AddComponent<TextMeshProLayerStack>();
             stack.Preset = preset;
             return text;
-        }
-
-        internal static void DrawPreview(Rect rect, Texture texture, GUIStyle background)
-        {
-            if (Event.current.type != EventType.Repaint) {
-                return;
-            }
-
-            background?.Draw(rect, false, false, false, false);
-            if (texture != null) {
-                GUI.DrawTexture(rect, texture, ScaleMode.StretchToFill, false);
-            }
         }
     }
 }

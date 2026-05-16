@@ -10,10 +10,10 @@ namespace Tripledot.CanvasKit.Editor
 {
     internal readonly struct CanvasPreviewEnvironmentKey : IEquatable<CanvasPreviewEnvironmentKey>
     {
-        internal readonly string ScenePath;
-        internal readonly Hash128 SceneHash;
+        public readonly string ScenePath;
+        public readonly Hash128 SceneHash;
 
-        internal CanvasPreviewEnvironmentKey(string scenePath, Hash128 sceneHash)
+        public CanvasPreviewEnvironmentKey(string scenePath, Hash128 sceneHash)
         {
             ScenePath = scenePath ?? string.Empty;
             SceneHash = sceneHash;
@@ -51,12 +51,12 @@ namespace Tripledot.CanvasKit.Editor
     {
         private static readonly List<Canvas> CanvasBuffer = new List<Canvas>(8);
 
-        internal static CanvasPreviewEnvironmentKey CreateCacheKey()
+        public static CanvasPreviewEnvironmentKey CreateCacheKey()
         {
             return CreateCacheKey(EditorSettings.prefabUIEnvironment);
         }
 
-        internal static CanvasPreviewEnvironmentKey CreateCacheKey(SceneAsset sceneAsset)
+        public static CanvasPreviewEnvironmentKey CreateCacheKey(SceneAsset sceneAsset)
         {
             var scenePath = sceneAsset != null ? AssetDatabase.GetAssetPath(sceneAsset) : string.Empty;
             if (string.IsNullOrEmpty(scenePath)) {
@@ -66,7 +66,7 @@ namespace Tripledot.CanvasKit.Editor
             return new CanvasPreviewEnvironmentKey(scenePath, AssetDatabase.GetAssetDependencyHash(scenePath));
         }
 
-        internal static Scene OpenPreviewScene(out bool usesEnvironmentScene)
+        public static Scene OpenPreviewScene(out bool usesEnvironmentScene)
         {
             usesEnvironmentScene = false;
             var sceneAsset = EditorSettings.prefabUIEnvironment;
@@ -95,7 +95,7 @@ namespace Tripledot.CanvasKit.Editor
             return EditorSceneManager.NewPreviewScene();
         }
 
-        internal static Canvas SelectEnvironmentCanvas(GameObject[] sceneRoots, Transform previewRoot)
+        public static Canvas SelectEnvironmentCanvas(GameObject[] sceneRoots, Transform previewRoot)
         {
             if (sceneRoots == null || sceneRoots.Length == 0) {
                 return null;

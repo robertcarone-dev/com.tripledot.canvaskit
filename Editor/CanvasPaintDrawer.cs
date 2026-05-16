@@ -19,16 +19,6 @@ namespace Tripledot.CanvasKit.Editor
 
     internal static class CanvasPaintDrawer
     {
-        private const float HeaderButtonWidth = 28f;
-        private const float HeaderButtonHeight = 20f;
-        private const float HeaderButtonGap = 2f;
-
-        static CanvasPaintDrawer()
-        {
-            Styles.EditGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/EditGradientIcon.png");
-            Styles.ResetGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/ResetIcon.png");
-        }
-
         public static CanvasPaintVisibleFields GetVisibleFields(SerializedCanvasPaint paint)
         {
             var fields = CanvasPaintVisibleFields.Output;
@@ -117,14 +107,14 @@ namespace Tripledot.CanvasKit.Editor
             return HasField(visible, CanvasPaintVisibleFields.Transform);
         }
 
-        public static void DrawMappingHeader(SerializedCanvasPaint paint, UnityEngine.Object sceneTarget = null, bool boxed = false)
+        public static void DrawMappingHeader(SerializedCanvasPaint paint, UnityEngine.Object sceneTarget = null, bool boxed = false, int layerIndex = -1)
         {
             if (boxed) {
-                CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Mapping, true, rect => DrawGradientHeaderButtons(paint, rect, sceneTarget));
+                CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Mapping, true, rect => DrawGradientHeaderButtons(paint, rect, sceneTarget, layerIndex));
                 return;
             }
 
-            CanvasEditorGUI.DrawSubsection(Styles.Mapping, true, rect => DrawGradientHeaderButtons(paint, rect, sceneTarget));
+            CanvasEditorGUI.DrawSubsection(Styles.Mapping, true, rect => DrawGradientHeaderButtons(paint, rect, sceneTarget, layerIndex));
         }
 
         public static void DrawMapping(SerializedCanvasPaint paint)
@@ -137,17 +127,17 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        private static void DrawGradientHeaderButtons(SerializedCanvasPaint paint, Rect rect, UnityEngine.Object sceneTarget)
+        private static void DrawGradientHeaderButtons(SerializedCanvasPaint paint, Rect rect, UnityEngine.Object sceneTarget, int layerIndex)
         {
             if (!CanvasPaintEditorUtility.IsEditableGradientPaint(paint, out var paintType)) {
                 return;
             }
 
-            var buttonY = rect.y + Mathf.Floor((rect.height - HeaderButtonHeight) * 0.5f) - 3f;
-            var resetRect = new Rect(rect.xMax - HeaderButtonWidth, buttonY, HeaderButtonWidth, HeaderButtonHeight);
+            var buttonY = rect.y + Mathf.Floor((rect.height - Styles.HeaderButtonHeight) * 0.5f) - 3f;
+            var resetRect = new Rect(rect.xMax - Styles.HeaderButtonWidth, buttonY, Styles.HeaderButtonWidth, Styles.HeaderButtonHeight);
 
             if (sceneTarget != null) {
-                var editRect = new Rect(resetRect.xMin - HeaderButtonGap - HeaderButtonWidth, buttonY, HeaderButtonWidth, HeaderButtonHeight);
+                var editRect = new Rect(resetRect.xMin - Styles.HeaderButtonGap - Styles.HeaderButtonWidth, buttonY, Styles.HeaderButtonWidth, Styles.HeaderButtonHeight);
                 var active = CanvasGradientSceneView.IsEditingPaint(paint.Root, sceneTarget);
                 EditorGUI.BeginChangeCheck();
                 var previousColor = GUI.backgroundColor;
@@ -159,7 +149,7 @@ namespace Tripledot.CanvasKit.Editor
                 GUI.backgroundColor = previousColor;
                 if (EditorGUI.EndChangeCheck()) {
                     if (nextActive) {
-                        CanvasGradientSceneView.SetEditingPaint(paint.Root, sceneTarget);
+                        CanvasGradientSceneView.SetEditingPaint(paint.Root, sceneTarget, layerIndex);
                     } else {
                         CanvasGradientSceneView.ClearEditingPaint();
                     }
@@ -269,6 +259,10 @@ namespace Tripledot.CanvasKit.Editor
 
         private static class Styles
         {
+            public const float HeaderButtonWidth = 28f;
+            public const float HeaderButtonHeight = 20f;
+            public const float HeaderButtonGap = 2f;
+
             public static readonly GUIContent CenterPercent = L10n.TextContent("Center (%)", "Position the center of the gradient or image within the rendered shape.");
             public static readonly GUIContent Color = L10n.TextContent("Color", "Set the color used by solid paints.");
             public static readonly GUIContent ColorA = L10n.TextContent("Color A", "Set the primary color used by solid and two-color gradient paints.");
@@ -303,6 +297,12 @@ namespace Tripledot.CanvasKit.Editor
                 margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(5, 5, 2, 2)
             };
+
+            static Styles()
+            {
+                EditGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/EditGradientIcon.png");
+                ResetGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/ResetIcon.png");
+            }
         }
     }
 }

@@ -19,15 +19,17 @@ namespace Tripledot.CanvasKit.Editor
             var selectedFont = selectedMaterial != null
                 ? TextMeshProLayerUpgradeUtility.ResolveFontAsset(selectedMaterial) ?? GetSelectedFontAsset(Selection.objects)
                 : GetSelectedFontAsset(Selection.objects);
+            
             var action = ScriptableObject.CreateInstance<CreateLayerPresetEndNameEditAction>();
             action.FontAsset = selectedFont;
             action.MaterialPreset = selectedMaterial;
+            
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
-                action.GetInstanceID(),
-                action,
-                GetDefaultAssetPathForSelection(selectedMaterial != null ? selectedMaterial : selectedFont != null ? selectedFont : Selection.activeObject),
-                null,
-                null);
+                instanceID: action.GetInstanceID(),
+                endAction: action,
+                pathName: GetDefaultAssetPathForSelection(selectedMaterial != null ? selectedMaterial : selectedFont != null ? selectedFont : Selection.activeObject),
+                icon: null,
+                resourceFile: null);
         }
 
         internal static string GetDefaultAssetPathForSelection(Object selection)
@@ -36,10 +38,9 @@ namespace Tripledot.CanvasKit.Editor
             var selectedMaterial = selection as Material;
             var selectedFontPath = selectedFont != null ? AssetDatabase.GetAssetPath(selectedFont) : null;
             var selectedMaterialPath = selectedMaterial != null ? AssetDatabase.GetAssetPath(selectedMaterial) : null;
+            
             var sourcePath = !string.IsNullOrEmpty(selectedMaterialPath) ? selectedMaterialPath : selectedFontPath;
-            var directory = !string.IsNullOrEmpty(sourcePath)
-                ? Path.GetDirectoryName(sourcePath)?.Replace('\\', '/')
-                : GetSelectedDirectory(selection);
+            var directory = !string.IsNullOrEmpty(sourcePath) ? Path.GetDirectoryName(sourcePath)?.Replace('\\', '/') : GetSelectedDirectory(selection);
 
             if (string.IsNullOrEmpty(directory)) {
                 directory = "Assets";
@@ -131,12 +132,12 @@ namespace Tripledot.CanvasKit.Editor
             [SerializeField]
             private Material materialPreset;
 
-            internal TMP_FontAsset FontAsset
+            public TMP_FontAsset FontAsset
             {
                 set => fontAsset = value;
             }
 
-            internal Material MaterialPreset
+            public Material MaterialPreset
             {
                 set => materialPreset = value;
             }

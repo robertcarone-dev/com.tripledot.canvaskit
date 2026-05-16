@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -8,7 +10,19 @@ namespace Tripledot.CanvasKit.Editor
     [CustomEditor(typeof(TextMeshProLayerStack))]
     internal sealed class TextMeshProLayerStackEditor : UnityEditor.Editor
     {
-        private static class Content
+        private readonly struct PendingPresetDirty
+        {
+            public readonly TextMeshProLayerStack.DirtyFlags Flags;
+            public readonly int LayerIndex;
+
+            public PendingPresetDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
+            {
+                Flags = flags;
+                LayerIndex = layerIndex;
+            }
+        }
+
+        private static class Styles
         {
             public static readonly GUIContent LayerPreset = L10n.TextContent("Layer Preset", "Use a shared TextMeshPro layer preset instead of local layers.");
             public static readonly GUIContent SharedMode = L10n.TextContent("Shared", "Use the shared preset layer. Editing this row changes the preset asset.");
@@ -17,14 +31,19 @@ namespace Tripledot.CanvasKit.Editor
             public static readonly GUIContent CloneLayerPreset = L10n.TextContent("Clone", "Copy the current effective layers into a new preset asset and assign it to this stack.");
             public static readonly GUIContent ClearLayerPreset = L10n.TextContent("Clear", "Stop using the assigned preset and show this stack's local layers.");
             public static readonly GUIContent ApplyPresetFont = L10n.TextContent("Apply Font", "Assign the preset font asset to this TextMeshPro component.");
-        }
 
-        private const float PresetActionButtonWidth = 52f;
-        private const float PresetFieldGap = 4f;
+            public const float PresetActionButtonWidth = 52f;
+            public const float PresetFieldGap = 4f;
+        }
 
         private SerializedProperty preset;
         private SerializedProperty localLayers;
         private SerializedProperty presetLayerOverrides;
+        private TextMeshProLayerStack.DirtyFlags pendingLayerDirtyFlags;
+        private TextMeshProLayerStack.DirtyFlags pendingPresetDirtyFlags;
+        private readonly List<int> pendingLayerMaterialDirties = new List<int>();
+        private readonly List<PendingPresetDirty> pendingPresetLayerDirties = new List<PendingPresetDirty>();
+        private readonly TextMeshProLayerInspectorGUI.LayerInspectorDirtyState layerDirtyState = new TextMeshProLayerInspectorGUI.LayerInspectorDirtyState();
         private ReorderableList localLayerList;
         private TextMeshProLayerPreset linkedPreset;
         private SerializedObject linkedPresetObject;
@@ -37,7 +56,7 @@ namespace Tripledot.CanvasKit.Editor
             preset = serializedObject.FindProperty("preset");
             localLayers = serializedObject.FindProperty("localLayers");
             presetLayerOverrides = serializedObject.FindProperty("presetLayerOverrides");
-            localLayerList = TextMeshProLayerInspectorGUI.CreateLayerList(localLayers, MarkStackDirty, true);
+            localLayerList = TextMeshProLayerInspectorGUI.CreateLayerList(localLayers, MarkLayerCompositionDirty, true);
         }
 
         private void OnDisable()
@@ -60,23 +79,35 @@ namespace Tripledot.CanvasKit.Editor
             } else {
                 ClearLinkedPresetCache();
                 TextMeshProLayerInspectorGUI.DoLayerList(localLayerList);
+                layerDirtyState.Clear();
                 TextMeshProLayerInspectorGUI.DrawLayerInspectorBlocks(
                     localLayers,
-                    MarkStackDirty,
+                    MarkLayerCompositionDirty,
                     contextKey: GetLayerListContextKey("Local"),
                     availablePadding: GetAvailablePadding(),
-                    sceneTarget: target);
+                    sceneTarget: target,
+                    dirtyState: layerDirtyState);
+                QueueLocalLayerDirty(layerDirtyState);
             }
 
-            if (serializedObject.ApplyModifiedProperties()) {
-                MarkStackDirty();
+            var appliedStackProperties = serializedObject.ApplyModifiedProperties();
+            if (appliedStackProperties) {
+                EditorUtility.SetDirty(target);
             }
+
+            FlushPendingLayerDirty();
         }
 
         public void OnSceneGUI()
         {
-            if (CanvasGradientSceneView.Draw(target)) {
-                MarkStackDirty();
+            var result = CanvasGradientSceneView.Draw(target);
+            if (result.Changed) {
+                if (result.LayerIndex >= 0) {
+                    MarkLayerMaterialDirty(result.LayerIndex);
+                } else {
+                    MarkLayerDirty(TextMeshProLayerStack.MaterialDirtyFlags);
+                }
+
                 Repaint();
             }
         }
@@ -89,21 +120,32 @@ namespace Tripledot.CanvasKit.Editor
             EnsureLinkedLayerList();
 
             TextMeshProLayerInspectorGUI.DoLayerList(linkedLayerList);
+            layerDirtyState.Clear();
             TextMeshProLayerInspectorGUI.DrawLayerInspectorBlocks(
                 linkedPresetLayers,
-                MarkPresetAndStackDirty,
+                MarkPresetAndStackCompositionDirty,
                 index => GetLinkedRowLayer(linkedPresetLayers, index),
                 HandleLinkedLayerRowChanged,
                 GetLayerListContextKey("Linked." + layerPreset.GetInstanceID()),
                 GetAvailablePadding(),
                 target,
-                IsPresetLayerInstance);
+                IsPresetLayerInstance,
+                layerDirtyState);
+            QueueLinkedLayerDirty(layerDirtyState);
 
-            if (linkedPresetObject.ApplyModifiedProperties()) {
-                EditorUtility.SetDirty(layerPreset);
-                layerPreset.NotifyChanged();
-                MarkStackDirty();
+            layerPreset.BeginSuppressingOnValidateNotifications();
+            bool appliedPresetProperties;
+            try {
+                appliedPresetProperties = linkedPresetObject.ApplyModifiedProperties();
+            } finally {
+                layerPreset.EndSuppressingOnValidateNotifications();
             }
+
+            if (appliedPresetProperties) {
+                EditorUtility.SetDirty(layerPreset);
+            }
+
+            FlushPendingPresetDirty();
         }
 
         private void EnsureLinkedPresetCache(TextMeshProLayerPreset layerPreset)
@@ -128,7 +170,7 @@ namespace Tripledot.CanvasKit.Editor
             linkedPresetLayerCount = linkedPresetLayers.arraySize;
             linkedLayerList = TextMeshProLayerInspectorGUI.CreateLayerList(
                 linkedPresetLayers,
-                MarkPresetAndStackDirty,
+                MarkPresetAndStackCompositionDirty,
                 false,
                 false,
                 index => GetLinkedRowLayer(linkedPresetLayers, index),
@@ -169,9 +211,9 @@ namespace Tripledot.CanvasKit.Editor
             var layerOverride = presetLayerOverrides.GetArrayElementAtIndex(index);
             var overrideEnabled = layerOverride.FindPropertyRelative("overrideLayer");
             if (overrideEnabled.boolValue) {
-                MarkStackDirty();
+                MarkLayerCompositionDirty();
             } else {
-                MarkPresetAndStackDirty();
+                MarkPresetAndStackCompositionDirty();
             }
         }
 
@@ -196,8 +238,8 @@ namespace Tripledot.CanvasKit.Editor
             var presetRect = new Rect(rect.x, rect.y, Mathf.Floor(rect.width * 0.5f), rect.height);
             var instanceRect = new Rect(presetRect.xMax - 1f, rect.y, rect.xMax - presetRect.xMax + 1f, rect.height);
 
-            var sharedSelectedAfterDraw = DrawModeSegment(presetRect, Content.SharedMode, !instance, true);
-            var instanceSelectedAfterDraw = DrawModeSegment(instanceRect, Content.InstanceMode, instance, false);
+            var sharedSelectedAfterDraw = DrawModeSegment(presetRect, Styles.SharedMode, !instance, true);
+            var instanceSelectedAfterDraw = DrawModeSegment(instanceRect, Styles.InstanceMode, instance, false);
             return GetPresetInstanceSegmentResult(instance, sharedSelectedAfterDraw, instanceSelectedAfterDraw);
         }
 
@@ -232,7 +274,7 @@ namespace Tripledot.CanvasKit.Editor
             var stack = (TextMeshProLayerStack)target;
             stack.SetPresetLayerInstance(index, instance);
             serializedObject.Update();
-            MarkStackDirty();
+            MarkLayerCompositionDirty();
         }
 
         private void DrawPresetFontMismatch(TextMeshProLayerPreset layerPreset)
@@ -245,7 +287,7 @@ namespace Tripledot.CanvasKit.Editor
             EditorGUILayout.HelpBox(
                 "The assigned layer preset is associated with a different TMP font asset than this TextMeshPro component.",
                 MessageType.Warning);
-            if (GUILayout.Button(Content.ApplyPresetFont, EditorStyles.miniButton)) {
+            if (GUILayout.Button(Styles.ApplyPresetFont, EditorStyles.miniButton)) {
                 serializedObject.ApplyModifiedProperties();
                 TextMeshProLayerPresetUtility.ApplyPresetFont(layerPreset, text, stack);
                 serializedObject.Update();
@@ -268,25 +310,29 @@ namespace Tripledot.CanvasKit.Editor
             var rect = EditorGUILayout.GetControlRect();
             var assignedPreset = preset.objectReferenceValue != null;
             var actionWidth = assignedPreset
-                ? PresetActionButtonWidth * 2f + PresetFieldGap
-                : PresetActionButtonWidth;
-            var buttonRect = new Rect(rect.xMax - PresetActionButtonWidth, rect.y, PresetActionButtonWidth, rect.height);
-            var fieldRect = new Rect(rect.x, rect.y, Mathf.Max(0f, rect.width - actionWidth - PresetFieldGap), rect.height);
+                ? Styles.PresetActionButtonWidth * 2f + Styles.PresetFieldGap
+                : Styles.PresetActionButtonWidth;
+            var buttonRect = new Rect(rect.xMax - Styles.PresetActionButtonWidth, rect.y, Styles.PresetActionButtonWidth, rect.height);
+            var fieldRect = new Rect(rect.x, rect.y, Mathf.Max(0f, rect.width - actionWidth - Styles.PresetFieldGap), rect.height);
 
-            EditorGUI.PropertyField(fieldRect, preset, Content.LayerPreset);
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.PropertyField(fieldRect, preset, Styles.LayerPreset);
+            if (EditorGUI.EndChangeCheck()) {
+                MarkLayerCompositionDirty();
+            }
 
             if (assignedPreset) {
-                var cloneRect = new Rect(buttonRect.x - PresetFieldGap - PresetActionButtonWidth, rect.y, PresetActionButtonWidth, rect.height);
-                if (GUI.Button(cloneRect, Content.CloneLayerPreset, EditorStyles.miniButtonLeft)) {
+                var cloneRect = new Rect(buttonRect.x - Styles.PresetFieldGap - Styles.PresetActionButtonWidth, rect.y, Styles.PresetActionButtonWidth, rect.height);
+                if (GUI.Button(cloneRect, Styles.CloneLayerPreset, EditorStyles.miniButtonLeft)) {
                     ClonePreset();
                 }
 
-                if (GUI.Button(buttonRect, Content.ClearLayerPreset, EditorStyles.miniButtonRight)) {
+                if (GUI.Button(buttonRect, Styles.ClearLayerPreset, EditorStyles.miniButtonRight)) {
                     ClearPreset();
                 }
             } else {
                 using (new EditorGUI.DisabledScope(localLayers.arraySize == 0)) {
-                    if (GUI.Button(buttonRect, Content.SaveLayerPreset, EditorStyles.miniButton)) {
+                    if (GUI.Button(buttonRect, Styles.SaveLayerPreset, EditorStyles.miniButton)) {
                         SaveLocalLayersAsPreset();
                     }
                 }
@@ -311,7 +357,7 @@ namespace Tripledot.CanvasKit.Editor
 
             preset.objectReferenceValue = layerPreset;
             ClearLinkedPresetCache();
-            MarkStackDirty();
+            MarkLayerCompositionDirty();
         }
 
         private void ClonePreset()
@@ -334,14 +380,14 @@ namespace Tripledot.CanvasKit.Editor
             preset.objectReferenceValue = layerPreset;
             ClearLinkedPresetCache();
             serializedObject.Update();
-            MarkStackDirty();
+            MarkLayerCompositionDirty();
         }
 
         private void ClearPreset()
         {
             preset.objectReferenceValue = null;
             ClearLinkedPresetCache();
-            MarkStackDirty();
+            MarkLayerCompositionDirty();
         }
 
         private bool IsPresetLayerInstance(int index)
@@ -349,31 +395,170 @@ namespace Tripledot.CanvasKit.Editor
             return ((TextMeshProLayerStack)target).IsPresetLayerInstance(index);
         }
 
-        private void MarkStackDirty()
+        private void MarkPresetAndStackCompositionDirty()
         {
+            MarkPresetDirty(TextMeshProLayerStack.CompositionDirtyFlags);
+            MarkLayerCompositionDirty();
+        }
+
+        private void QueueLocalLayerDirty(TextMeshProLayerInspectorGUI.LayerInspectorDirtyState dirtyState)
+        {
+            if (dirtyState == null) {
+                return;
+            }
+
+            var layerDirties = dirtyState.LayerDirties;
+            for (int i = 0; i < layerDirties.Count; i++) {
+                QueueLayerDirty(layerDirties[i].Flags, layerDirties[i].LayerIndex);
+            }
+        }
+
+        private void QueueLinkedLayerDirty(TextMeshProLayerInspectorGUI.LayerInspectorDirtyState dirtyState)
+        {
+            if (dirtyState == null) {
+                return;
+            }
+
+            var layerDirties = dirtyState.LayerDirties;
+            for (int i = 0; i < layerDirties.Count; i++) {
+                var dirty = layerDirties[i];
+                if (IsPresetLayerInstance(dirty.LayerIndex)) {
+                    QueueLayerDirty(dirty.Flags, dirty.LayerIndex);
+                } else {
+                    QueuePresetDirty(dirty.Flags, dirty.LayerIndex);
+                }
+            }
+        }
+
+        private void MarkLayerCompositionDirty()
+        {
+            MarkLayerDirty(TextMeshProLayerStack.CompositionDirtyFlags);
+        }
+
+        private void MarkLayerDirty(TextMeshProLayerStack.DirtyFlags flags)
+        {
+            if (flags == TextMeshProLayerStack.DirtyFlags.None) {
+                return;
+            }
+
             var layerStack = (TextMeshProLayerStack)target;
-            layerStack.SetLayerStackDirty();
+            layerStack.SetLayerStackDirty(flags);
             EditorUtility.SetDirty(layerStack);
         }
 
-        private void MarkPresetAndStackDirty()
+        private void MarkLayerMaterialDirty(int layerIndex)
         {
-            if (preset.objectReferenceValue is TextMeshProLayerPreset layerPreset) {
-                EditorUtility.SetDirty(layerPreset);
-                layerPreset.NotifyChanged();
+            var layerStack = (TextMeshProLayerStack)target;
+            layerStack.SetLayerMaterialChanged(layerIndex);
+            EditorUtility.SetDirty(layerStack);
+        }
+
+        private void QueueLayerDirty(TextMeshProLayerStack.DirtyFlags flags)
+        {
+            pendingLayerDirtyFlags |= flags;
+        }
+
+        private void QueueLayerDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
+        {
+            if (flags == TextMeshProLayerStack.MaterialDirtyFlags) {
+                QueueLayerMaterialDirty(layerIndex);
+                return;
             }
 
-            MarkStackDirty();
+            QueueLayerDirty(flags);
+        }
+
+        private void QueueLayerMaterialDirty(int layerIndex)
+        {
+            if (layerIndex < 0) {
+                QueueLayerDirty(TextMeshProLayerStack.MaterialDirtyFlags);
+                return;
+            }
+
+            if (!pendingLayerMaterialDirties.Contains(layerIndex)) {
+                pendingLayerMaterialDirties.Add(layerIndex);
+            }
+        }
+
+        private void QueuePresetDirty(TextMeshProLayerStack.DirtyFlags flags)
+        {
+            pendingPresetDirtyFlags |= flags;
+        }
+
+        private void QueuePresetDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
+        {
+            if (flags == TextMeshProLayerStack.DirtyFlags.None || layerIndex < 0) {
+                QueuePresetDirty(flags);
+                return;
+            }
+
+            for (int i = 0; i < pendingPresetLayerDirties.Count; i++) {
+                var dirty = pendingPresetLayerDirties[i];
+                if (dirty.Flags == flags && dirty.LayerIndex == layerIndex) {
+                    return;
+                }
+            }
+
+            pendingPresetLayerDirties.Add(new PendingPresetDirty(flags, layerIndex));
+        }
+
+        private void FlushPendingLayerDirty()
+        {
+            var flags = pendingLayerDirtyFlags;
+            pendingLayerDirtyFlags = TextMeshProLayerStack.DirtyFlags.None;
+            if ((flags & TextMeshProLayerStack.DirtyFlags.Layers) != 0) {
+                pendingLayerMaterialDirties.Clear();
+            }
+
+            MarkLayerDirty(flags);
+
+            for (int i = 0; i < pendingLayerMaterialDirties.Count; i++) {
+                MarkLayerMaterialDirty(pendingLayerMaterialDirties[i]);
+            }
+
+            pendingLayerMaterialDirties.Clear();
+        }
+
+        private void FlushPendingPresetDirty()
+        {
+            var flags = pendingPresetDirtyFlags;
+            pendingPresetDirtyFlags = TextMeshProLayerStack.DirtyFlags.None;
+            if ((flags & TextMeshProLayerStack.DirtyFlags.Layers) != 0) {
+                pendingPresetLayerDirties.Clear();
+            }
+
+            MarkPresetDirty(flags);
+
+            for (int i = 0; i < pendingPresetLayerDirties.Count; i++) {
+                var dirty = pendingPresetLayerDirties[i];
+                MarkPresetDirty(dirty.Flags, dirty.LayerIndex);
+            }
+
+            pendingPresetLayerDirties.Clear();
+        }
+
+        private void MarkPresetDirty(TextMeshProLayerStack.DirtyFlags flags)
+        {
+            MarkPresetDirty(flags, -1);
+        }
+
+        private void MarkPresetDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
+        {
+            if (flags == TextMeshProLayerStack.DirtyFlags.None || preset.objectReferenceValue is not TextMeshProLayerPreset layerPreset) {
+                return;
+            }
+
+            EditorUtility.SetDirty(layerPreset);
+            layerPreset.NotifyChanged(flags, layerIndex);
         }
 
         private float GetAvailablePadding()
         {
             if (!((TextMeshProLayerStack)target).TryGetComponent(out TextMeshProUGUI text)) {
-                return TextMeshProUtility.DefaultEditorSliderPadding;
+                return CanvasEditorGUI.Styles.DefaultSdfSliderPadding;
             }
 
-            var sourceMaterial = text.fontSharedMaterial != null ? text.fontSharedMaterial : text.materialForRendering;
-            return TextMeshProUtility.CalculateAvailablePadding(text, sourceMaterial);
+            return TextMeshProUtility.CalculateAvailablePadding(text);
         }
 
         private string GetLayerListContextKey(string scope)

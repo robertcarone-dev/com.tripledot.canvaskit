@@ -33,14 +33,19 @@ namespace Tripledot.CanvasKit
         public Texture2D Texture;
         public CanvasPaintTransform Transform;
 
+        public bool IsGradientPaint => Type is CanvasPaintType.LinearGradient or CanvasPaintType.RadialGradient;
+        public bool HasFullGradient => Gradient != null && IsGradientPaint && GradientMode == CanvasGradientMode.Texture;
+
         public static CanvasPaint Solid(Color color)
         {
-            return new CanvasPaint { Type = CanvasPaintType.Solid, Color = color, SecondaryColor = color, Opacity = 1f, Transform = CanvasPaintTransform.Default };
+            return new CanvasPaint {
+                Type = CanvasPaintType.Solid, 
+                Color = color, 
+                SecondaryColor = color, 
+                Opacity = 1f, 
+                Transform = CanvasPaintTransform.Default 
+            };
         }
-
-        internal bool IsGradientPaint => Type is CanvasPaintType.LinearGradient or CanvasPaintType.RadialGradient;
-
-        internal bool HasFullGradient => Gradient != null && IsGradientPaint && GradientMode == CanvasGradientMode.Texture;
 
         public bool Equals(CanvasPaint other)
         {

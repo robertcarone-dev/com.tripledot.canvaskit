@@ -11,7 +11,7 @@ namespace Tripledot.CanvasKit.Editor
         private static readonly List<RectTransform> RectTransformBuffer = new List<RectTransform>(32);
         private static readonly List<Graphic> GraphicBuffer = new List<Graphic>(32);
 
-        internal static bool TryGetPreviewTarget(GameObject gameObject, out CanvasPreviewTarget target)
+        public static bool TryGetPreviewTarget(GameObject gameObject, out CanvasPreviewTarget target)
         {
             target = CanvasPreviewTarget.Empty;
             if (!IsPrefabAssetRoot(gameObject)) {
@@ -21,7 +21,7 @@ namespace Tripledot.CanvasKit.Editor
             return TryGetPreviewTargetInHierarchy(gameObject, out target);
         }
 
-        internal static bool TryGetPreviewTargetInHierarchy(GameObject root, out CanvasPreviewTarget target)
+        public static bool TryGetPreviewTargetInHierarchy(GameObject root, out CanvasPreviewTarget target)
         {
             target = CanvasPreviewTarget.Empty;
             if (root == null) {

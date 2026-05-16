@@ -12,19 +12,15 @@ namespace Tripledot.CanvasKit
 
     internal static class TextMeshProUtility
     {
-        internal const float DefaultEditorSliderPadding = 64f;
-        
         private const float SdfPixelsToPaddingPixelsScale = 2f;
         private const float SdfPixelsToPaddingPixelsScaleRcp = 1f / SdfPixelsToPaddingPixelsScale;
-        private const float GradientScalePackingPadding = 1f;
-        private const float DefaultGradientScale = 5f;
 
-        internal static Vector4 PaddingUniform(float value)
+        public static Vector4 PaddingUniform(float value)
         {
             return new Vector4(value, value, value, value);
         }
 
-        internal static Vector4 PaddingWithDirectionalOffset(Vector4 padding, Vector2 offset, Vector2 localUnitsPerPaddingPixel)
+        public static Vector4 PaddingWithDirectionalOffset(Vector4 padding, Vector2 offset, Vector2 localUnitsPerPaddingPixel)
         {
             var x = LocalOffsetToPaddingPixels(offset.x, localUnitsPerPaddingPixel.x);
             var y = LocalOffsetToPaddingPixels(offset.y, localUnitsPerPaddingPixel.y);
@@ -35,7 +31,7 @@ namespace Tripledot.CanvasKit
                 padding.w + (offset.y < 0f ? y : 0f));
         }
 
-        internal static Vector4 PaddingMax(Vector4 a, Vector4 b)
+        public static Vector4 PaddingMax(Vector4 a, Vector4 b)
         {
             return new Vector4(
                 Mathf.Max(a.x, b.x),
@@ -44,7 +40,7 @@ namespace Tripledot.CanvasKit
                 Mathf.Max(a.w, b.w));
         }
 
-        internal static Vector4 CalculateBounds(TextMeshProUGUI text, bool forceMeshUpdate = false)
+        public static Vector4 CalculateBounds(TextMeshProUGUI text, bool forceMeshUpdate = false)
         {
             if (forceMeshUpdate) {
                 text.ForceMeshUpdate();
@@ -53,18 +49,18 @@ namespace Tripledot.CanvasKit
             return TryCalculateVisibleGlyphBounds(text.textInfo, out var bounds) ? bounds : CalculateFrameBounds(text);
         }
 
-        internal static Vector4 CalculateFrameBounds(TextMeshProUGUI text)
+        public static Vector4 CalculateFrameBounds(TextMeshProUGUI text)
         {
             var textRect = text.rectTransform.rect;
             return new Vector4(textRect.xMin, textRect.yMin, Mathf.Max(0f, textRect.width), Mathf.Max(0f, textRect.height));
         }
 
-        internal static bool TryCalculateVisibleGlyphBounds(TMP_TextInfo textInfo, out Vector4 bounds)
+        public static bool TryCalculateVisibleGlyphBounds(TMP_TextInfo textInfo, out Vector4 bounds)
         {
             return TryCalculateLayerBounds(textInfo, null, 0f, out bounds);
         }
 
-        internal static bool TryCalculateLayerBounds(TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit, out Vector4 bounds)
+        public static bool TryCalculateLayerBounds(TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit, out Vector4 bounds)
         {
             bounds = default;
 
@@ -113,7 +109,7 @@ namespace Tripledot.CanvasKit
             return true;
         }
 
-        internal static bool TryCalculateGlyphBounds(TMP_TextInfo textInfo, out Vector4 bounds)
+        public static bool TryCalculateGlyphBounds(TMP_TextInfo textInfo, out Vector4 bounds)
         {
             bounds = default;
 
@@ -148,49 +144,39 @@ namespace Tripledot.CanvasKit
             return true;
         }
 
-        internal static float CalculateAvailablePadding(TextMeshProUGUI text, Material sourceMaterial)
+        public static float CalculateAvailablePadding(TextMeshProUGUI text)
         {
             var fontAsset = text.font;
             if (fontAsset != null && fontAsset.atlasPadding > 0) {
                 return PaddingPixelsToSdfPixels(Mathf.Max(0f, fontAsset.atlasPadding));
             }
 
-            var gradientScale = GetGradientScale(sourceMaterial);
-            if (gradientScale > 0f) {
-                return PaddingPixelsToSdfPixels(Mathf.Max(0f, gradientScale - GradientScalePackingPadding));
-            }
-
             return 0f;
         }
 
-        internal static float GetGradientScale(Material material)
+        public static float GetGradientScale(Material material)
         {
             return material != null && material.HasProperty(ShaderUtilities.ID_GradientScale)
                 ? material.GetFloat(ShaderUtilities.ID_GradientScale)
                 : 0f;
         }
 
-        internal static float PixelsToFaceDilate(float pixels, float gradientScale)
+        public static float PixelsToFaceDilate(float pixels, float gradientScale)
         {
             return pixels / GetEffectiveGradientScale(gradientScale);
         }
 
-        internal static float SdfPixelsToPaddingPixels(float pixels)
+        public static float SdfPixelsToPaddingPixels(float pixels)
         {
             return Mathf.Max(0f, pixels) * SdfPixelsToPaddingPixelsScale;
         }
 
-        internal static float PaddingPixelsToSdfPixels(float pixels)
+        public static float PaddingPixelsToSdfPixels(float pixels)
         {
             return Mathf.Max(0f, pixels) * SdfPixelsToPaddingPixelsScaleRcp;
         }
 
-        internal static void ClampStrokeEffect(float width, float feather, float availablePadding, float reservedPadding, out float clampedWidth, out float clampedFeather)
-        {
-            ClampStrokeEffect(width, feather, TextMeshProStrokePosition.Outside, availablePadding, reservedPadding, out clampedWidth, out clampedFeather);
-        }
-
-        internal static void ClampStrokeEffect(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float clampedWidth, out float clampedFeather)
+        public static void ClampStrokeEffect(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float clampedWidth, out float clampedFeather)
         {
             var available = GetRemainingPadding(availablePadding, reservedPadding);
             var strokeWidthFactor = GetStrokeVisualPaddingFactor(position);
@@ -199,7 +185,7 @@ namespace Tripledot.CanvasKit
             clampedFeather = Mathf.Min(Mathf.Max(0f, feather), Mathf.Max(0f, available - clampedWidth * strokeWidthFactor));
         }
 
-        internal static void ClampShadowEffect(float spread, float blur, float availablePadding, float reservedPadding, out float clampedSpread, out float clampedBlur)
+        public static void ClampShadowEffect(float spread, float blur, float availablePadding, float reservedPadding, out float clampedSpread, out float clampedBlur)
         {
             var outwardAvailable = GetRemainingPadding(availablePadding, reservedPadding);
             var signedAvailable = float.IsPositiveInfinity(availablePadding) ? availablePadding : Mathf.Max(0f, availablePadding);
@@ -207,17 +193,7 @@ namespace Tripledot.CanvasKit
             clampedBlur = Mathf.Min(Mathf.Max(0f, blur), Mathf.Max(0f, outwardAvailable - clampedSpread));
         }
 
-        internal static float GetShadowSdfRange(float spread, float blur)
-        {
-            return Mathf.Max(Mathf.Abs(spread), Mathf.Abs(spread + Mathf.Max(0f, blur)));
-        }
-
-        internal static float GetShadowOutwardRange(float spread, float blur)
-        {
-            return Mathf.Max(0f, spread + Mathf.Max(0f, blur));
-        }
-
-        internal static float GetStrokeVisualPaddingFactor(TextMeshProStrokePosition position)
+        public static float GetStrokeVisualPaddingFactor(TextMeshProStrokePosition position)
         {
             return position switch {
                 TextMeshProStrokePosition.Outside => 1f,
@@ -226,40 +202,29 @@ namespace Tripledot.CanvasKit
             };
         }
 
-        internal static float GetGeometryPaddingLimit(float effectPaddingBudget)
+        public static float GetGeometryPaddingLimit(float effectPaddingBudget)
         {
             return effectPaddingBudget > 0f ? SdfPixelsToPaddingPixels(effectPaddingBudget) : 0f;
         }
 
-        internal static float PixelsToPercent(float pixels, float availablePadding)
+        public static float PixelsToPercent(float pixels, float availablePadding)
         {
             return availablePadding <= 0f ? 0f : pixels / availablePadding * 100f;
         }
 
-        internal static float PercentToPixels(float percent, float availablePadding)
+        public static float PercentToPixels(float percent, float availablePadding)
         {
             return availablePadding <= 0f ? 0f : percent * availablePadding / 100f;
         }
 
-        internal static float GetEditorSliderMax(float availablePadding, float currentPixels)
-        {
-            var currentMagnitude = Mathf.Abs(currentPixels);
-            
-            if (availablePadding > 0f) {
-                return Mathf.Max(availablePadding, currentMagnitude);
-            }
-
-            return Mathf.Max(DefaultEditorSliderPadding, currentMagnitude);
-        }
-
-        internal static float GetEffectiveGradientScale(Material material)
+        public static float GetEffectiveGradientScale(Material material)
         {
             return GetEffectiveGradientScale(GetGradientScale(material));
         }
 
-        internal static float GetEffectiveGradientScale(float gradientScale)
+        public static float GetEffectiveGradientScale(float gradientScale)
         {
-            return gradientScale > 0f ? gradientScale : DefaultGradientScale;
+            return gradientScale > 0f ? gradientScale : 1f;
         }
 
         private static float GetRemainingPadding(float availablePadding, float reservedPadding)

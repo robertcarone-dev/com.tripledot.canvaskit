@@ -7,7 +7,7 @@ namespace Tripledot.CanvasKit.Editor
 {
     internal static class TextMeshProLayerUpgradeUtility
     {
-        internal static List<TextMeshProLayerData> ConvertMaterial(Material material)
+        public static List<TextMeshProLayerData> ConvertMaterial(Material material)
         {
             var layers = new List<TextMeshProLayerData>();
             if (material == null) {
@@ -28,7 +28,7 @@ namespace Tripledot.CanvasKit.Editor
             return layers;
         }
 
-        internal static TextMeshProLayerStack UpgradeText(TextMeshProUGUI text)
+        public static TextMeshProLayerStack UpgradeText(TextMeshProUGUI text)
         {
             if (text == null) {
                 return null;
@@ -53,7 +53,7 @@ namespace Tripledot.CanvasKit.Editor
             return stack;
         }
 
-        internal static TextMeshProLayerPreset CreatePresetFromMaterial(Material material, string assetPath)
+        public static TextMeshProLayerPreset CreatePresetFromMaterial(Material material, string assetPath)
         {
             if (material == null || string.IsNullOrEmpty(assetPath)) {
                 return null;
@@ -66,7 +66,7 @@ namespace Tripledot.CanvasKit.Editor
             return preset;
         }
 
-        internal static TMP_FontAsset ResolveFontAsset(Material material)
+        public static TMP_FontAsset ResolveFontAsset(Material material)
         {
             if (material == null) {
                 return null;
@@ -97,7 +97,7 @@ namespace Tripledot.CanvasKit.Editor
             return null;
         }
 
-        internal static string GetPresetAssetPath(Material material)
+        public static string GetPresetAssetPath(Material material)
         {
             var materialPath = AssetDatabase.GetAssetPath(material);
             if (string.IsNullOrEmpty(materialPath)) {

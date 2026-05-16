@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Rendering;
 using UnityEditorInternal;
@@ -8,6 +9,68 @@ namespace Tripledot.CanvasKit.Editor
 {
     internal static class TextMeshProLayerInspectorGUI
     {
+        internal readonly struct LayerDirty
+        {
+            public readonly int LayerIndex;
+            public readonly TextMeshProLayerStack.DirtyFlags Flags;
+
+            public LayerDirty(int layerIndex, TextMeshProLayerStack.DirtyFlags flags)
+            {
+                LayerIndex = layerIndex;
+                Flags = flags;
+            }
+        }
+
+        internal sealed class LayerInspectorDirtyState
+        {
+            private readonly List<LayerDirty> layerDirties = new List<LayerDirty>();
+
+            public IReadOnlyList<LayerDirty> LayerDirties => layerDirties;
+
+            public void Clear()
+            {
+                layerDirties.Clear();
+            }
+
+            public void MarkLayer(int layerIndex, TextMeshProLayerStack.DirtyFlags flags)
+            {
+                if (flags == TextMeshProLayerStack.DirtyFlags.None || layerIndex < 0) {
+                    return;
+                }
+
+                for (int i = 0; i < layerDirties.Count; i++) {
+                    var dirty = layerDirties[i];
+                    if (dirty.LayerIndex == layerIndex && dirty.Flags == flags) {
+                        return;
+                    }
+                }
+
+                layerDirties.Add(new LayerDirty(layerIndex, flags));
+            }
+        }
+
+        private readonly struct LayerDirtyChangeCheckScope : IDisposable
+        {
+            private readonly LayerInspectorDirtyState dirtyState;
+            private readonly int layerIndex;
+            private readonly TextMeshProLayerStack.DirtyFlags flags;
+
+            public LayerDirtyChangeCheckScope(LayerInspectorDirtyState dirtyState, int layerIndex, TextMeshProLayerStack.DirtyFlags flags)
+            {
+                this.dirtyState = dirtyState;
+                this.layerIndex = layerIndex;
+                this.flags = flags;
+                EditorGUI.BeginChangeCheck();
+            }
+
+            public void Dispose()
+            {
+                if (EditorGUI.EndChangeCheck()) {
+                    dirtyState?.MarkLayer(layerIndex, flags);
+                }
+            }
+        }
+
         public static class Styles
         {
             public static readonly GUIContent BlendMode = L10n.TextContent("Blend Mode", "Choose how this layer is composited with layers below it.");
@@ -48,9 +111,9 @@ namespace Tripledot.CanvasKit.Editor
             public static readonly Color InstanceMarkerTextColorDark = new Color(0.66f, 0.82f, 1f, 1f);
             public static readonly Color InstanceMarkerTextColorLight = new Color(0.12f, 0.28f, 0.55f, 1f);
 
-            public static Texture2D FillLayerIcon;
-            public static Texture2D StrokeLayerIcon;
-            public static Texture2D ShadowLayerIcon;
+            public static readonly Texture2D FillLayerIcon;
+            public static readonly Texture2D StrokeLayerIcon;
+            public static readonly Texture2D ShadowLayerIcon;
             public static readonly GUIContent ScratchContent = new GUIContent();
 
             public const float LayerHeaderHeight = 26f;
@@ -225,9 +288,10 @@ namespace Tripledot.CanvasKit.Editor
             Func<int, SerializedProperty> getLayer = null,
             Action<int, SerializedProperty> layerChanged = null,
             string contextKey = null,
-            float availablePadding = TextMeshProUtility.DefaultEditorSliderPadding,
+            float availablePadding = CanvasEditorGUI.Styles.DefaultSdfSliderPadding,
             UnityEngine.Object sceneTarget = null,
-            Func<int, bool> isInstanceLayer = null)
+            Func<int, bool> isInstanceLayer = null,
+            LayerInspectorDirtyState dirtyState = null)
         {
             if (layers.arraySize == 0) {
                 return;
@@ -238,8 +302,8 @@ namespace Tripledot.CanvasKit.Editor
                 if (layer == null) {
                     continue;
                 }
+                
                 var serializedLayer = new SerializedLayer(layer);
-
                 var expanded = DrawLayerInspectorHeader(
                     serializedLayer,
                     i,
@@ -251,7 +315,7 @@ namespace Tripledot.CanvasKit.Editor
 
                 if (expanded) {
                     using (new EditorGUI.DisabledScope(serializedLayer.IsDisabled)) {
-                        DrawLayerDetails(serializedLayer, availablePadding, sceneTarget);
+                        DrawLayerDetails(serializedLayer, i, availablePadding, sceneTarget, dirtyState);
                     }
                 }
 
@@ -261,26 +325,20 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        public static void DrawLayerDetails(SerializedProperty layer, float availablePadding, UnityEngine.Object sceneTarget = null)
-        {
-            DrawLayerDetails(new SerializedLayer(layer), availablePadding, sceneTarget);
-        }
-
-        private static void DrawLayerDetails(SerializedLayer layer, float availablePadding, UnityEngine.Object sceneTarget = null)
+        private static void DrawLayerDetails(SerializedLayer layer, int layerIndex, float availablePadding, UnityEngine.Object sceneTarget, LayerInspectorDirtyState dirtyState)
         {
             GUILayout.Space(4f);
             EditorGUILayout.PropertyField(layer.Label, Styles.Label);
-            EditorGUILayout.PropertyField(layer.BlendMode, Styles.BlendMode);
-            EditorGUILayout.Slider(layer.Opacity, 0f, 1f, Styles.Opacity);
+
+            using (new LayerDirtyChangeCheckScope(dirtyState, layerIndex, TextMeshProLayerStack.MaterialDirtyFlags)) {
+                EditorGUILayout.PropertyField(layer.BlendMode, Styles.BlendMode);
+                EditorGUILayout.Slider(layer.Opacity, 0f, 1f, Styles.Opacity);
+            }
+
             GUILayout.Space(5f);
             CoreEditorUtils.DrawSplitter();
             GUILayout.Space(5f);
-            DrawUnifiedLayer(layer, availablePadding, sceneTarget);
-        }
-
-        public static string GetLayerTitle(SerializedProperty layer, int index)
-        {
-            return GetLayerDisplayContent(layer).text;
+            DrawUnifiedLayer(layer, layerIndex, availablePadding, sceneTarget, dirtyState);
         }
 
         private static void DrawLayerListRow(
@@ -368,9 +426,7 @@ namespace Tripledot.CanvasKit.Editor
             EditorGUI.BeginChangeCheck();
             EditorGUI.showMixedValue = enabled.hasMultipleDifferentValues;
             var layerEnabled = GUI.Toggle(
-                enabledRect,
-                enabled.hasMultipleDifferentValues || enabled.boolValue,
-                GUIContent.none,
+                enabledRect, enabled.hasMultipleDifferentValues || enabled.boolValue, GUIContent.none,
                 enabled.hasMultipleDifferentValues ? CoreEditorStyles.smallMixedTickbox : CoreEditorStyles.smallTickbox);
             EditorGUI.showMixedValue = false;
             if (EditorGUI.EndChangeCheck()) {
@@ -407,13 +463,8 @@ namespace Tripledot.CanvasKit.Editor
         }
 
         internal static void CalculateLayerListRowRects(
-            Rect rect,
-            bool hasTrailingControl,
-            out Rect iconRect,
-            out Rect enabledRect,
-            out Rect swatchRect,
-            out Rect labelRect,
-            out Rect trailingRect)
+            Rect rect, bool hasTrailingControl,
+            out Rect iconRect, out Rect enabledRect, out Rect swatchRect, out Rect labelRect, out Rect trailingRect)
         {
             iconRect = Rect.zero;
             enabledRect = new Rect(rect.x, rect.y, Styles.EnabledToggleSize, rect.height);
@@ -426,15 +477,8 @@ namespace Tripledot.CanvasKit.Editor
         }
 
         internal static void CalculateLayerHeaderRects(
-            Rect rect,
-            bool showPresetModeMarker,
-            bool instance,
-            out Rect foldoutRect,
-            out Rect iconRect,
-            out Rect enabledRect,
-            out Rect swatchRect,
-            out Rect instanceMarkerRect,
-            out Rect labelRect)
+            Rect rect, bool showPresetModeMarker, bool instance,
+            out Rect foldoutRect, out Rect iconRect, out Rect enabledRect, out Rect swatchRect, out Rect instanceMarkerRect, out Rect labelRect)
         {
             foldoutRect = rect;
             foldoutRect.x += 2f;
@@ -507,18 +551,13 @@ namespace Tripledot.CanvasKit.Editor
                     case TextMeshProLayerPreset preset when layers.propertyPath == "layers":
                         preset.MutableLayers.Add(layer);
                         EditorUtility.SetDirty(preset);
-                        preset.NotifyChanged();
+                        preset.NotifyChanged(TextMeshProLayerStack.CompositionDirtyFlags);
                         break;
                 }
             }
 
             layers.serializedObject.Update();
             changed?.Invoke();
-        }
-
-        internal static TextMeshProLayerData CreateLabeledLayerForTests(Func<TextMeshProLayerData> createLayer, string label)
-        {
-            return CreateLabeledLayer(createLayer, label);
         }
 
         private static TextMeshProLayerData CreateLabeledLayer(Func<TextMeshProLayerData> createLayer, string label)
@@ -536,36 +575,6 @@ namespace Tripledot.CanvasKit.Editor
         private static GUIContent GetLayerDisplayContent(SerializedLayer layer)
         {
             return Styles.GetLayerDisplayContent(layer.DisplayLabel);
-        }
-
-        internal static string[] GetLayerFeatureIconNamesForTests(SerializedProperty layer)
-        {
-            var flags = new SerializedLayer(layer).FeatureFlags;
-            var names = new string[GetLayerFeatureIconCount(flags)];
-            var index = 0;
-            if ((flags & LayerFeatureFlags.Face) != 0) {
-                names[index++] = Styles.Face.text;
-            }
-
-            if ((flags & LayerFeatureFlags.Stroke) != 0) {
-                names[index++] = Styles.Outline.text;
-            }
-
-            if ((flags & LayerFeatureFlags.Shadow) != 0) {
-                names[index] = Styles.Underlay.text;
-            }
-
-            return names;
-        }
-
-        internal static Rect GetLayerTitleRectForTests(Rect rect, int iconCount)
-        {
-            return GetLayerTitleRect(rect, iconCount);
-        }
-
-        internal static float GetLayerFeatureIconBadgesWidthForTests(int iconCount)
-        {
-            return GetLayerFeatureIconBadgesWidth(iconCount);
         }
 
         private static Rect GetLayerTitleRect(Rect rect, int iconCount)
@@ -638,54 +647,69 @@ namespace Tripledot.CanvasKit.Editor
             iconRect.x += Styles.FeatureIconBadgeSize + Styles.FeatureIconBadgeGap;
         }
 
-        private static void DrawUnifiedLayer(SerializedLayer layer, float availablePadding, UnityEngine.Object sceneTarget)
+        private static void DrawUnifiedLayer(SerializedLayer layer, int layerIndex, float availablePadding, UnityEngine.Object sceneTarget, LayerInspectorDirtyState dirtyState)
         {
             var face = layer.Face;
             var stroke = layer.Stroke;
             var shadow = layer.Shadow;
             GUILayout.Space(6f);
 
-            var faceExpanded = BeginToggleSection(layer, Styles.Face, face.Enabled);
+            var faceExpanded = BeginToggleSection(layer, Styles.Face, face.Enabled, dirtyState, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags);
             if (faceExpanded) {
                 using (new EditorGUI.DisabledScope(face.Enabled is { hasMultipleDifferentValues: false, boolValue: false })) {
-                    CanvasPaintDrawer.DrawFillMode(face.Paint);
-                    CanvasPaintDrawer.DrawAppearance(face.Paint);
-                    DrawPaintMapping(face.Paint, sceneTarget, true);
+                    using (new LayerDirtyChangeCheckScope(dirtyState, layerIndex, TextMeshProLayerStack.MaterialDirtyFlags)) {
+                        CanvasPaintDrawer.DrawFillMode(face.Paint);
+                        CanvasPaintDrawer.DrawAppearance(face.Paint);
+                        DrawPaintMapping(face.Paint, sceneTarget, layerIndex, true);
+                    }
+
                     CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Shape);
-                    CanvasEditorGUI.SdfLengthSlider(face.Dilate, face.DilateUnit, Styles.Dilate, availablePadding, -availablePadding, availablePadding);
+                    using (new LayerDirtyChangeCheckScope(dirtyState, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags)) {
+                        CanvasEditorGUI.SdfLengthSlider(face.Dilate, face.DilateUnit, Styles.Dilate, availablePadding, -availablePadding, availablePadding);
+                    }
                 }
             }
             EndToggleSection(faceExpanded);
 
-            var strokeExpanded = BeginToggleSection(layer, Styles.Outline, stroke.Enabled);
+            var strokeExpanded = BeginToggleSection(layer, Styles.Outline, stroke.Enabled, dirtyState, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags);
             if (strokeExpanded) {
                 using (new EditorGUI.DisabledScope(stroke.Enabled is { hasMultipleDifferentValues: false, boolValue: false })) {
-                    CanvasPaintDrawer.DrawFillMode(stroke.Paint);
-                    CanvasPaintDrawer.DrawAppearance(stroke.Paint);
-                    DrawPaintMapping(stroke.Paint, sceneTarget, true);
+                    using (new LayerDirtyChangeCheckScope(dirtyState, layerIndex, TextMeshProLayerStack.MaterialDirtyFlags)) {
+                        CanvasPaintDrawer.DrawFillMode(stroke.Paint);
+                        CanvasPaintDrawer.DrawAppearance(stroke.Paint);
+                        DrawPaintMapping(stroke.Paint, sceneTarget, layerIndex, true);
+                    }
+
                     CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Shape);
-                    CanvasEditorGUI.PropertyField(stroke.Position, Styles.Position);
-                    var reservedFacePadding = GetEffectivePositiveSdfBudget(face.Enabled, face.Dilate, availablePadding);
-                    GetStrokeSliderBudgets(stroke.Width, stroke.Feather, stroke.Position, availablePadding, reservedFacePadding, out var widthMax, out var featherMax);
-                    CanvasEditorGUI.ConstrainedSdfLengthSlider(stroke.Width, stroke.WidthUnit, Styles.Width, availablePadding, 0f, widthMax);
-                    CanvasEditorGUI.ConstrainedSdfLengthSlider(stroke.Feather, stroke.FeatherUnit, Styles.Feather, availablePadding, 0f, featherMax);
-                    CanvasEditorGUI.Vector2Field(stroke.Offset, Styles.Offset);
+                    using (new LayerDirtyChangeCheckScope(dirtyState, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags)) {
+                        CanvasEditorGUI.PropertyField(stroke.Position, Styles.Position);
+                        var reservedFacePadding = GetEffectivePositiveSdfBudget(face.Enabled, face.Dilate, availablePadding);
+                        GetStrokeSliderBudgets(stroke.Width, stroke.Feather, stroke.Position, availablePadding, reservedFacePadding, out var widthMax, out var featherMax);
+                        CanvasEditorGUI.ConstrainedSdfLengthSlider(stroke.Width, stroke.WidthUnit, Styles.Width, availablePadding, 0f, widthMax);
+                        CanvasEditorGUI.ConstrainedSdfLengthSlider(stroke.Feather, stroke.FeatherUnit, Styles.Feather, availablePadding, 0f, featherMax);
+                        CanvasEditorGUI.Vector2Field(stroke.Offset, Styles.Offset);
+                    }
                 }
             }
             EndToggleSection(strokeExpanded);
 
-            var shadowExpanded = BeginToggleSection(layer, Styles.Underlay, shadow.Enabled);
+            var shadowExpanded = BeginToggleSection(layer, Styles.Underlay, shadow.Enabled, dirtyState, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags);
             if (shadowExpanded) {
                 using (new EditorGUI.DisabledScope(shadow.Enabled is { hasMultipleDifferentValues: false, boolValue: false })) {
-                    CanvasPaintDrawer.DrawFillMode(shadow.Paint);
-                    CanvasPaintDrawer.DrawAppearance(shadow.Paint);
-                    DrawPaintMapping(shadow.Paint, sceneTarget, true);
+                    using (new LayerDirtyChangeCheckScope(dirtyState, layerIndex, TextMeshProLayerStack.MaterialDirtyFlags)) {
+                        CanvasPaintDrawer.DrawFillMode(shadow.Paint);
+                        CanvasPaintDrawer.DrawAppearance(shadow.Paint);
+                        DrawPaintMapping(shadow.Paint, sceneTarget, layerIndex, true);
+                    }
+
                     CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Effect);
-                    var reservedFacePadding = GetEffectivePositiveSdfBudget(face.Enabled, face.Dilate, availablePadding);
-                    GetShadowSliderBudgets(shadow.Spread, shadow.Blur, availablePadding, reservedFacePadding, out var spreadMin, out var spreadMax, out var blurMax);
-                    CanvasEditorGUI.ConstrainedSdfLengthSlider(shadow.Spread, shadow.SpreadUnit, Styles.Spread, availablePadding, spreadMin, spreadMax);
-                    CanvasEditorGUI.ConstrainedSdfLengthSlider(shadow.Blur, shadow.BlurUnit, Styles.Blur, availablePadding, 0f, blurMax);
-                    CanvasEditorGUI.Vector2Field(shadow.Offset, Styles.Offset);
+                    using (new LayerDirtyChangeCheckScope(dirtyState, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags)) {
+                        var reservedFacePadding = GetEffectivePositiveSdfBudget(face.Enabled, face.Dilate, availablePadding);
+                        GetShadowSliderBudgets(shadow.Spread, shadow.Blur, availablePadding, reservedFacePadding, out var spreadMin, out var spreadMax, out var blurMax);
+                        CanvasEditorGUI.ConstrainedSdfLengthSlider(shadow.Spread, shadow.SpreadUnit, Styles.Spread, availablePadding, spreadMin, spreadMax);
+                        CanvasEditorGUI.ConstrainedSdfLengthSlider(shadow.Blur, shadow.BlurUnit, Styles.Blur, availablePadding, 0f, blurMax);
+                        CanvasEditorGUI.Vector2Field(shadow.Offset, Styles.Offset);
+                    }
                 }
             }
             EndToggleSection(shadowExpanded);
@@ -693,10 +717,6 @@ namespace Tripledot.CanvasKit.Editor
 
         private static float GetRemainingSdfBudget(float availablePadding, float reservedPadding)
         {
-            if (float.IsPositiveInfinity(availablePadding)) {
-                return availablePadding;
-            }
-
             return Mathf.Max(0f, availablePadding - reservedPadding);
         }
 
@@ -711,16 +731,7 @@ namespace Tripledot.CanvasKit.Editor
 
         internal static float GetEffectivePositiveSdfBudget(float value, float availablePadding)
         {
-            if (float.IsPositiveInfinity(availablePadding)) {
-                return Mathf.Max(0f, value);
-            }
-
             return Mathf.Min(Mathf.Max(0f, value), Mathf.Max(0f, availablePadding));
-        }
-
-        internal static void GetStrokeSliderBudgets(SerializedProperty width, SerializedProperty feather, float availablePadding, float reservedPadding, out float widthMax, out float featherMax)
-        {
-            GetStrokeSliderBudgets(GetSdfValue(width), GetSdfValue(feather), TextMeshProStrokePosition.Outside, availablePadding, reservedPadding, out widthMax, out featherMax);
         }
 
         internal static void GetStrokeSliderBudgets(SerializedProperty width, SerializedProperty feather, SerializedProperty position, float availablePadding, float reservedPadding, out float widthMax, out float featherMax)
@@ -728,14 +739,9 @@ namespace Tripledot.CanvasKit.Editor
             GetStrokeSliderBudgets(GetSdfValue(width), GetSdfValue(feather), GetStrokePosition(position), availablePadding, reservedPadding, out widthMax, out featherMax);
         }
 
-        internal static void GetStrokeSliderBudgets(float width, float feather, float availablePadding, float reservedPadding, out float widthMax, out float featherMax)
-        {
-            GetStrokeSliderBudgets(width, feather, TextMeshProStrokePosition.Outside, availablePadding, reservedPadding, out widthMax, out featherMax);
-        }
-
         internal static void GetStrokeSliderBudgets(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float widthMax, out float featherMax)
         {
-            var remainingBudget = GetRemainingSdfBudget(availablePadding, Mathf.Max(0f, reservedPadding));
+            var remainingBudget = GetRemainingSdfBudget(availablePadding, reservedPadding);
             var strokeWidthFactor = TextMeshProUtility.GetStrokeVisualPaddingFactor(position);
             widthMax = strokeWidthFactor > 0.0f ? remainingBudget / strokeWidthFactor : remainingBudget;
             TextMeshProUtility.ClampStrokeEffect(width, feather, position, availablePadding, reservedPadding, out var effectiveWidth, out _);
@@ -749,8 +755,8 @@ namespace Tripledot.CanvasKit.Editor
 
         internal static void GetShadowSliderBudgets(float spread, float blur, float availablePadding, float reservedPadding, out float spreadMin, out float spreadMax, out float blurMax)
         {
-            spreadMax = GetRemainingSdfBudget(availablePadding, Mathf.Max(0f, reservedPadding));
-            spreadMin = float.IsPositiveInfinity(availablePadding) ? float.NegativeInfinity : -Mathf.Max(0f, availablePadding);
+            spreadMax = GetRemainingSdfBudget(availablePadding, reservedPadding);
+            spreadMin = -availablePadding;
             TextMeshProUtility.ClampShadowEffect(spread, blur, availablePadding, reservedPadding, out var effectiveSpread, out _);
             blurMax = GetRemainingSdfBudget(spreadMax, effectiveSpread);
         }
@@ -769,24 +775,30 @@ namespace Tripledot.CanvasKit.Editor
             return (TextMeshProStrokePosition)Mathf.Clamp(property.enumValueIndex, 0, 2);
         }
 
-        private static void DrawPaintMapping(SerializedCanvasPaint paint, UnityEngine.Object sceneTarget, bool boxed = false)
+        private static void DrawPaintMapping(SerializedCanvasPaint paint, UnityEngine.Object sceneTarget, int layerIndex, bool boxed = false)
         {
             if (CanvasPaintDrawer.HasMapping(paint)) {
-                CanvasPaintDrawer.DrawMappingHeader(paint, sceneTarget, boxed);
+                CanvasPaintDrawer.DrawMappingHeader(paint, sceneTarget, boxed, layerIndex);
                 CanvasPaintDrawer.DrawMapping(paint);
             }
         }
 
-        private static bool BeginToggleSection(SerializedLayer layer, GUIContent title, SerializedProperty enabledProperty)
+        private static bool BeginToggleSection(
+            SerializedLayer layer,
+            GUIContent title,
+            SerializedProperty enabledProperty,
+            LayerInspectorDirtyState dirtyState,
+            int layerIndex,
+            TextMeshProLayerStack.DirtyFlags flags)
         {
             var key = layer.Root.serializedObject.targetObject.GetInstanceID() + "." + layer.Root.propertyPath + "." + title.text;
             var expanded = SessionState.GetBool(key, true);
 
-            EditorGUILayout.BeginVertical(CanvasEditorGUI.RoundedInspectorPanelStyle);
-            expanded = DrawHeaderToggleFoldout(title, expanded, enabledProperty);
+            EditorGUILayout.BeginVertical(CanvasEditorGUI.Styles.RoundedInspectorPanelStyle);
+            expanded = DrawHeaderToggleFoldout(title, expanded, enabledProperty, dirtyState, layerIndex, flags);
             SessionState.SetBool(key, expanded);
             if (expanded) {
-                EditorGUILayout.BeginVertical(CanvasEditorGUI.RoundedInspectorPanelContentStyle);
+                EditorGUILayout.BeginVertical(CanvasEditorGUI.Styles.RoundedInspectorPanelContentStyle);
             }
 
             return expanded;
@@ -802,10 +814,16 @@ namespace Tripledot.CanvasKit.Editor
             CanvasEditorGUI.DrawRoundedInspectorPanelBorder(GUILayoutUtility.GetLastRect());
         }
 
-        private static bool DrawHeaderToggleFoldout(GUIContent title, bool expanded, SerializedProperty enabledProperty)
+        private static bool DrawHeaderToggleFoldout(
+            GUIContent title,
+            bool expanded,
+            SerializedProperty enabledProperty,
+            LayerInspectorDirtyState dirtyState,
+            int layerIndex,
+            TextMeshProLayerStack.DirtyFlags flags)
         {
             var headerRect = GUILayoutUtility.GetRect(1f, Styles.FillSectionHeaderHeight);
-            GUI.Label(headerRect, GUIContent.none, CanvasEditorGUI.GetRoundedInspectorPanelHeaderStyle(expanded));
+            GUI.Label(headerRect, GUIContent.none, CanvasEditorGUI.Styles.GetRoundedInspectorPanelHeaderStyle(expanded));
 
             var foldoutRect = headerRect;
             foldoutRect.x += 9f;
@@ -850,6 +868,7 @@ namespace Tripledot.CanvasKit.Editor
             EditorGUI.showMixedValue = false;
             if (EditorGUI.EndChangeCheck()) {
                 enabledProperty.boolValue = enabled;
+                dirtyState?.MarkLayer(layerIndex, flags);
             }
 
             var currentEvent = Event.current;
@@ -867,11 +886,6 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             return expanded;
-        }
-
-        private static void DrawLayerSwatch(Rect rect, SerializedProperty layer)
-        {
-            DrawLayerSwatch(rect, new SerializedLayer(layer));
         }
 
         private static void DrawLayerSwatch(Rect rect, SerializedLayer layer)
@@ -903,16 +917,6 @@ namespace Tripledot.CanvasKit.Editor
         private static Texture2D LoadLayerIcon(string filename)
         {
             return AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/" + filename);
-        }
-
-        internal static LayerSwatchDescriptor GetLayerSwatchDescriptorForTests(SerializedProperty layer)
-        {
-            return GetLayerSwatchDescriptor(layer);
-        }
-
-        private static LayerSwatchDescriptor GetLayerSwatchDescriptor(SerializedProperty layer)
-        {
-            return GetLayerSwatchDescriptor(new SerializedLayer(layer));
         }
 
         private static LayerSwatchDescriptor GetLayerSwatchDescriptor(SerializedLayer layer)

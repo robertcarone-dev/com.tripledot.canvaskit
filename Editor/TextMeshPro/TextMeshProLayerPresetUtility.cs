@@ -63,7 +63,12 @@ namespace Tripledot.CanvasKit.Editor
 
             if (stack != null) {
                 Undo.RecordObject(stack, "Apply TextMeshPro Layer Preset Font");
-                stack.SetLayerStackDirty();
+                stack.SetLayerStackDirty(TextMeshProLayerStack.DirtyFlags.SourceGeometry
+                    | TextMeshProLayerStack.DirtyFlags.Geometry
+                    | TextMeshProLayerStack.DirtyFlags.Padding
+                    | TextMeshProLayerStack.DirtyFlags.Material
+                    | TextMeshProLayerStack.DirtyFlags.Canvas
+                    | TextMeshProLayerStack.DirtyFlags.PaintBounds);
                 EditorUtility.SetDirty(stack);
             }
         }

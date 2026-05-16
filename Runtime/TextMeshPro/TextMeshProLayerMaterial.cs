@@ -65,13 +65,16 @@ namespace Tripledot.CanvasKit
         {
             GraphicsSettings.TryGetRenderPipelineSettings<CanvasKitResourcesURP>(out var resources);
             if (resources == null) {
-                throw new InvalidOperationException($"Failed to resolve required text shader: render pipeline resources are missing a {nameof(CanvasKitResourcesURP)} asset.");
+                throw new InvalidOperationException(
+                    $"Failed to resolve required text shader: render pipeline resources are missing a {nameof(CanvasKitResourcesURP)} asset.");
             }
 
             var shader = resources.TextMeshProCoreShader;
 
             if (shader == null) {
-                throw new InvalidOperationException("Failed to resolve required text shader from render pipeline resources. Make sure the core TextMeshPro shader is assigned in the CanvasKitResourcesURP asset.");
+                throw new InvalidOperationException(
+                    "Failed to resolve required text shader from render pipeline resources. " +
+                    "Make sure the core TextMeshPro shader is assigned in the CanvasKitResourcesURP asset.");
             }
 
             return shader;
@@ -245,6 +248,7 @@ namespace Tripledot.CanvasKit
         public bool Equals(TextMeshProLayerMaterialContext other)
         {
             return FontAtlas == other.FontAtlas
+                && PaintBounds == other.PaintBounds
                 && ScaleRatioA == other.ScaleRatioA
                 && GradientScale == other.GradientScale
                 && Sharpness == other.Sharpness
@@ -276,6 +280,7 @@ namespace Tripledot.CanvasKit
             unchecked
             {
                 var hashCode = FontAtlas != null ? FontAtlas.GetHashCode() : 0;
+                hashCode = (hashCode * 397) ^ PaintBounds.GetHashCode();
                 hashCode = (hashCode * 397) ^ ScaleRatioA.GetHashCode();
                 hashCode = (hashCode * 397) ^ GradientScale.GetHashCode();
                 hashCode = (hashCode * 397) ^ Sharpness.GetHashCode();

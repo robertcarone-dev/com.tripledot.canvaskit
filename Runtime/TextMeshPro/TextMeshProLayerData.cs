@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Animations;
 
 namespace Tripledot.CanvasKit
 {
@@ -7,6 +8,7 @@ namespace Tripledot.CanvasKit
     public sealed class TextMeshProLayerData
     {
         [SerializeField]
+        [NotKeyable]
         private bool enabled = true;
         [SerializeField]
         private string label = "Layer";
@@ -15,6 +17,7 @@ namespace Tripledot.CanvasKit
         [SerializeField]
         private float opacity = 1f;
         [SerializeField]
+        [NotKeyable]
         public Vector3 offset = Vector3.zero;
         [SerializeField]
         private TextMeshProFace face = TextMeshProFace.Default;
@@ -190,7 +193,8 @@ namespace Tripledot.CanvasKit
             var shadowUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
                 material, shadow.Paint, ShaderIds.ShadowPaint, ShaderKeywords.ShadowTexture, shadow.Enabled);
 
-            CanvasUtility.SetKeyword(material, ShaderKeywords.GradientAtlas, faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
+            CanvasUtility.SetKeyword(material, ShaderKeywords.GradientAtlas, 
+                faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
             
             TextMeshProLayerMaterial.ApplySharedTextProperties(material, context, blendMode, Opacity);
         }

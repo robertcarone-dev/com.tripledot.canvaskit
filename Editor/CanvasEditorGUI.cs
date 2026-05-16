@@ -7,10 +7,178 @@ namespace Tripledot.CanvasKit.Editor
 {
     internal static class CanvasEditorGUI
     {
-        private static class Styles
+        internal static class Styles
         {
+            public const float SliderNumericFieldWidth = 50f;
+            public const float SliderRowGap = 4f;
+            public const float SliderUnitWidth = 52f;
+            public const float DefaultSdfSliderPadding = 64f;
+            public const int RoundedInspectorContentPadding = 8;
+            public const float SliderValueGroupWidth = SliderNumericFieldWidth + SliderRowGap + SliderUnitWidth;
+            public const float CheckerSize = 4f;
+            
+            private const int RoundedInspectorTextureSize = 16;
+            private const int RoundedInspectorRadius = 5;
+            private const int RoundedInspectorBorderSegments = 4;
+
             public static readonly GUIContent X = L10n.TextContent("X", "Adjust the horizontal component.");
             public static readonly GUIContent Y = L10n.TextContent("Y", "Adjust the vertical component.");
+
+            public static readonly GUIContent[] SdfLengthUnitLabels = {
+                L10n.TextContent("PX", "Edit this SDF length in pixels."),
+                L10n.TextContent("%", "Edit this SDF length as a percentage of available SDF padding.")
+            };
+
+            public static readonly Color CheckerLight = new Color(0.72f, 0.72f, 0.72f, 1f);
+            public static readonly Color CheckerDark = new Color(0.47f, 0.47f, 0.47f, 1f);
+
+            private static GUIStyle _subsectionStyle;
+            private static GUIStyle _swatchLabelStyle;
+            private static GUIStyle _roundedInspectorPanelStyleDark;
+            private static GUIStyle _roundedInspectorPanelStyleLight;
+            private static GUIStyle _roundedInspectorPanelHeaderStyleDark;
+            private static GUIStyle _roundedInspectorPanelHeaderStyleLight;
+            private static GUIStyle _roundedInspectorPanelCollapsedHeaderStyleDark;
+            private static GUIStyle _roundedInspectorPanelCollapsedHeaderStyleLight;
+            private static GUIStyle _roundedInspectorPanelContentStyle;
+        
+            public static Color SwatchBorder => 
+                EditorGUIUtility.isProSkin ? new Color(0.06f, 0.06f, 0.06f, 1f) : new Color(0.42f, 0.42f, 0.42f, 1f);
+
+            public static Color RoundedInspectorPanelBorder =>
+                EditorGUIUtility.isProSkin ? new Color(0.12f, 0.12f, 0.12f, 1f) : new Color(0.52f, 0.53f, 0.55f, 1f);
+
+            public static GUIStyle SubsectionStyle => _subsectionStyle ??= new GUIStyle(EditorStyles.boldLabel) {
+                padding = new RectOffset(0, 0, 0, 0)
+            };
+
+            public static GUIStyle SwatchLabelStyle => _swatchLabelStyle ??= new GUIStyle(EditorStyles.label) {
+                alignment = TextAnchor.MiddleLeft
+            };
+
+            public static GUIStyle RoundedInspectorPanelStyle => EditorGUIUtility.isProSkin
+                ? _roundedInspectorPanelStyleDark ??= CreateRoundedInspectorPanelStyle(true)
+                : _roundedInspectorPanelStyleLight ??= CreateRoundedInspectorPanelStyle(false);
+
+            public static GUIStyle GetRoundedInspectorPanelHeaderStyle(bool expanded)
+            {
+                if (expanded) {
+                    return EditorGUIUtility.isProSkin
+                        ? _roundedInspectorPanelHeaderStyleDark ??= CreateRoundedInspectorPanelHeaderStyle(true, true)
+                        : _roundedInspectorPanelHeaderStyleLight ??= CreateRoundedInspectorPanelHeaderStyle(false, true);
+                }
+
+                return EditorGUIUtility.isProSkin
+                    ? _roundedInspectorPanelCollapsedHeaderStyleDark ??= CreateRoundedInspectorPanelHeaderStyle(true, false)
+                    : _roundedInspectorPanelCollapsedHeaderStyleLight ??= CreateRoundedInspectorPanelHeaderStyle(false, false);
+            }
+
+            public static GUIStyle RoundedInspectorPanelContentStyle => _roundedInspectorPanelContentStyle ??= new GUIStyle {
+                padding = new RectOffset(RoundedInspectorContentPadding, RoundedInspectorContentPadding, 6, 8)
+            };
+
+            private static GUIStyle CreateRoundedInspectorPanelStyle(bool darkSkin)
+            {
+                var fill = darkSkin ? new Color(0.20f, 0.20f, 0.20f, 1f) : new Color(0.76f, 0.76f, 0.76f, 1f);
+                return new GUIStyle {
+                    normal = { background = CreateRoundedRectTexture(fill, true, true) },
+                    border = new RectOffset(RoundedInspectorRadius, RoundedInspectorRadius, RoundedInspectorRadius, RoundedInspectorRadius),
+                    margin = new RectOffset(14, 8, 0, 6),
+                    padding = new RectOffset(0, 0, 0, 0)
+                };
+            }
+
+            private static GUIStyle CreateRoundedInspectorPanelHeaderStyle(bool darkSkin, bool expanded)
+            {
+                var fill = darkSkin ? new Color(0.22f, 0.225f, 0.23f, 1f) : new Color(0.70f, 0.71f, 0.72f, 1f);
+                return new GUIStyle {
+                    normal = { background = CreateRoundedRectTexture(fill, true, !expanded) },
+                    border = new RectOffset(RoundedInspectorRadius, RoundedInspectorRadius, RoundedInspectorRadius, expanded ? 1 : RoundedInspectorRadius),
+                    margin = new RectOffset(0, 0, 0, 0),
+                    padding = new RectOffset(0, 0, 0, 0)
+                };
+            }
+
+            internal static Vector3[] GetRoundedRectBorderPoints(Rect rect)
+            {
+                var radius = Mathf.Min(RoundedInspectorRadius, rect.width * 0.5f, rect.height * 0.5f);
+                var points = new Vector3[(RoundedInspectorBorderSegments + 1) * 4 + 1];
+                var index = 0;
+                AddRoundedRectCorner(points, ref index, rect.xMax - radius, rect.yMin + radius, radius, -90f, 0f);
+                AddRoundedRectCorner(points, ref index, rect.xMax - radius, rect.yMax - radius, radius, 0f, 90f);
+                AddRoundedRectCorner(points, ref index, rect.xMin + radius, rect.yMax - radius, radius, 90f, 180f);
+                AddRoundedRectCorner(points, ref index, rect.xMin + radius, rect.yMin + radius, radius, 180f, 270f);
+                points[index] = points[0];
+                return points;
+            }
+
+            private static Texture2D CreateRoundedRectTexture(Color fill, bool roundTop, bool roundBottom)
+            {
+                var texture = new Texture2D(RoundedInspectorTextureSize, RoundedInspectorTextureSize, TextureFormat.RGBA32, false) {
+                    hideFlags = HideFlags.HideAndDontSave,
+                    filterMode = FilterMode.Point,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+
+                var clear = new Color(0f, 0f, 0f, 0f);
+                for (int y = 0; y < texture.height; y++) {
+                    for (int x = 0; x < texture.width; x++) {
+                        var inside = IsInsideRoundedRect(x + 0.5f, y + 0.5f, texture.width, texture.height, RoundedInspectorRadius, roundTop, roundBottom);
+                        if (!inside) {
+                            texture.SetPixel(x, y, clear);
+                            continue;
+                        }
+
+                        texture.SetPixel(x, y, fill);
+                    }
+                }
+
+                texture.Apply();
+                return texture;
+            }
+
+            private static void AddRoundedRectCorner(Vector3[] points, ref int index, float centerX, float centerY, float radius, float startDegrees, float endDegrees)
+            {
+                for (int i = 0; i <= RoundedInspectorBorderSegments; i++) {
+                    var angle = Mathf.Lerp(startDegrees, endDegrees, i / (float)RoundedInspectorBorderSegments) * Mathf.Deg2Rad;
+                    points[index++] = new Vector3(
+                        centerX + Mathf.Cos(angle) * radius,
+                        centerY + Mathf.Sin(angle) * radius,
+                        0f);
+                }
+            }
+
+            private static bool IsInsideRoundedRect(float x, float y, float width, float height, float radius, bool roundTop, bool roundBottom)
+            {
+                if (radius <= 0f) {
+                    return true;
+                }
+
+                if (roundBottom && x < radius && y < radius) {
+                    return IsInsideCorner(x, y, radius, radius, radius);
+                }
+
+                if (roundBottom && x > width - radius && y < radius) {
+                    return IsInsideCorner(x, y, width - radius, radius, radius);
+                }
+
+                if (roundTop && x < radius && y > height - radius) {
+                    return IsInsideCorner(x, y, radius, height - radius, radius);
+                }
+
+                if (roundTop && x > width - radius && y > height - radius) {
+                    return IsInsideCorner(x, y, width - radius, height - radius, radius);
+                }
+
+                return true;
+            }
+
+            private static bool IsInsideCorner(float x, float y, float centerX, float centerY, float radius)
+            {
+                var dx = x - centerX;
+                var dy = y - centerY;
+                return dx * dx + dy * dy <= radius * radius;
+            }
         }
 
         internal readonly struct SdfLengthPresentation
@@ -26,69 +194,6 @@ namespace Tripledot.CanvasKit.Editor
                 FieldPixels = showEffectiveInField ? effectivePixels : authoredPixels;
             }
         }
-        
-        internal const float SliderNumericFieldWidth = 50f;
-        internal const float SliderRowGap = 4f;
-        internal const float SliderUnitWidth = 52f;
-        private const float SliderValueGroupWidth = SliderNumericFieldWidth + SliderRowGap + SliderUnitWidth;
-        private const float CheckerSize = 4f;
-        private const int RoundedInspectorContentPadding = 8;
-        private const int RoundedInspectorTextureSize = 16;
-        private const int RoundedInspectorRadius = 5;
-        private const int RoundedInspectorBorderSegments = 4;
-
-        private static readonly GUIContent[] SdfLengthUnitLabels = {
-            L10n.TextContent("PX", "Edit this SDF length in pixels."),
-            L10n.TextContent("%", "Edit this SDF length as a percentage of available SDF padding.")
-        };
-
-        private static readonly Color CheckerLight = new Color(0.72f, 0.72f, 0.72f, 1f);
-        private static readonly Color CheckerDark = new Color(0.47f, 0.47f, 0.47f, 1f);
-
-        private static GUIStyle _subsectionStyle;
-        private static GUIStyle _swatchLabelStyle;
-        private static GUIStyle _roundedInspectorPanelStyleDark;
-        private static GUIStyle _roundedInspectorPanelStyleLight;
-        private static GUIStyle _roundedInspectorPanelHeaderStyleDark;
-        private static GUIStyle _roundedInspectorPanelHeaderStyleLight;
-        private static GUIStyle _roundedInspectorPanelCollapsedHeaderStyleDark;
-        private static GUIStyle _roundedInspectorPanelCollapsedHeaderStyleLight;
-        private static GUIStyle _roundedInspectorPanelContentStyle;
-        
-        private static Color SwatchBorder => 
-            EditorGUIUtility.isProSkin ? new Color(0.06f, 0.06f, 0.06f, 1f) : new Color(0.42f, 0.42f, 0.42f, 1f);
-
-        private static Color RoundedInspectorPanelBorder =>
-            EditorGUIUtility.isProSkin ? new Color(0.12f, 0.12f, 0.12f, 1f) : new Color(0.52f, 0.53f, 0.55f, 1f);
-
-        private static GUIStyle SubsectionStyle => _subsectionStyle ??= new GUIStyle(EditorStyles.boldLabel) {
-            padding = new RectOffset(0, 0, 0, 0)
-        };
-
-        private static GUIStyle SwatchLabelStyle => _swatchLabelStyle ??= new GUIStyle(EditorStyles.label) {
-            alignment = TextAnchor.MiddleLeft
-        };
-
-        internal static GUIStyle RoundedInspectorPanelStyle => EditorGUIUtility.isProSkin
-            ? _roundedInspectorPanelStyleDark ??= CreateRoundedInspectorPanelStyle(true)
-            : _roundedInspectorPanelStyleLight ??= CreateRoundedInspectorPanelStyle(false);
-
-        internal static GUIStyle GetRoundedInspectorPanelHeaderStyle(bool expanded)
-        {
-            if (expanded) {
-                return EditorGUIUtility.isProSkin
-                    ? _roundedInspectorPanelHeaderStyleDark ??= CreateRoundedInspectorPanelHeaderStyle(true, true)
-                    : _roundedInspectorPanelHeaderStyleLight ??= CreateRoundedInspectorPanelHeaderStyle(false, true);
-            }
-
-            return EditorGUIUtility.isProSkin
-                ? _roundedInspectorPanelCollapsedHeaderStyleDark ??= CreateRoundedInspectorPanelHeaderStyle(true, false)
-                : _roundedInspectorPanelCollapsedHeaderStyleLight ??= CreateRoundedInspectorPanelHeaderStyle(false, false);
-        }
-
-        internal static GUIStyle RoundedInspectorPanelContentStyle => _roundedInspectorPanelContentStyle ??= new GUIStyle {
-            padding = new RectOffset(RoundedInspectorContentPadding, RoundedInspectorContentPadding, 6, 8)
-        };
 
         public static void DrawSubsection(GUIContent title, bool addSeparator = true, Action<Rect> drawTrailingControls = null)
         {
@@ -99,7 +204,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
-            EditorGUI.LabelField(rect, title, SubsectionStyle);
+            EditorGUI.LabelField(rect, title, Styles.SubsectionStyle);
             drawTrailingControls?.Invoke(rect);
         }
 
@@ -108,14 +213,14 @@ namespace Tripledot.CanvasKit.Editor
             if (addSeparator) {
                 GUILayout.Space(5f);
                 var separatorRect = EditorGUILayout.GetControlRect(false, 1f);
-                separatorRect.xMin -= RoundedInspectorContentPadding;
-                separatorRect.xMax += RoundedInspectorContentPadding;
-                EditorGUI.DrawRect(separatorRect, RoundedInspectorPanelBorder);
+                separatorRect.xMin -= Styles.RoundedInspectorContentPadding;
+                separatorRect.xMax += Styles.RoundedInspectorContentPadding;
+                EditorGUI.DrawRect(separatorRect, Styles.RoundedInspectorPanelBorder);
                 GUILayout.Space(5f);
             }
 
             var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
-            EditorGUI.LabelField(rect, title, SubsectionStyle);
+            EditorGUI.LabelField(rect, title, Styles.SubsectionStyle);
             drawTrailingControls?.Invoke(rect);
         }
 
@@ -153,7 +258,7 @@ namespace Tripledot.CanvasKit.Editor
         private static void SdfLengthSlider(SerializedProperty pixelProperty, SerializedProperty unitProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels, bool showEffectiveValue)
         {
             var sliderPadding = float.IsPositiveInfinity(availablePadding) ? 0f : availablePadding;
-            var fallbackMax = TextMeshProUtility.GetEditorSliderMax(sliderPadding, pixelProperty.floatValue);
+            var fallbackMax = GetSdfSliderMax(sliderPadding, pixelProperty.floatValue);
             if (float.IsNegativeInfinity(minPixels)) {
                 minPixels = -fallbackMax;
             }
@@ -172,7 +277,7 @@ namespace Tripledot.CanvasKit.Editor
             var unit = (TextMeshProSdfLengthUnit)Mathf.Clamp(unitProperty.enumValueIndex, 0, 1);
             var percentBasis = availablePadding > 0f && !float.IsPositiveInfinity(availablePadding)
                 ? availablePadding
-                : Mathf.Max(TextMeshProUtility.DefaultEditorSliderPadding, Mathf.Abs(currentPixels), Mathf.Abs(minPixels), Mathf.Abs(maxPixels));
+                : Mathf.Max(Styles.DefaultSdfSliderPadding, Mathf.Abs(currentPixels), Mathf.Abs(minPixels), Mathf.Abs(maxPixels));
             
             var fieldValue = GetSdfLengthDisplayValue(presentation.FieldPixels, unit, percentBasis);
             var sliderValue = GetSdfLengthDisplayValue(presentation.EffectivePixels, unit, percentBasis);
@@ -189,7 +294,18 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        internal static void NormalizeSdfLengthRange(ref float minPixels, ref float maxPixels)
+        private static float GetSdfSliderMax(float availablePadding, float currentPixels)
+        {
+            var currentMagnitude = Mathf.Abs(currentPixels);
+
+            if (availablePadding > 0f) {
+                return Mathf.Max(availablePadding, currentMagnitude);
+            }
+
+            return Mathf.Max(Styles.DefaultSdfSliderPadding, currentMagnitude);
+        }
+
+        public static void NormalizeSdfLengthRange(ref float minPixels, ref float maxPixels)
         {
             if (float.IsNaN(minPixels)) {
                 minPixels = 0f;
@@ -204,13 +320,13 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        internal static SdfLengthPresentation GetConstrainedSdfLengthPresentation(float authoredPixels, float minPixels, float maxPixels)
+        public static SdfLengthPresentation GetConstrainedSdfLengthPresentation(float authoredPixels, float minPixels, float maxPixels)
         {
             NormalizeSdfLengthRange(ref minPixels, ref maxPixels);
             return new SdfLengthPresentation(authoredPixels, Mathf.Clamp(authoredPixels, minPixels, maxPixels), true);
         }
 
-        internal static float GetConstrainedSdfLengthEditedPixels(float displayValue, TextMeshProSdfLengthUnit unit, float percentBasis, float minPixels, float maxPixels)
+        public static float GetConstrainedSdfLengthEditedPixels(float displayValue, TextMeshProSdfLengthUnit unit, float percentBasis, float minPixels, float maxPixels)
         {
             NormalizeSdfLengthRange(ref minPixels, ref maxPixels);
             var pixels = unit == TextMeshProSdfLengthUnit.Percent ? TextMeshProUtility.PercentToPixels(displayValue, percentBasis) : displayValue;
@@ -234,37 +350,37 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        internal static float UnitToPercentDisplay(float value)
+        public static float UnitToPercentDisplay(float value)
         {
             return value * 100f;
         }
 
-        internal static float PercentDisplayToUnit(float value)
+        public static float PercentDisplayToUnit(float value)
         {
             return value / 100f;
         }
 
-        internal static float GetSdfLengthDisplayValue(float pixels, TextMeshProSdfLengthUnit unit, float percentBasis)
+        public static float GetSdfLengthDisplayValue(float pixels, TextMeshProSdfLengthUnit unit, float percentBasis)
         {
             return unit == TextMeshProSdfLengthUnit.Percent ? TextMeshProUtility.PixelsToPercent(pixels, percentBasis) : pixels;
         }
 
-        internal static void CalculateSliderValueRects(Rect controlRect, out Rect sliderRect, out Rect fieldRect)
+        public static void CalculateSliderValueRects(Rect controlRect, out Rect sliderRect, out Rect fieldRect)
         {
             CalculateSliderRowRects(controlRect, false, out sliderRect, out fieldRect, out _);
         }
 
-        internal static void CalculateSdfSliderValueRects(Rect controlRect, out Rect sliderRect, out Rect fieldRect, out Rect unitRect)
+        public static void CalculateSdfSliderValueRects(Rect controlRect, out Rect sliderRect, out Rect fieldRect, out Rect unitRect)
         {
             CalculateSliderRowRects(controlRect, true, out sliderRect, out fieldRect, out unitRect);
         }
 
-        internal static bool SliderValue(GUIContent label, ref float value, float min, float max, bool mixed)
+        public static bool SliderValue(GUIContent label, ref float value, float min, float max, bool mixed)
         {
             return DrawSliderValue(label, ref value, min, max, mixed);
         }
 
-        internal static bool ChildSliderValue(GUIContent label, ref float value, float min, float max, bool mixed)
+        public static bool ChildSliderValue(GUIContent label, ref float value, float min, float max, bool mixed)
         {
             return DrawSliderValue(label, ref value, min, max, mixed);
         }
@@ -280,7 +396,7 @@ namespace Tripledot.CanvasKit.Editor
             DrawSwatchBorder(rect);
         }
 
-        internal static void DrawPaintOutlineSwatch(Rect rect, CanvasPaint paint, Color fallback)
+        public static void DrawPaintOutlineSwatch(Rect rect, CanvasPaint paint, Color fallback)
         {
             if (Event.current.type != EventType.Repaint) {
                 return;
@@ -343,7 +459,7 @@ namespace Tripledot.CanvasKit.Editor
             DrawSwatchBorder(rect);
         }
 
-        internal static void DrawTransparentSwatch(Rect rect)
+        public static void DrawTransparentSwatch(Rect rect)
         {
             DrawCheckerboard(rect);
             DrawSwatchBorder(rect);
@@ -360,32 +476,10 @@ namespace Tripledot.CanvasKit.Editor
 
         public static void DrawSwatchLabel(Rect rect, GUIContent content)
         {
-            GUI.Label(rect, content, SwatchLabelStyle);
+            GUI.Label(rect, content, Styles.SwatchLabelStyle);
         }
 
-        private static GUIStyle CreateRoundedInspectorPanelStyle(bool darkSkin)
-        {
-            var fill = darkSkin ? new Color(0.20f, 0.20f, 0.20f, 1f) : new Color(0.76f, 0.76f, 0.76f, 1f);
-            return new GUIStyle {
-                normal = { background = CreateRoundedRectTexture(fill, true, true) },
-                border = new RectOffset(RoundedInspectorRadius, RoundedInspectorRadius, RoundedInspectorRadius, RoundedInspectorRadius),
-                margin = new RectOffset(14, 8, 0, 6),
-                padding = new RectOffset(0, 0, 0, 0)
-            };
-        }
-
-        private static GUIStyle CreateRoundedInspectorPanelHeaderStyle(bool darkSkin, bool expanded)
-        {
-            var fill = darkSkin ? new Color(0.22f, 0.225f, 0.23f, 1f) : new Color(0.70f, 0.71f, 0.72f, 1f);
-            return new GUIStyle {
-                normal = { background = CreateRoundedRectTexture(fill, true, !expanded) },
-                border = new RectOffset(RoundedInspectorRadius, RoundedInspectorRadius, RoundedInspectorRadius, expanded ? 1 : RoundedInspectorRadius),
-                margin = new RectOffset(0, 0, 0, 0),
-                padding = new RectOffset(0, 0, 0, 0)
-            };
-        }
-
-        internal static void DrawRoundedInspectorPanelBorder(Rect rect)
+        public static void DrawRoundedInspectorPanelBorder(Rect rect)
         {
             if (Event.current.type != EventType.Repaint) {
                 return;
@@ -398,13 +492,13 @@ namespace Tripledot.CanvasKit.Editor
 
             Handles.BeginGUI();
             var previousColor = Handles.color;
-            Handles.color = RoundedInspectorPanelBorder;
-            Handles.DrawAAPolyLine(2f, GetRoundedRectBorderPoints(rect, RoundedInspectorRadius));
+            Handles.color = Styles.RoundedInspectorPanelBorder;
+            Handles.DrawAAPolyLine(2f, Styles.GetRoundedRectBorderPoints(rect));
             Handles.color = previousColor;
             Handles.EndGUI();
         }
 
-        internal static void DrawRoundedInspectorHeaderSeparator(Rect rect)
+        public static void DrawRoundedInspectorHeaderSeparator(Rect rect)
         {
             if (Event.current.type != EventType.Repaint) {
                 return;
@@ -415,88 +509,7 @@ namespace Tripledot.CanvasKit.Editor
                 Mathf.Floor(rect.yMax) - 1f,
                 Mathf.Max(0f, Mathf.Floor(rect.width) - 2f),
                 1f);
-            EditorGUI.DrawRect(separatorRect, RoundedInspectorPanelBorder);
-        }
-
-        private static Texture2D CreateRoundedRectTexture(Color fill, bool roundTop, bool roundBottom)
-        {
-            var texture = new Texture2D(RoundedInspectorTextureSize, RoundedInspectorTextureSize, TextureFormat.RGBA32, false) {
-                hideFlags = HideFlags.HideAndDontSave,
-                filterMode = FilterMode.Point,
-                wrapMode = TextureWrapMode.Clamp
-            };
-
-            var clear = new Color(0f, 0f, 0f, 0f);
-            for (int y = 0; y < texture.height; y++) {
-                for (int x = 0; x < texture.width; x++) {
-                    var inside = IsInsideRoundedRect(x + 0.5f, y + 0.5f, texture.width, texture.height, RoundedInspectorRadius, roundTop, roundBottom);
-                    if (!inside) {
-                        texture.SetPixel(x, y, clear);
-                        continue;
-                    }
-
-                    texture.SetPixel(x, y, fill);
-                }
-            }
-
-            texture.Apply();
-            return texture;
-        }
-
-        private static Vector3[] GetRoundedRectBorderPoints(Rect rect, float radius)
-        {
-            radius = Mathf.Min(radius, rect.width * 0.5f, rect.height * 0.5f);
-            var points = new Vector3[(RoundedInspectorBorderSegments + 1) * 4 + 1];
-            var index = 0;
-            AddRoundedRectCorner(points, ref index, rect.xMax - radius, rect.yMin + radius, radius, -90f, 0f);
-            AddRoundedRectCorner(points, ref index, rect.xMax - radius, rect.yMax - radius, radius, 0f, 90f);
-            AddRoundedRectCorner(points, ref index, rect.xMin + radius, rect.yMax - radius, radius, 90f, 180f);
-            AddRoundedRectCorner(points, ref index, rect.xMin + radius, rect.yMin + radius, radius, 180f, 270f);
-            points[index] = points[0];
-            return points;
-        }
-
-        private static void AddRoundedRectCorner(Vector3[] points, ref int index, float centerX, float centerY, float radius, float startDegrees, float endDegrees)
-        {
-            for (int i = 0; i <= RoundedInspectorBorderSegments; i++) {
-                var angle = Mathf.Lerp(startDegrees, endDegrees, i / (float)RoundedInspectorBorderSegments) * Mathf.Deg2Rad;
-                points[index++] = new Vector3(
-                    centerX + Mathf.Cos(angle) * radius,
-                    centerY + Mathf.Sin(angle) * radius,
-                    0f);
-            }
-        }
-
-        private static bool IsInsideRoundedRect(float x, float y, float width, float height, float radius, bool roundTop, bool roundBottom)
-        {
-            if (radius <= 0f) {
-                return true;
-            }
-
-            if (roundBottom && x < radius && y < radius) {
-                return IsInsideCorner(x, y, radius, radius, radius);
-            }
-
-            if (roundBottom && x > width - radius && y < radius) {
-                return IsInsideCorner(x, y, width - radius, radius, radius);
-            }
-
-            if (roundTop && x < radius && y > height - radius) {
-                return IsInsideCorner(x, y, radius, height - radius, radius);
-            }
-
-            if (roundTop && x > width - radius && y > height - radius) {
-                return IsInsideCorner(x, y, width - radius, height - radius, radius);
-            }
-
-            return true;
-        }
-
-        private static bool IsInsideCorner(float x, float y, float centerX, float centerY, float radius)
-        {
-            var dx = x - centerX;
-            var dy = y - centerY;
-            return dx * dx + dy * dy <= radius * radius;
+            EditorGUI.DrawRect(separatorRect, Styles.RoundedInspectorPanelBorder);
         }
 
         private static bool DrawSliderValue(GUIContent label, ref float value, float min, float max, bool mixed)
@@ -564,7 +577,7 @@ namespace Tripledot.CanvasKit.Editor
 
                 EditorGUI.showMixedValue = unitMixed;
                 EditorGUI.BeginChangeCheck();
-                var unitIndex = GUI.Toolbar(unitRect, (int)unit, SdfLengthUnitLabels, EditorStyles.miniButton);
+                var unitIndex = GUI.Toolbar(unitRect, (int)unit, Styles.SdfLengthUnitLabels, EditorStyles.miniButton);
                 var unitChanged = EditorGUI.EndChangeCheck();
                 EditorGUI.showMixedValue = false;
 
@@ -581,13 +594,13 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void CalculateSliderRowRects(Rect controlRect, bool includeUnit, out Rect sliderRect, out Rect fieldRect, out Rect unitRect)
         {
-            var valueGroupWidth = includeUnit ? SliderValueGroupWidth : SliderNumericFieldWidth;
+            var valueGroupWidth = includeUnit ? Styles.SliderValueGroupWidth : Styles.SliderNumericFieldWidth;
             var valueGroupRect = new Rect(controlRect.xMax - valueGroupWidth, controlRect.y, valueGroupWidth, controlRect.height);
             if (includeUnit) {
-                var fieldWidth = Mathf.Min(SliderNumericFieldWidth, valueGroupWidth);
+                var fieldWidth = Mathf.Min(Styles.SliderNumericFieldWidth, valueGroupWidth);
                 var remainingWidth = Mathf.Max(0f, valueGroupWidth - fieldWidth);
-                var unitWidth = remainingWidth > SliderRowGap ? Mathf.Min(SliderUnitWidth, remainingWidth - SliderRowGap) : 0f;
-                var unitGap = unitWidth > 0f ? SliderRowGap : 0f;
+                var unitWidth = remainingWidth > Styles.SliderRowGap ? Mathf.Min(Styles.SliderUnitWidth, remainingWidth - Styles.SliderRowGap) : 0f;
+                var unitGap = unitWidth > 0f ? Styles.SliderRowGap : 0f;
                 unitRect = new Rect(valueGroupRect.xMax - unitWidth, controlRect.y, unitWidth, controlRect.height);
                 fieldRect = new Rect(unitRect.xMin - unitGap - fieldWidth, controlRect.y, fieldWidth, controlRect.height);
             } else {
@@ -595,7 +608,7 @@ namespace Tripledot.CanvasKit.Editor
                 fieldRect = valueGroupRect;
             }
 
-            var sliderWidth = Mathf.Max(0f, valueGroupRect.xMin - SliderRowGap - controlRect.x);
+            var sliderWidth = Mathf.Max(0f, valueGroupRect.xMin - Styles.SliderRowGap - controlRect.x);
             sliderRect = new Rect(controlRect.x, controlRect.y + 3f, sliderWidth, Mathf.Max(0f, controlRect.height - 6f));
         }
 
@@ -651,16 +664,16 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void DrawCheckerboard(Rect rect)
         {
-            var columns = Mathf.Max(1, Mathf.CeilToInt(rect.width / CheckerSize));
-            var rows = Mathf.Max(1, Mathf.CeilToInt(rect.height / CheckerSize));
+            var columns = Mathf.Max(1, Mathf.CeilToInt(rect.width / Styles.CheckerSize));
+            var rows = Mathf.Max(1, Mathf.CeilToInt(rect.height / Styles.CheckerSize));
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < columns; x++) {
                     var tile = new Rect(
-                        rect.x + x * CheckerSize,
-                        rect.y + y * CheckerSize,
-                        Mathf.Min(CheckerSize, rect.xMax - rect.x - x * CheckerSize),
-                        Mathf.Min(CheckerSize, rect.yMax - rect.y - y * CheckerSize));
-                    EditorGUI.DrawRect(tile, ((x + y) & 1) == 0 ? CheckerLight : CheckerDark);
+                        rect.x + x * Styles.CheckerSize,
+                        rect.y + y * Styles.CheckerSize,
+                        Mathf.Min(Styles.CheckerSize, rect.xMax - rect.x - x * Styles.CheckerSize),
+                        Mathf.Min(Styles.CheckerSize, rect.yMax - rect.y - y * Styles.CheckerSize));
+                    EditorGUI.DrawRect(tile, ((x + y) & 1) == 0 ? Styles.CheckerLight : Styles.CheckerDark);
                 }
             }
         }
@@ -677,10 +690,10 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void DrawSwatchBorder(Rect rect)
         {
-            EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 1f), SwatchBorder);
-            EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), SwatchBorder);
-            EditorGUI.DrawRect(new Rect(rect.x, rect.y, 1f, rect.height), SwatchBorder);
-            EditorGUI.DrawRect(new Rect(rect.xMax - 1f, rect.y, 1f, rect.height), SwatchBorder);
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 1f), Styles.SwatchBorder);
+            EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), Styles.SwatchBorder);
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, 1f, rect.height), Styles.SwatchBorder);
+            EditorGUI.DrawRect(new Rect(rect.xMax - 1f, rect.y, 1f, rect.height), Styles.SwatchBorder);
         }
     }
 }

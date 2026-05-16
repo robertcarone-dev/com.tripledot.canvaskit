@@ -7,6 +7,18 @@ namespace Tripledot.CanvasKit.Editor
 {
     internal static class CanvasGradientSceneView
     {
+        public readonly struct DrawResult
+        {
+            public readonly bool Changed;
+            public readonly int LayerIndex;
+
+            public DrawResult(bool changed, int layerIndex)
+            {
+                Changed = changed;
+                LayerIndex = layerIndex;
+            }
+        }
+
         private const float HandleSize = 0.07f;
         private const float CenterHandleSize = 0.085f;
         private const int EllipseSegments = 72;
@@ -24,8 +36,9 @@ namespace Tripledot.CanvasKit.Editor
         private static Object _activeSerializedTarget;
         private static Object _activeSceneTarget;
         private static string _activePropertyPath;
+        private static int _activeLayerIndex = -1;
 
-        internal static bool IsEditingPaint(SerializedProperty paint, Object sceneTarget)
+        public static bool IsEditingPaint(SerializedProperty paint, Object sceneTarget)
         {
             return paint != null
                 && sceneTarget != null
@@ -34,25 +47,27 @@ namespace Tripledot.CanvasKit.Editor
                 && _activePropertyPath == paint.propertyPath;
         }
 
-        internal static void SetEditingPaint(SerializedProperty paint, Object sceneTarget)
+        public static void SetEditingPaint(SerializedProperty paint, Object sceneTarget, int layerIndex = -1)
         {
             _activeSerializedTarget = paint.serializedObject.targetObject;
             _activeSceneTarget = sceneTarget;
             _activePropertyPath = paint.propertyPath;
+            _activeLayerIndex = layerIndex;
         }
 
-        internal static void ClearEditingPaint()
+        public static void ClearEditingPaint()
         {
             _activeSerializedTarget = null;
             _activeSceneTarget = null;
             _activePropertyPath = null;
+            _activeLayerIndex = -1;
             ClearCache();
         }
 
-        internal static bool Draw(Object sceneTarget)
+        public static DrawResult Draw(Object sceneTarget)
         {
-            if (!TryGetEditingPaint(sceneTarget, out var serializedTarget, out var propertyPath)) {
-                return false;
+            if (!TryGetEditingPaint(sceneTarget, out var serializedTarget, out var propertyPath, out var layerIndex)) {
+                return default;
             }
 
             var serializedObject = GetSerializedObject(serializedTarget, propertyPath);
@@ -62,29 +77,29 @@ namespace Tripledot.CanvasKit.Editor
             if (paintProperty == null) {
                 ClearEditingPaint();
                 SceneView.RepaintAll();
-                return false;
+                return default;
             }
 
             var paint = new SerializedCanvasPaint(paintProperty);
             if (!CanvasPaintEditorUtility.IsEditableGradientPaint(paint, out var paintType)) {
                 ClearEditingPaint();
                 SceneView.RepaintAll();
-                return false;
+                return default;
             }
 
             if (sceneTarget is not Component component) {
-                return false;
+                return default;
             }
 
             var text = component.GetComponent<TextMeshProUGUI>();
             if (text == null || text.rectTransform == null) {
-                return false;
+                return default;
             }
 
             var rectTransform = text.rectTransform;
             var paintBounds = GetPaintBounds(text);
             if (paintBounds.z <= 0f || paintBounds.w <= 0f) {
-                return false;
+                return default;
             }
 
             var transform = paint.Transform;
@@ -101,18 +116,28 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             if (!changed) {
-                return false;
+                return default;
             }
 
             Undo.RecordObject(serializedTarget, "Edit Gradient Transform");
             serializedObject.ApplyModifiedProperties();
             EditorUtility.SetDirty(serializedTarget);
             if (serializedTarget is TextMeshProLayerPreset preset) {
-                preset.NotifyChanged();
+                preset.NotifyChanged(TextMeshProLayerStack.MaterialDirtyFlags, layerIndex);
             }
 
             SceneView.RepaintAll();
-            return true;
+            return new DrawResult(true, layerIndex);
+        }
+
+        public static bool TryGetEditingLayerIndexForTests(Object sceneTarget, out int layerIndex)
+        {
+            if (TryGetEditingPaint(sceneTarget, out _, out _, out layerIndex)) {
+                return true;
+            }
+
+            layerIndex = -1;
+            return false;
         }
 
         private static bool DrawLinear(RectTransform rectTransform, Vector4 paintBounds, SerializedProperty center, SerializedProperty offset,
@@ -294,10 +319,11 @@ namespace Tripledot.CanvasKit.Editor
             _cachedForcedMeshUpdate = false;
         }
 
-        private static bool TryGetEditingPaint(Object sceneTarget, out Object serializedTarget, out string propertyPath)
+        private static bool TryGetEditingPaint(Object sceneTarget, out Object serializedTarget, out string propertyPath, out int layerIndex)
         {
             serializedTarget = null;
             propertyPath = null;
+            layerIndex = -1;
 
             if (sceneTarget == null ||
                 _activeSceneTarget != sceneTarget ||
@@ -308,6 +334,7 @@ namespace Tripledot.CanvasKit.Editor
 
             serializedTarget = _activeSerializedTarget;
             propertyPath = _activePropertyPath;
+            layerIndex = _activeLayerIndex;
             return true;
         }
 

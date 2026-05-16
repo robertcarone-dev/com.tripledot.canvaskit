@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Animations;
 
 namespace Tripledot.CanvasKit
 {
@@ -13,13 +14,23 @@ namespace Tripledot.CanvasKit
     [Serializable]
     public struct TextMeshProStroke : IEquatable<TextMeshProStroke>
     {
+        [NotKeyable]
         public bool Enabled;
         public CanvasPaint Paint;
+        
+        [NotKeyable]
         public TextMeshProStrokePosition Position;
+        [NotKeyable]
         public float Width;
+        
+        [NotKeyable]
         public TextMeshProSdfLengthUnit WidthUnit;
+        [NotKeyable]
         public float Feather;
+        
+        [NotKeyable]
         public TextMeshProSdfLengthUnit FeatherUnit;
+        [NotKeyable]
         public Vector2 Offset;
 
         public static TextMeshProStroke Default => new TextMeshProStroke {

@@ -8,15 +8,18 @@ namespace Tripledot.CanvasKit
     internal readonly struct TextMeshProLayerMaterialCacheKey : IEquatable<TextMeshProLayerMaterialCacheKey>
     {
         public readonly TextMeshProLayerPreset Preset;
+        public readonly int PresetVersion;
         public readonly int LayerIndex;
         public readonly TextMeshProLayerMaterialContext MaterialContext;
 
         public TextMeshProLayerMaterialCacheKey(
             TextMeshProLayerPreset preset,
+            int presetVersion,
             int layerIndex,
             TextMeshProLayerMaterialContext materialContext)
         {
             Preset = preset;
+            PresetVersion = presetVersion;
             LayerIndex = layerIndex;
             MaterialContext = materialContext;
         }
@@ -53,6 +56,11 @@ namespace Tripledot.CanvasKit
         {
             if (Entries.TryGetValue(key, out var entry)) {
                 if (entry.Material != null) {
+                    if (entry.PresetVersion != key.PresetVersion) {
+                        layer.ApplyMaterial(entry.Material, context);
+                        entry.PresetVersion = key.PresetVersion;
+                    }
+
                     entry.ReferenceCount++;
                     return entry;
                 }
@@ -86,14 +94,16 @@ namespace Tripledot.CanvasKit
 
         public sealed class Entry
         {
-            internal readonly TextMeshProLayerMaterialCacheKey Key;
-            internal readonly Material Material;
-            internal int ReferenceCount;
+            public readonly TextMeshProLayerMaterialCacheKey Key;
+            public readonly Material Material;
+            public int PresetVersion;
+            public int ReferenceCount;
 
-            internal Entry(TextMeshProLayerMaterialCacheKey key, Material material)
+            public Entry(TextMeshProLayerMaterialCacheKey key, Material material)
             {
                 Key = key;
                 Material = material;
+                PresetVersion = key.PresetVersion;
                 ReferenceCount = 1;
             }
         }
