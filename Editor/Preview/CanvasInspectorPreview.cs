@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityObject = UnityEngine.Object;
 
 namespace Tripledot.CanvasKit.Editor
 {
@@ -17,12 +18,12 @@ namespace Tripledot.CanvasKit.Editor
             EditorApplication.projectChanged += ClearPreviewCache;
         }
 
-        internal static bool CanPreview(UnityEngine.Object target)
+        public static bool CanPreview(UnityObject target)
         {
             return TryGetState(target, out _);
         }
 
-        internal static bool CanPreview(UnityEngine.Object[] targets)
+        public static bool CanPreview(UnityObject[] targets)
         {
             if (targets == null || targets.Length == 0) {
                 return false;
@@ -37,7 +38,7 @@ namespace Tripledot.CanvasKit.Editor
             return true;
         }
 
-        internal static bool TryGetPreviewTarget(UnityEngine.Object target, UnityEngine.Object[] targets, out GameObject prefab)
+        public static bool TryGetPreviewTarget(UnityObject target, UnityObject[] targets, out GameObject prefab)
         {
             if (targets is { Length: > 1 }) {
                 if (!CanPreview(targets)) {
@@ -63,22 +64,22 @@ namespace Tripledot.CanvasKit.Editor
             return false;
         }
 
-        internal static bool UsesScreenSpacePreset(UnityEngine.Object target)
+        public static bool UsesScreenSpacePreset(UnityObject target)
         {
             return TryGetState(target, out var state) && CanvasPreviewRoleResolver.UsesPreset(state.Role);
         }
 
-        internal static bool HasPreviewGUI(UnityEngine.Object target, UnityEngine.Object[] targets, bool baseHasPreview)
+        public static bool HasPreviewGUI(UnityObject target, UnityObject[] targets, bool baseHasPreview)
         {
             return baseHasPreview || CanPreview(targets) || CanPreview(target);
         }
 
-        internal static GUIContent GetPreviewTitle(UnityEngine.Object target, UnityEngine.Object[] targets, GUIContent baseTitle)
+        public static GUIContent GetPreviewTitle(UnityObject target, UnityObject[] targets, GUIContent baseTitle)
         {
             return TryGetPreviewTarget(target, targets, out _) ? PreviewTitle : baseTitle;
         }
 
-        internal static string GetInfoString(UnityEngine.Object target, UnityEngine.Object[] targets, int selectedSizeIndex, string baseInfoString)
+        public static string GetInfoString(UnityObject target, UnityObject[] targets, int selectedSizeIndex, string baseInfoString)
         {
             if (!TryGetPreviewTarget(target, targets, out var prefab) || !TryGetState(prefab, out var state)) {
                 return baseInfoString;
@@ -90,12 +91,7 @@ namespace Tripledot.CanvasKit.Editor
                 : "Canvas Preview - " + roleName;
         }
 
-        internal static Texture2D RenderStaticPreview(
-            UnityEngine.Object target,
-            string assetPath,
-            UnityEngine.Object[] subAssets,
-            int width,
-            int height)
+        public static Texture2D RenderStaticPreview(UnityObject target, string assetPath, UnityObject[] subAssets, int width, int height)
         {
             if (target is not GameObject prefabAsset || !CanPreview(prefabAsset)) {
                 return null;
@@ -117,7 +113,7 @@ namespace Tripledot.CanvasKit.Editor
             return result.Texture;
         }
 
-        internal static void OnPreviewSettings(UnityEngine.Object target, UnityEngine.Object[] targets, ref int selectedSizeIndex, Action releasePreview)
+        public static void OnPreviewSettings(UnityObject target, UnityObject[] targets, ref int selectedSizeIndex, Action releasePreview)
         {
             if (!TryGetPreviewTarget(target, targets, out var prefab)
                 || !TryGetState(prefab, out var state)
@@ -138,9 +134,9 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        internal static bool OnPreviewGUI(
-            UnityEngine.Object target,
-            UnityEngine.Object[] targets,
+        public static bool OnPreviewGUI(
+            UnityObject target,
+            UnityObject[] targets,
             Rect rect,
             GUIStyle background,
             CanvasPreviewCache cache,
@@ -166,13 +162,13 @@ namespace Tripledot.CanvasKit.Editor
             return true;
         }
 
-        internal static void ClearPreviewCache()
+        public static void ClearPreviewCache()
         {
             StateCache.Clear();
             ProjectPreviewCache.Clear();
         }
 
-        private static bool TryGetState(UnityEngine.Object target, out PreviewState state)
+        private static bool TryGetState(UnityObject target, out PreviewState state)
         {
             state = PreviewState.Empty;
             if (target is not GameObject gameObject) {
@@ -232,25 +228,21 @@ namespace Tripledot.CanvasKit.Editor
 
         private readonly struct PreviewState
         {
-            internal static readonly PreviewState Empty = new PreviewState(
+            public static readonly PreviewState Empty = new PreviewState(
                 false,
                 CanvasPreviewRole.Element,
                 CanvasPreviewTargetKind.None,
                 RenderMode.WorldSpace,
                 0);
 
-            internal readonly bool CanPreview;
-            internal readonly CanvasPreviewRole Role;
-            internal readonly CanvasPreviewTargetKind TargetKind;
-            internal readonly RenderMode SourceRenderMode;
-            internal readonly int SettingsRevision;
+            public readonly bool CanPreview;
+            public readonly CanvasPreviewRole Role;
+            public readonly CanvasPreviewTargetKind TargetKind;
+            public readonly RenderMode SourceRenderMode;
+            public readonly int SettingsRevision;
 
-            internal PreviewState(
-                bool canPreview,
-                CanvasPreviewRole role,
-                CanvasPreviewTargetKind targetKind,
-                RenderMode sourceRenderMode,
-                int settingsRevision)
+            public PreviewState(
+                bool canPreview, CanvasPreviewRole role, CanvasPreviewTargetKind targetKind, RenderMode sourceRenderMode, int settingsRevision)
             {
                 CanPreview = canPreview;
                 Role = role;
@@ -270,12 +262,7 @@ namespace Tripledot.CanvasKit.Editor
             private readonly CanvasPreviewEnvironmentKey environmentKey;
 
             private StaticPreviewKey(
-                string assetPath,
-                Hash128 assetHash,
-                int width,
-                int height,
-                int settingsRevision,
-                CanvasPreviewEnvironmentKey environmentKey)
+                string assetPath, Hash128 assetHash, int width, int height, int settingsRevision, CanvasPreviewEnvironmentKey environmentKey)
             {
                 this.assetPath = assetPath;
                 this.assetHash = assetHash;
@@ -285,7 +272,7 @@ namespace Tripledot.CanvasKit.Editor
                 this.environmentKey = environmentKey;
             }
 
-            internal static StaticPreviewKey Create(GameObject prefabAsset, int width, int height)
+            public static StaticPreviewKey Create(GameObject prefabAsset, int width, int height)
             {
                 var assetPath = AssetDatabase.GetAssetPath(prefabAsset);
                 var assetHash = !string.IsNullOrEmpty(assetPath) ? AssetDatabase.GetAssetDependencyHash(assetPath) : default;
@@ -327,12 +314,12 @@ namespace Tripledot.CanvasKit.Editor
             private readonly Dictionary<StaticPreviewKey, LinkedListNode<Entry>> entries = new Dictionary<StaticPreviewKey, LinkedListNode<Entry>>();
             private readonly LinkedList<Entry> usage = new LinkedList<Entry>();
 
-            internal StaticPreviewCache(int capacity)
+            public StaticPreviewCache(int capacity)
             {
                 this.capacity = Mathf.Max(1, capacity);
             }
 
-            internal bool TryGet(StaticPreviewKey key, out Texture2D texture)
+            public bool TryGet(StaticPreviewKey key, out Texture2D texture)
             {
                 if (entries.TryGetValue(key, out var node) && node.Value.Texture != null) {
                     usage.Remove(node);
@@ -345,7 +332,7 @@ namespace Tripledot.CanvasKit.Editor
                 return false;
             }
 
-            internal void Add(StaticPreviewKey key, Texture2D texture)
+            public void Add(StaticPreviewKey key, Texture2D texture)
             {
                 if (texture == null) {
                     return;
@@ -365,7 +352,7 @@ namespace Tripledot.CanvasKit.Editor
                 Trim();
             }
 
-            internal void Clear()
+            public void Clear()
             {
                 for (var node = usage.First; node != null; node = node.Next) {
                     DestroyTexture(node.Value.Texture);
@@ -388,7 +375,7 @@ namespace Tripledot.CanvasKit.Editor
             private static void DestroyTexture(Texture2D texture)
             {
                 if (texture != null) {
-                    UnityEngine.Object.DestroyImmediate(texture);
+                    UnityObject.DestroyImmediate(texture);
                 }
             }
 
@@ -419,12 +406,8 @@ namespace Tripledot.CanvasKit.Editor
         private int previewSettingsRevision;
         private CanvasPreviewEnvironmentKey previewEnvironmentKey;
 
-        internal Texture2D EnsurePreviewTexture(
-            GameObject prefabAsset,
-            CanvasPreviewSize previewSize,
-            int selectedSizeIndex,
-            int width,
-            int height)
+        public Texture2D EnsurePreviewTexture(
+            GameObject prefabAsset, CanvasPreviewSize previewSize, int selectedSizeIndex, int width, int height)
         {
             if (width <= 0 || height <= 0 || prefabAsset == null) {
                 ReleasePreviewTexture();
@@ -436,6 +419,7 @@ namespace Tripledot.CanvasKit.Editor
             var settingsRevision = CanvasPreviewSettings.Revision;
             var environmentKey = CanvasPreviewEnvironment.CreateCacheKey();
             var renderSize = GetRenderSize(previewSize);
+            
             if (previewTexture != null
                 && previewWidth == renderSize.x
                 && previewHeight == renderSize.y
@@ -462,13 +446,14 @@ namespace Tripledot.CanvasKit.Editor
             previewAssetPath = assetPath;
             previewSettingsRevision = settingsRevision;
             previewEnvironmentKey = environmentKey;
+            
             return previewTexture;
         }
 
-        internal void ReleasePreviewTexture()
+        public void ReleasePreviewTexture()
         {
             if (previewTexture != null) {
-                UnityEngine.Object.DestroyImmediate(previewTexture);
+                UnityObject.DestroyImmediate(previewTexture);
             }
 
             previewTexture = null;
@@ -487,6 +472,7 @@ namespace Tripledot.CanvasKit.Editor
             var height = Mathf.Max(1, previewSize.Height);
             var max = Mathf.Max(1, MaxPreviewTextureSize);
             var scale = Mathf.Min(1f, max / (float)Mathf.Max(width, height));
+            
             return new Vector2Int(
                 Mathf.Max(1, Mathf.RoundToInt(width * scale)),
                 Mathf.Max(1, Mathf.RoundToInt(height * scale)));

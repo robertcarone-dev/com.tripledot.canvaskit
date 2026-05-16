@@ -28,10 +28,8 @@ namespace Tripledot.CanvasKit.Editor
             var renderTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
             var previousActiveRT = RenderTexture.active;
             
-            var cameraObject = new GameObject("TextMeshPro Layer Preset Preview Camera") {
-                hideFlags = HideFlags.HideAndDontSave
-            };
-            var root = new GameObject("TextMeshPro Layer Preset Preview") {
+            var cameraObject = new GameObject("Preset Preview Camera") { hideFlags = HideFlags.HideAndDontSave };
+            var root = new GameObject("Preset Preview") {
                 hideFlags = HideFlags.HideAndDontSave,
                 layer = PreviewLayer
             };
@@ -54,12 +52,13 @@ namespace Tripledot.CanvasKit.Editor
                 var canvas = root.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.WorldSpace;
                 canvas.worldCamera = camera;
+                
                 var canvasRect = root.GetComponent<RectTransform>();
                 canvasRect.sizeDelta = new Vector2(width, height);
 
                 var text = CreateStackPreview(root.transform, preset, height);
-
                 text.ForceMeshUpdate();
+                
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
 
@@ -103,6 +102,7 @@ namespace Tripledot.CanvasKit.Editor
                 layer = PreviewLayer
             };
             textObject.transform.SetParent(parent, false);
+            
             var textRect = textObject.AddComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
@@ -119,6 +119,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var stack = textObject.AddComponent<TextMeshProLayerStack>();
             stack.Preset = preset;
+            
             return text;
         }
     }

@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using UnityEditor;
-using UnityEditorInternal;
 using UnityEngine;
 
 namespace Tripledot.CanvasKit.Editor
@@ -16,18 +14,6 @@ namespace Tripledot.CanvasKit.Editor
             Preview = 1 << 0,
         }
 
-        private readonly struct PendingLayerDirty
-        {
-            public readonly TextMeshProLayerStack.DirtyFlags Flags;
-            public readonly int LayerIndex;
-
-            public PendingLayerDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
-            {
-                Flags = flags;
-                LayerIndex = layerIndex;
-            }
-        }
-
         private static class Styles
         {
             public static readonly GUIContent FontAsset = L10n.TextContent("Font Asset", "TMP font asset this layer preset was authored for.");
@@ -38,22 +24,21 @@ namespace Tripledot.CanvasKit.Editor
         private SerializedProperty fontAsset;
         private SerializedProperty previewText;
         private SerializedProperty layers;
-        private ReorderableList layerList;
         private Texture2D previewTexture;
         private int previewWidth;
         private int previewHeight;
         private int previewVersion;
         private PendingDirtyScopes pendingPreviewDirtyScopes;
-        private TextMeshProLayerStack.DirtyFlags pendingDirtyFlags;
-        private readonly List<PendingLayerDirty> pendingLayerDirties = new List<PendingLayerDirty>();
-        private readonly TextMeshProLayerInspectorGUI.LayerInspectorDirtyState layerDirtyState = new TextMeshProLayerInspectorGUI.LayerInspectorDirtyState();
+        private TextMeshProLayerInspector layerInspector;
 
+        private TextMeshProLayerPreset Preset => (TextMeshProLayerPreset)target;
+        
         private void OnEnable()
         {
             fontAsset = serializedObject.FindProperty("fontAsset");
             previewText = serializedObject.FindProperty("previewText");
             layers = serializedObject.FindProperty("layers");
-            layerList = TextMeshProLayerInspectorGUI.CreateLayerList(layers, MarkPresetCompositionDirty, true);
+            layerInspector = new TextMeshProLayerInspector(Preset, serializedObject, layers);
         }
 
         private void OnDisable()
@@ -67,7 +52,7 @@ namespace Tripledot.CanvasKit.Editor
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(fontAsset, Styles.FontAsset);
             if (EditorGUI.EndChangeCheck()) {
-                QueuePresetDirty(TextMeshProLayerStack.MaterialDirtyFlags);
+                layerInspector.QueuePresetDirty(TextMeshProLayerStack.MaterialDirtyFlags);
             }
 
             EditorGUI.BeginChangeCheck();
@@ -80,16 +65,11 @@ namespace Tripledot.CanvasKit.Editor
                 EditorGUILayout.HelpBox(Styles.MissingPreviewFont.text, MessageType.Info);
             }
             EditorGUILayout.Space();
-            TextMeshProLayerInspectorGUI.DoLayerList(layerList);
-            
-            layerDirtyState.Clear();
-            TextMeshProLayerInspectorGUI.DrawLayerInspectorBlocks(
-                layers, MarkPresetCompositionDirty, contextKey: "TextMeshProLayerPreset." + target.GetInstanceID(), dirtyState: layerDirtyState);
-            QueuePresetDirty(layerDirtyState);
-            
-            var preset = (TextMeshProLayerPreset)target;
+            layerInspector.Draw();
+
+            var preset = Preset;
             preset.BeginSuppressingOnValidateNotifications();
-            
+
             bool appliedProperties;
             try {
                 appliedProperties = serializedObject.ApplyModifiedProperties();
@@ -101,37 +81,37 @@ namespace Tripledot.CanvasKit.Editor
                 EditorUtility.SetDirty(target);
             }
 
-            FlushPendingDirty();
+            FlushPreviewDirty();
+            layerInspector.FlushPresetDirties(Preset);
         }
 
         public override bool HasPreviewGUI()
         {
-            return TextMeshProLayerPresetPreviewRenderer.CanPreview((TextMeshProLayerPreset)target);
+            return TextMeshProLayerPresetPreviewRenderer.CanPreview(Preset);
         }
 
         public override void OnPreviewGUI(Rect rect, GUIStyle background)
         {
-            EnsurePreviewTexture((TextMeshProLayerPreset)target, Mathf.CeilToInt(rect.width), Mathf.CeilToInt(rect.height));
+            EnsurePreviewTexture(Preset, Mathf.CeilToInt(rect.width), Mathf.CeilToInt(rect.height));
             TextMeshProLayerPresetPreviewRenderer.DrawPreview(rect, previewTexture, background);
         }
 
         public override Texture2D RenderStaticPreview(string assetPath, UnityEngine.Object[] subAssets, int width, int height)
         {
-            return TextMeshProLayerPresetPreviewRenderer.RenderPreviewTexture((TextMeshProLayerPreset)target, width, height);
+            return TextMeshProLayerPresetPreviewRenderer.RenderPreviewTexture(Preset, width, height);
         }
 
         public override string GetInfoString()
         {
-            var preset = (TextMeshProLayerPreset)target;
-            if (preset == null || preset.FontAsset == null) {
+            if (Preset == null || Preset.FontAsset == null) {
                 return "Assign a TMP font asset to enable preview.";
             }
 
-            if (preset.LayerCount == 0) {
+            if (Preset.LayerCount == 0) {
                 return "Add at least one layer to enable preview.";
             }
 
-            return preset.GetPreviewText() + " - " + preset.FontAsset.name;
+            return Preset.GetPreviewText() + " - " + Preset.FontAsset.name;
         }
 
         private void EnsurePreviewTexture(TextMeshProLayerPreset preset, int width, int height)
@@ -174,84 +154,15 @@ namespace Tripledot.CanvasKit.Editor
             previewVersion = 0;
         }
 
-        private void MarkPresetCompositionDirty()
+        private void FlushPreviewDirty()
         {
-            MarkPresetDirty(TextMeshProLayerStack.CompositionDirtyFlags);
-        }
-
-        private void QueuePresetDirty(TextMeshProLayerInspectorGUI.LayerInspectorDirtyState dirtyState)
-        {
-            if (dirtyState == null) {
-                return;
-            }
-
-            var layerDirties = dirtyState.LayerDirties;
-            for (int i = 0; i < layerDirties.Count; i++) {
-                QueuePresetDirty(layerDirties[i].Flags, layerDirties[i].LayerIndex);
-            }
-        }
-
-        private void QueuePresetDirty(TextMeshProLayerStack.DirtyFlags flags)
-        {
-            pendingDirtyFlags |= flags;
-        }
-
-        private void QueuePresetDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
-        {
-            if (flags == TextMeshProLayerStack.DirtyFlags.None || layerIndex < 0) {
-                QueuePresetDirty(flags);
-                return;
-            }
-
-            for (int i = 0; i < pendingLayerDirties.Count; i++) {
-                var dirty = pendingLayerDirties[i];
-                if (dirty.Flags == flags && dirty.LayerIndex == layerIndex) {
-                    return;
-                }
-            }
-
-            pendingLayerDirties.Add(new PendingLayerDirty(flags, layerIndex));
-        }
-
-        private void FlushPendingDirty()
-        {
-            var flags = pendingDirtyFlags;
             var previewScopes = pendingPreviewDirtyScopes;
-            pendingDirtyFlags = TextMeshProLayerStack.DirtyFlags.None;
             pendingPreviewDirtyScopes = PendingDirtyScopes.None;
-
-            if ((flags & TextMeshProLayerStack.DirtyFlags.Layers) != 0) {
-                MarkPresetDirty(flags);
-                pendingLayerDirties.Clear();
-                return;
-            }
-
-            if (flags != TextMeshProLayerStack.DirtyFlags.None) {
-                MarkPresetDirty(flags);
-            }
 
             if ((previewScopes & PendingDirtyScopes.Preview) != 0) {
                 ReleasePreviewTexture();
                 Repaint();
             }
-
-            for (int i = 0; i < pendingLayerDirties.Count; i++) {
-                var dirty = pendingLayerDirties[i];
-                MarkPresetDirty(dirty.Flags, dirty.LayerIndex);
-            }
-
-            pendingLayerDirties.Clear();
-        }
-
-        private void MarkPresetDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex = -1)
-        {
-            if (flags == TextMeshProLayerStack.DirtyFlags.None) {
-                return;
-            }
-
-            var preset = (TextMeshProLayerPreset)target;
-            EditorUtility.SetDirty(preset);
-            preset.NotifyChanged(flags, layerIndex);
         }
     }
 }

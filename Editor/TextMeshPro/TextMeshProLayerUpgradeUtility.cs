@@ -25,6 +25,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             layers.Add(CreateFaceLayer(material, gradientScale));
+            
             return layers;
         }
 
@@ -50,6 +51,7 @@ namespace Tripledot.CanvasKit.Editor
             stack.SetLayerStackDirty();
             EditorUtility.SetDirty(stack);
             EditorUtility.SetDirty(text);
+            
             return stack;
         }
 
@@ -75,6 +77,7 @@ namespace Tripledot.CanvasKit.Editor
             var materialAssetPath = AssetDatabase.GetAssetPath(material);
             var mainTexture = GetTexture(material, ShaderUtilities.ID_MainTex);
             var guids = AssetDatabase.FindAssets("t:TMP_FontAsset");
+            
             for (int i = 0; i < guids.Length; i++) {
                 var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetDatabase.GUIDToAssetPath(guids[i]));
                 if (font == null) {
@@ -124,6 +127,7 @@ namespace Tripledot.CanvasKit.Editor
             var outlineWidth = GetFloat(material, ShaderUtilities.ID_OutlineWidth, 0f);
             var outlineSoftness = GetFloat(material, ShaderUtilities.ID_OutlineSoftness, 0f);
             var outlineColor = GetColor(material, ShaderUtilities.ID_OutlineColor, Color.black);
+            
             if (outlineWidth > 0f && outlineColor.a > 0f) {
                 layer.Stroke = new TextMeshProStroke {
                     Enabled = true,
@@ -160,14 +164,10 @@ namespace Tripledot.CanvasKit.Editor
         private static TextMeshProLayerData CreateGlowLayer(Material material, float gradientScale)
         {
             var layer = TextMeshProLayerData.GlowPreset();
-            var spread = NormalizedDistanceToPixels(
-                GetFloat(material, ShaderUtilities.ID_GlowOffset, 0f)
-                - GetFloat(material, ShaderUtilities.ID_GlowInner, 0f),
-                gradientScale);
-            var blur = NormalizedDistanceToPixels(
-                GetFloat(material, ShaderUtilities.ID_GlowOuter, 0f)
-                + GetFloat(material, ShaderUtilities.ID_GlowInner, 0f),
-                gradientScale);
+            
+            var spread = NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_GlowOffset, 0f) - GetFloat(material, ShaderUtilities.ID_GlowInner, 0f), gradientScale);
+            var blur = NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_GlowOuter, 0f) + GetFloat(material, ShaderUtilities.ID_GlowInner, 0f), gradientScale);
+            
             layer.Shadow = new TextMeshProShadow {
                 Enabled = true,
                 Paint = CanvasPaint.Solid(GetColor(material, ShaderUtilities.ID_GlowColor, new Color(1f, 1f, 1f, 0.5f))),
@@ -177,6 +177,7 @@ namespace Tripledot.CanvasKit.Editor
                 Blur = blur,
                 BlurUnit = TextMeshProSdfLengthUnit.Pixels
             };
+            
             return layer;
         }
 
@@ -225,6 +226,5 @@ namespace Tripledot.CanvasKit.Editor
         {
             return material != null && material.HasProperty(propertyId) ? material.GetTexture(propertyId) : null;
         }
-
     }
 }

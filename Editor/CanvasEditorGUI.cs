@@ -390,13 +390,13 @@ namespace Tripledot.CanvasKit.Editor
             EditorGUILayout.PropertyField(property, label);
         }
 
-        public static void DrawPaintSwatch(Rect rect, CanvasPaint paint, Color fallback)
+        public static void DrawPaintSwatch(Rect rect, CanvasPaint paint)
         {
-            DrawPaintSwatchFill(rect, paint, fallback);
+            DrawPaintSwatchFill(rect, paint);
             DrawSwatchBorder(rect);
         }
 
-        public static void DrawPaintOutlineSwatch(Rect rect, CanvasPaint paint, Color fallback)
+        public static void DrawPaintOutlineSwatch(Rect rect, CanvasPaint paint)
         {
             if (Event.current.type != EventType.Repaint) {
                 return;
@@ -416,17 +416,17 @@ namespace Tripledot.CanvasKit.Editor
             var leftRect = new Rect(contentRect.x, sideY, thickness, sideHeight);
             var rightRect = new Rect(contentRect.xMax - thickness, sideY, thickness, sideHeight);
 
-            DrawPaintSwatchFill(topRect, paint, fallback);
-            DrawPaintSwatchFill(bottomRect, paint, fallback);
+            DrawPaintSwatchFill(topRect, paint);
+            DrawPaintSwatchFill(bottomRect, paint);
             if (sideHeight > 0f) {
-                DrawPaintSwatchFill(leftRect, paint, fallback);
-                DrawPaintSwatchFill(rightRect, paint, fallback);
+                DrawPaintSwatchFill(leftRect, paint);
+                DrawPaintSwatchFill(rightRect, paint);
             }
 
             DrawSwatchBorder(rect);
         }
 
-        private static void DrawPaintSwatchFill(Rect rect, CanvasPaint paint, Color fallback)
+        private static void DrawPaintSwatchFill(Rect rect, CanvasPaint paint)
         {
             switch (paint.Type) {
                 case CanvasPaintType.LinearGradient:
@@ -451,12 +451,6 @@ namespace Tripledot.CanvasKit.Editor
                     DrawColorSwatchFill(rect, paint.Color, paint.Opacity);
                     break;
             }
-        }
-
-        public static void DrawColorSwatch(Rect rect, Color color, float alphaScale = 1f)
-        {
-            DrawColorSwatchFill(rect, color, alphaScale);
-            DrawSwatchBorder(rect);
         }
 
         public static void DrawTransparentSwatch(Rect rect)

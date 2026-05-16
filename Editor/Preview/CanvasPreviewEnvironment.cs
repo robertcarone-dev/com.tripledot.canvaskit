@@ -69,8 +69,10 @@ namespace Tripledot.CanvasKit.Editor
         public static Scene OpenPreviewScene(out bool usesEnvironmentScene)
         {
             usesEnvironmentScene = false;
+            
             var sceneAsset = EditorSettings.prefabUIEnvironment;
             var scenePath = sceneAsset != null ? AssetDatabase.GetAssetPath(sceneAsset) : string.Empty;
+            
             if (IsValidSceneAssetPath(scenePath)) {
                 Scene environmentScene = default;
                 try {
@@ -97,7 +99,7 @@ namespace Tripledot.CanvasKit.Editor
 
         public static Canvas SelectEnvironmentCanvas(GameObject[] sceneRoots, Transform previewRoot)
         {
-            if (sceneRoots == null || sceneRoots.Length == 0) {
+            if (sceneRoots.Length == 0) {
                 return null;
             }
 

@@ -72,12 +72,7 @@ namespace Tripledot.CanvasKit.Editor
                 : sourceName + PresetFileNameSuffix;
         }
 
-        internal static TextMeshProLayerPreset CreatePresetAtPath(string assetPath, TMP_FontAsset selectedFont)
-        {
-            return CreatePresetAtPath(assetPath, selectedFont, null);
-        }
-
-        internal static TextMeshProLayerPreset CreatePresetAtPath(string assetPath, TMP_FontAsset selectedFont, Material materialPreset)
+        internal static TextMeshProLayerPreset CreatePresetAtPath(string assetPath, TMP_FontAsset selectedFont, Material materialPreset = null)
         {
             if (string.IsNullOrEmpty(assetPath)) {
                 return null;
@@ -127,24 +122,12 @@ namespace Tripledot.CanvasKit.Editor
 
         private sealed class CreateLayerPresetEndNameEditAction : EndNameEditAction
         {
-            [SerializeField]
-            private TMP_FontAsset fontAsset;
-            [SerializeField]
-            private Material materialPreset;
-
-            public TMP_FontAsset FontAsset
-            {
-                set => fontAsset = value;
-            }
-
-            public Material MaterialPreset
-            {
-                set => materialPreset = value;
-            }
+            public TMP_FontAsset FontAsset;
+            public Material MaterialPreset;
 
             public override void Action(int instanceId, string pathName, string resourceFile)
             {
-                var preset = CreatePresetAtPath(pathName, fontAsset, materialPreset);
+                var preset = CreatePresetAtPath(pathName, FontAsset, MaterialPreset);
                 if (preset == null) {
                     return;
                 }

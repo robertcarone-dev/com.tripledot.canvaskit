@@ -57,11 +57,7 @@ namespace Tripledot.CanvasKit.Editor
 
         internal static void SaveKeywordRules(string screen, string popup, string element)
         {
-            SetKeywordRules(
-                SplitKeywords(screen),
-                SplitKeywords(popup),
-                SplitKeywords(element),
-                true);
+            SetKeywordRules(SplitKeywords(screen), SplitKeywords(popup), SplitKeywords(element), true);
         }
 
         internal static void SetKeywordRulesForTests(string[] screen, string[] popup, string[] element)
@@ -90,6 +86,7 @@ namespace Tripledot.CanvasKit.Editor
                 new[] { "popup", "modal", "dialog" },
                 new[] { "button", "btn", "control", "toggle", "slider", "cell", "item", "content", "icon", "image" },
                 false);
+            
             SetScalerDefaults(CanvasScaler.ScaleMode.ScaleWithScreenSize, new Vector2(1080f, 1920f), 100f, false);
             SetSelectedReferenceSizeIndex(CanvasPreviewSize.DefaultIndex, false);
         }
@@ -140,6 +137,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.controlKeywords = Array.Empty<string>();
             settings.contentKeywords = Array.Empty<string>();
             settings.legacyKeywordRulesMigrated = true;
+            
             Revision++;
             CanvasInspectorPreview.ClearPreviewCache();
 
@@ -154,6 +152,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.scalerUiScaleMode = uiScaleMode;
             settings.scalerReferenceResolution = SanitizeReferenceResolution(referenceResolution);
             settings.scalerReferencePixelsPerUnit = SanitizeReferencePixelsPerUnit(referencePixelsPerUnit);
+            
             Revision++;
             CanvasInspectorPreview.ClearPreviewCache();
 
@@ -166,6 +165,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var settings = instance;
             settings.selectedReferenceSizeIndex = NormalizeReferenceSizeIndex(selectedSizeIndex);
+            
             Revision++;
             CanvasInspectorPreview.ClearPreviewCache();
 

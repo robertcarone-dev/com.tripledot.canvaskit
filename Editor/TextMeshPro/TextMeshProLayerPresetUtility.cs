@@ -29,11 +29,14 @@ namespace Tripledot.CanvasKit.Editor
             var layerPreset = UnityEngine.ScriptableObject.CreateInstance<TextMeshProLayerPreset>();
             stack.CopyEffectivePresetLayersTo(layerPreset.MutableLayers);
             layerPreset.SetFontAsset(GetStackFontAsset(stack));
+            
             AssetDatabase.CreateAsset(layerPreset, assetPath);
             AssetDatabase.SaveAssets();
+            
             stack.Preset = layerPreset;
             stack.ClearPresetLayerInstances();
             EditorUtility.SetDirty(stack);
+            
             return layerPreset;
         }
 

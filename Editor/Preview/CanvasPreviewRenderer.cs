@@ -23,20 +23,7 @@ namespace Tripledot.CanvasKit.Editor
         private static readonly Vector3[] CornerBuffer = new Vector3[4];
 
         internal static PreviewResult RenderPreviewTexture(
-            GameObject prefabAsset,
-            CanvasPreviewSize previewSize,
-            int width,
-            int height)
-        {
-            return RenderPreviewTexture(prefabAsset, previewSize, width, height, false);
-        }
-
-        internal static PreviewResult RenderPreviewTexture(
-            GameObject prefabAsset,
-            CanvasPreviewSize previewSize,
-            int width,
-            int height,
-            bool preserveRequestedOutputSize)
+            GameObject prefabAsset, CanvasPreviewSize previewSize, int width, int height, bool preserveRequestedOutputSize = false)
         {
             if (prefabAsset == null || width <= 0 || height <= 0) {
                 return PreviewResult.Empty;
@@ -56,7 +43,7 @@ namespace Tripledot.CanvasKit.Editor
             GameObject cameraObject = null;
             Scene previewScene = default;
             try {
-                var usesEnvironmentScene = false;
+                bool usesEnvironmentScene;
                 using (new SampleScope("CanvasPreview.Instantiate")) {
                     previewScene = CanvasPreviewEnvironment.OpenPreviewScene(out usesEnvironmentScene);
                     PrefabUtility.LoadPrefabContentsIntoPreviewScene(prefabPath, previewScene, out prefabRoot);
@@ -135,16 +122,8 @@ namespace Tripledot.CanvasKit.Editor
                 }
 
                 var frameBounds = ExpandBounds(contentBounds, ElementPadding);
-                var outputSize = usesPreset || preserveRequestedOutputSize
-                    ? new Vector2Int(width, height)
-                    : GetElementRenderSize(contentBounds);
-
-                return RenderCanvas(
-                    camera: camera,
-                    canvasRect: canvasRect, 
-                    frameBounds: frameBounds, 
-                    width: outputSize.x, 
-                    height: outputSize.y);
+                var outputSize = usesPreset || preserveRequestedOutputSize ? new Vector2Int(width, height) : GetElementRenderSize(contentBounds);
+                return RenderCanvas(camera: camera, canvasRect: canvasRect, frameBounds: frameBounds, width: outputSize.x, height: outputSize.y);
             } catch {
                 return PreviewResult.Empty;
             } finally {
@@ -201,10 +180,6 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void ConfigureBaseCanvasRect(RectTransform canvasRect, Vector2 referenceSize)
         {
-            if (canvasRect == null) {
-                return;
-            }
-
             canvasRect.anchorMin = new Vector2(0.5f, 0.5f);
             canvasRect.anchorMax = new Vector2(0.5f, 0.5f);
             canvasRect.pivot = new Vector2(0.5f, 0.5f);
@@ -217,11 +192,8 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void ConfigureElementPreviewScalers(GameObject root)
         {
-            if (root == null) {
-                return;
-            }
-
             root.GetComponentsInChildren(true, ScalerBuffer);
+            
             try {
                 for (int i = 0; i < ScalerBuffer.Count; i++) {
                     var scaler = ScalerBuffer[i];
@@ -315,11 +287,7 @@ namespace Tripledot.CanvasKit.Editor
         }
 
         private static PreviewResult RenderCanvas(
-            Camera camera,
-            RectTransform canvasRect,
-            Bounds frameBounds,
-            int width,
-            int height)
+            Camera camera, RectTransform canvasRect, Bounds frameBounds, int width, int height)
         {
             var renderTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
             var previousActive = RenderTexture.active;
@@ -445,10 +413,6 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void SetLayerRecursively(GameObject root, int layer)
         {
-            if (root == null) {
-                return;
-            }
-
             root.GetComponentsInChildren(true, TransformBuffer);
             try {
                 for (int i = 0; i < TransformBuffer.Count; i++) {

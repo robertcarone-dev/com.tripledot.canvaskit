@@ -64,6 +64,7 @@ namespace Tripledot.CanvasKit.Editor
             Undo.IncrementCurrentGroup();
             Undo.SetCurrentGroupName("Upgrade TextMeshPro Layer Stack");
             Undo.RecordObject(text, "Upgrade TextMeshPro Layer Stack");
+            
             var stack = text.GetComponent<TextMeshProLayerStack>();
             if (stack == null) {
                 Undo.AddComponent<TextMeshProLayerStack>(text.gameObject);
