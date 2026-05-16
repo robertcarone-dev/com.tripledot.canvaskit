@@ -57,7 +57,7 @@ namespace Tripledot.CanvasKit
             if (Entries.TryGetValue(key, out var entry)) {
                 if (entry.Material != null) {
                     if (entry.PresetVersion != key.PresetVersion) {
-                        layer.ApplyMaterial(entry.Material, context);
+                        layer.ApplyMaterial(entry.Material, context, entry.GradientState);
                         entry.PresetVersion = key.PresetVersion;
                     }
 
@@ -65,14 +65,15 @@ namespace Tripledot.CanvasKit
                     return entry;
                 }
 
+                entry.GradientState.Release();
                 Entries.Remove(key);
             }
 
             var material = TextMeshProLayerMaterial.CreateMaterial(TextMeshProLayerMaterial.ResolveCoreShader());
             material.name = (key.Preset != null ? key.Preset.name : "Preset") + " (TextLayerCore Shared)";
-            layer.ApplyMaterial(material, context);
 
             entry = new Entry(key, material);
+            layer.ApplyMaterial(material, context, entry.GradientState);
             Entries.Add(key, entry);
             return entry;
         }
@@ -89,6 +90,7 @@ namespace Tripledot.CanvasKit
             }
 
             Entries.Remove(entry.Key);
+            entry.GradientState.Release();
             CoreUtils.Destroy(entry.Material);
         }
 
@@ -96,6 +98,7 @@ namespace Tripledot.CanvasKit
         {
             public readonly TextMeshProLayerMaterialCacheKey Key;
             public readonly Material Material;
+            public readonly TextMeshProLayerMaterialGradientState GradientState;
             public int PresetVersion;
             public int ReferenceCount;
 
@@ -103,6 +106,7 @@ namespace Tripledot.CanvasKit
             {
                 Key = key;
                 Material = material;
+                GradientState = new TextMeshProLayerMaterialGradientState();
                 PresetVersion = key.PresetVersion;
                 ReferenceCount = 1;
             }

@@ -1242,6 +1242,7 @@ namespace Tripledot.CanvasKit
         {
             private Material uniqueMaterial;
             private TextMeshProLayerMaterialContext uniqueMaterialContext;
+            private readonly TextMeshProLayerMaterialGradientState uniqueGradientState = new TextMeshProLayerMaterialGradientState();
             private bool hasUniqueMaterialContext;
             private bool uniqueMaterialDirty = true;
 
@@ -1270,7 +1271,7 @@ namespace Tripledot.CanvasKit
                     sharedMaterialKey = key;
                     hasSharedMaterialKey = true;
                 } else if (sharedMaterialEntry.PresetVersion != key.PresetVersion) {
-                    layer.ApplyMaterial(sharedMaterialEntry.Material, context);
+                    layer.ApplyMaterial(sharedMaterialEntry.Material, context, sharedMaterialEntry.GradientState);
                     sharedMaterialEntry.PresetVersion = key.PresetVersion;
                 }
 
@@ -1286,7 +1287,7 @@ namespace Tripledot.CanvasKit
                 }
 
                 if (uniqueMaterialDirty || !hasUniqueMaterialContext || !uniqueMaterialContext.Equals(context)) {
-                    layer.ApplyMaterial(uniqueMaterial, context);
+                    layer.ApplyMaterial(uniqueMaterial, context, uniqueGradientState);
                     uniqueMaterialContext = context;
                     hasUniqueMaterialContext = true;
                     uniqueMaterialDirty = false;
@@ -1308,6 +1309,7 @@ namespace Tripledot.CanvasKit
 
             private void ReleaseUniqueMaterial()
             {
+                uniqueGradientState.Release();
                 CoreUtils.Destroy(uniqueMaterial);
                 uniqueMaterial = null;
                 uniqueMaterialContext = default;

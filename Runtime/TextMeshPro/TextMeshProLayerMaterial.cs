@@ -40,7 +40,8 @@ namespace Tripledot.CanvasKit
             ApplyBlend(material, blendPreset);
         }
 
-        public static bool ApplyPaint(Material material, CanvasPaint paint, PaintShaderIds ids, string textureKeyword, bool resourcesEnabled)
+        public static bool ApplyPaint(Material material, CanvasPaint paint, PaintShaderIds ids, string textureKeyword, bool resourcesEnabled,
+            CanvasGradientAtlas.Lease gradientLease)
         {
             var transform = paint.Transform;
             var primaryColor = paint.HasFullGradient ? Color.white : GetPrimaryPaintColor(paint);
@@ -55,7 +56,7 @@ namespace Tripledot.CanvasKit
             SetPaintTransform(material, ids.PaintTransform0, ids.PaintTransform1, transform);
 
             var textureEnabled = resourcesEnabled && paint.Type == CanvasPaintType.Texture;
-            var gradientAtlasEnabled = resourcesEnabled && SetGradientAtlas(material, ids.GradientAtlasRect, paint);
+            var gradientAtlasEnabled = SetGradientAtlas(material, ids.GradientAtlasRect, paint, resourcesEnabled, gradientLease);
             CanvasUtility.SetKeyword(material, textureKeyword, textureEnabled);
             
             return gradientAtlasEnabled;
@@ -116,9 +117,10 @@ namespace Tripledot.CanvasKit
             material.SetVector(transform1Id, new Vector4(transform.Scale.x, transform.Scale.y, transform.Rotation, (float)transform.WrapMode));
         }
 
-        private static bool SetGradientAtlas(Material material, int rectId, CanvasPaint paint)
+        private static bool SetGradientAtlas(Material material, int rectId, CanvasPaint paint, bool resourcesEnabled,
+            CanvasGradientAtlas.Lease gradientLease)
         {
-            if (CanvasGradientAtlas.TryGetEntry(paint, out var entry)) {
+            if (CanvasGradientAtlas.TryGetEntry(paint, resourcesEnabled, gradientLease, out var entry)) {
                 material.SetTexture(ShaderIds.GradientAtlas, entry.Texture);
                 material.SetVector(rectId, entry.Rect);
                 return true;
@@ -185,6 +187,20 @@ namespace Tripledot.CanvasKit
             public static readonly int PerspectiveFilter = Shader.PropertyToID("_PerspectiveFilter");
             public static readonly int WeightNormal = Shader.PropertyToID("_WeightNormal");
             public static readonly int WeightBold = Shader.PropertyToID("_WeightBold");
+        }
+    }
+
+    internal sealed class TextMeshProLayerMaterialGradientState
+    {
+        public readonly CanvasGradientAtlas.Lease Face = new CanvasGradientAtlas.Lease();
+        public readonly CanvasGradientAtlas.Lease Stroke = new CanvasGradientAtlas.Lease();
+        public readonly CanvasGradientAtlas.Lease Shadow = new CanvasGradientAtlas.Lease();
+
+        public void Release()
+        {
+            CanvasGradientAtlas.Release(Face);
+            CanvasGradientAtlas.Release(Stroke);
+            CanvasGradientAtlas.Release(Shadow);
         }
     }
 

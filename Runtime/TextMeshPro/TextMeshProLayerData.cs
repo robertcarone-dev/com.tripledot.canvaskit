@@ -165,11 +165,11 @@ namespace Tripledot.CanvasKit
 
         #region Material
 
-        internal void ApplyMaterial(Material material, TextMeshProLayerMaterialContext context)
+        internal void ApplyMaterial(Material material, TextMeshProLayerMaterialContext context, TextMeshProLayerMaterialGradientState gradientState)
         {
             material.SetInteger(ShaderIds.FaceEnabled, face.Enabled ? 1 : 0);
             var faceUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled);
+                material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled, gradientState.Face);
             material.SetFloat(ShaderIds.FaceDilate, TextMeshProUtility.PixelsToFaceDilate(face.Dilate, context.GradientScale));
 
             TextMeshProUtility.ClampStrokeEffect(
@@ -181,7 +181,7 @@ namespace Tripledot.CanvasKit
             material.SetInteger(ShaderIds.StrokePosition, (int)stroke.Position);
             material.SetVector(ShaderIds.StrokeOffset, new Vector4(stroke.Offset.x, stroke.Offset.y, 0f, 0f));
             var strokeUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled);
+                material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled, gradientState.Stroke);
             
             TextMeshProUtility.ClampShadowEffect(
                 shadow.Spread, shadow.Blur, context.AppliedSdfPadding, face.Dilate,
@@ -191,7 +191,7 @@ namespace Tripledot.CanvasKit
             material.SetFloat(ShaderIds.ShadowSpread, shadowSpread);
             material.SetVector(ShaderIds.ShadowOffset, new Vector4(shadow.Offset.x, shadow.Offset.y, 0f, 0f));
             var shadowUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material, shadow.Paint, ShaderIds.ShadowPaint, ShaderKeywords.ShadowTexture, shadow.Enabled);
+                material, shadow.Paint, ShaderIds.ShadowPaint, ShaderKeywords.ShadowTexture, shadow.Enabled, gradientState.Shadow);
 
             CanvasUtility.SetKeyword(material, ShaderKeywords.GradientAtlas, 
                 faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
