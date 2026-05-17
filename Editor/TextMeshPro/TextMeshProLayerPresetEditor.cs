@@ -52,7 +52,7 @@ namespace Tripledot.CanvasKit.Editor
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(fontAsset, Styles.FontAsset);
             if (EditorGUI.EndChangeCheck()) {
-                layerInspector.QueuePresetDirty(TextMeshProLayerStack.MaterialDirtyFlags);
+                layerInspector.QueuePresetDirty();
             }
 
             EditorGUI.BeginChangeCheck();

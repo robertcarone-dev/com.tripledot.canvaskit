@@ -58,21 +58,12 @@ namespace Tripledot.CanvasKit.Editor
             if (appliedStackProperties) {
                 EditorUtility.SetDirty(target);
             }
-
-            layerInspector.FlushStackDirties(Stack);
         }
 
         public void OnSceneGUI()
         {
             var result = CanvasGradientSceneView.Draw(target);
             if (result.Changed) {
-                if (result.LayerIndex >= 0) {
-                    MarkLayerMaterialDirty(result.LayerIndex);
-                } else {
-                    MarkLayerDirty(TextMeshProLayerStack.MaterialDirtyFlags);
-                }
-
-                layerInspector.FlushStackDirties(Stack);
                 Repaint();
             }
         }
@@ -105,11 +96,7 @@ namespace Tripledot.CanvasKit.Editor
             var buttonRect = new Rect(rect.xMax - Styles.PresetActionButtonWidth, rect.y, Styles.PresetActionButtonWidth, rect.height);
             var fieldRect = new Rect(rect.x, rect.y, Mathf.Max(0f, rect.width - actionWidth - Styles.PresetFieldGap), rect.height);
 
-            EditorGUI.BeginChangeCheck();
             EditorGUI.PropertyField(fieldRect, preset, Styles.LayerPreset);
-            if (EditorGUI.EndChangeCheck()) {
-                MarkLayerCompositionDirty();
-            }
 
             if (assignedPreset) {
                 var cloneRect = new Rect(buttonRect.x - Styles.PresetFieldGap - Styles.PresetActionButtonWidth, rect.y, Styles.PresetActionButtonWidth, rect.height);
@@ -143,7 +130,6 @@ namespace Tripledot.CanvasKit.Editor
 
             preset.objectReferenceValue = layerPreset;
             layerInspector.ClearLinkedPresetCache();
-            MarkLayerCompositionDirty();
         }
 
         private void ClonePreset()
@@ -161,29 +147,12 @@ namespace Tripledot.CanvasKit.Editor
             preset.objectReferenceValue = layerPreset;
             layerInspector.ClearLinkedPresetCache();
             serializedObject.Update();
-            MarkLayerCompositionDirty();
         }
 
         private void ClearPreset()
         {
             preset.objectReferenceValue = null;
             layerInspector.ClearLinkedPresetCache();
-            MarkLayerCompositionDirty();
-        }
-
-        private void MarkLayerCompositionDirty()
-        {
-            MarkLayerDirty(TextMeshProLayerStack.CompositionDirtyFlags);
-        }
-
-        private void MarkLayerDirty(TextMeshProLayerStack.DirtyFlags flags)
-        {
-            layerInspector.QueueStackDirty(flags);
-        }
-
-        private void MarkLayerMaterialDirty(int layerIndex)
-        {
-            layerInspector.QueueStackDirty(TextMeshProLayerStack.MaterialDirtyFlags, layerIndex);
         }
     }
 }

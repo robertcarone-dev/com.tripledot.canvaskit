@@ -123,7 +123,7 @@ namespace Tripledot.CanvasKit.Editor
             serializedObject.ApplyModifiedProperties();
             EditorUtility.SetDirty(serializedTarget);
             if (serializedTarget is TextMeshProLayerPreset preset) {
-                preset.NotifyChanged(TextMeshProLayerStack.MaterialDirtyFlags, layerIndex);
+                preset.NotifyChanged();
             }
 
             SceneView.RepaintAll();

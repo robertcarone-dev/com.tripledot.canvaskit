@@ -34,16 +34,13 @@ namespace Tripledot.CanvasKit.Editor
         private readonly TextMeshProLayerStack stack;
         private readonly TextMeshProLayerPreset preset;
 
-        private TextMeshProLayerStack.DirtyFlags pendingStackDirtyFlags;
-        private TextMeshProLayerStack.DirtyFlags pendingPresetDirtyFlags;
+        private bool pendingPresetDirty;
         
         private TextMeshProLayerPreset linkedPreset;
         private SerializedObject linkedPresetObject;
         private SerializedProperty linkedPresetLayers;
 
-        private readonly List<(int layer, TextMeshProLayerStack.DirtyFlags flags)> layerDirtyFlags = new List<(int, TextMeshProLayerStack.DirtyFlags)>();
-        private readonly List<(int layer, TextMeshProLayerStack.DirtyFlags flags)> presetLayerDirtyFlags = new List<(int layer, TextMeshProLayerStack.DirtyFlags flags)>();
-        private readonly List<int> pendingDirtyMaterials = new List<int>();
+        private readonly List<int> dirtyLayerIndices = new List<int>();
 
         public TextMeshProLayerInspector(
             TextMeshProLayerPreset preset,
@@ -133,15 +130,11 @@ namespace Tripledot.CanvasKit.Editor
             switch (source)
             {
                 case LayerSource.LinkedPreset:
-                    QueuePresetDirty(TextMeshProLayerStack.CompositionDirtyFlags);
-                    QueueStackDirty(TextMeshProLayerStack.CompositionDirtyFlags);
+                    QueuePresetDirty();
                     return;
                 case LayerSource.Preset:
-                    QueuePresetDirty(TextMeshProLayerStack.CompositionDirtyFlags);
+                    QueuePresetDirty();
                     return;
-                default:
-                    QueueStackDirty(TextMeshProLayerStack.CompositionDirtyFlags);
-                    break;
             }
         }
 
@@ -151,37 +144,27 @@ namespace Tripledot.CanvasKit.Editor
             {
                 case LayerSource.LinkedPreset:
                 {
-                    if (IsLinkedPresetInstanceLayer(index)) {
-                        QueueStackDirty(TextMeshProLayerStack.CompositionDirtyFlags);
-                    } else {
-                        QueuePresetDirty(TextMeshProLayerStack.CompositionDirtyFlags);
-                        QueueStackDirty(TextMeshProLayerStack.CompositionDirtyFlags);
+                    if (!IsLinkedPresetInstanceLayer(index)) {
+                        QueuePresetDirty();
                     }
                     return;
                 }
                 case LayerSource.Preset:
-                    QueuePresetDirty(TextMeshProLayerStack.CompositionDirtyFlags);
+                    QueuePresetDirty();
                     return;
-                default:
-                    QueueStackDirty(TextMeshProLayerStack.CompositionDirtyFlags);
-                    break;
             }
         }
 
-        private void OnLayerDirty(LayerSource source, int layerIndex, TextMeshProLayerStack.DirtyFlags flags)
+        private void OnLayerDirty(LayerSource source, int layerIndex)
         {
             switch (source)
             {
                 case LayerSource.LinkedPreset when !IsLinkedPresetInstanceLayer(layerIndex):
-                    QueuePresetDirty(flags, layerIndex);
-                    QueueStackDirty(TextMeshProLayerStack.CompositionDirtyFlags);
+                    QueuePresetDirty();
                     return;
                 case LayerSource.Preset:
-                    QueuePresetDirty(flags, layerIndex);
+                    QueuePresetDirty();
                     return;
-                default:
-                    QueueStackDirty(flags, layerIndex);
-                    break;
             }
         }
 
@@ -302,121 +285,31 @@ namespace Tripledot.CanvasKit.Editor
             presetLayerOverrides.serializedObject.ApplyModifiedProperties();
             stack.SetPresetLayerInstance(index, instance);
             presetLayerOverrides.serializedObject.Update();
-            QueueStackDirty(TextMeshProLayerStack.CompositionDirtyFlags);
         }
 
-        public void QueueStackDirty(TextMeshProLayerStack.DirtyFlags flags)
+        public void QueuePresetDirty()
         {
-            pendingStackDirtyFlags |= flags;
-        }
-
-        public void QueueStackDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
-        {
-            if (flags == TextMeshProLayerStack.MaterialDirtyFlags) {
-                QueueStackMaterialDirty(layerIndex);
-                return;
-            }
-
-            QueueStackDirty(flags);
-        }
-
-        private void QueueStackMaterialDirty(int layerIndex)
-        {
-            if (layerIndex < 0) {
-                QueueStackDirty(TextMeshProLayerStack.MaterialDirtyFlags);
-                return;
-            }
-
-            if (!pendingDirtyMaterials.Contains(layerIndex)) {
-                pendingDirtyMaterials.Add(layerIndex);
-            }
-        }
-
-        public void FlushStackDirties(TextMeshProLayerStack stack)
-        {
-            var flags = pendingStackDirtyFlags;
-            pendingStackDirtyFlags = TextMeshProLayerStack.DirtyFlags.None;
-            if ((flags & TextMeshProLayerStack.DirtyFlags.Layers) != 0) {
-                pendingDirtyMaterials.Clear();
-            }
-
-            MarkStackDirty(stack, flags);
-
-            for (int i = 0; i < pendingDirtyMaterials.Count; i++) {
-                MarkStackMaterialDirty(stack, pendingDirtyMaterials[i]);
-            }
-
-            pendingDirtyMaterials.Clear();
-        }
-
-        private static void MarkStackDirty(TextMeshProLayerStack stack, TextMeshProLayerStack.DirtyFlags flags)
-        {
-            if (stack == null || flags == TextMeshProLayerStack.DirtyFlags.None) {
-                return;
-            }
-
-            stack.SetLayerStackDirty(flags);
-            EditorUtility.SetDirty(stack);
-        }
-
-        private static void MarkStackMaterialDirty(TextMeshProLayerStack stack, int layerIndex)
-        {
-            if (stack == null) {
-                return;
-            }
-
-            stack.SetLayerMaterialChanged(layerIndex);
-            EditorUtility.SetDirty(stack);
-        }
-
-        public void QueuePresetDirty(TextMeshProLayerStack.DirtyFlags flags)
-        {
-            pendingPresetDirtyFlags |= flags;
-        }
-
-        private void QueuePresetDirty(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
-        {
-            if (flags == TextMeshProLayerStack.DirtyFlags.None || layerIndex < 0) {
-                QueuePresetDirty(flags);
-                return;
-            }
-
-            for (int i = 0; i < presetLayerDirtyFlags.Count; i++) {
-                var dirty = presetLayerDirtyFlags[i];
-                if (dirty.flags == flags && dirty.layer == layerIndex) {
-                    return;
-                }
-            }
-
-            presetLayerDirtyFlags.Add(new ValueTuple<int, TextMeshProLayerStack.DirtyFlags>(layerIndex, flags));
+            pendingPresetDirty = true;
         }
 
         public void FlushPresetDirties(TextMeshProLayerPreset preset)
         {
-            var flags = pendingPresetDirtyFlags;
-            pendingPresetDirtyFlags = TextMeshProLayerStack.DirtyFlags.None;
-            if ((flags & TextMeshProLayerStack.DirtyFlags.Layers) != 0) {
-                presetLayerDirtyFlags.Clear();
+            if (!pendingPresetDirty) {
+                return;
             }
 
-            MarkPresetDirty(preset, flags, -1);
-
-            for (int i = 0; i < presetLayerDirtyFlags.Count; i++) {
-                var dirty = presetLayerDirtyFlags[i];
-                MarkPresetDirty(preset, dirty.flags, dirty.layer);
-            }
-
-            presetLayerDirtyFlags.Clear();
+            pendingPresetDirty = false;
+            MarkPresetDirty(preset);
         }
 
-        private static void MarkPresetDirty(TextMeshProLayerPreset preset, TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
+        private static void MarkPresetDirty(TextMeshProLayerPreset preset)
         {
-            if (preset == null || flags == TextMeshProLayerStack.DirtyFlags.None) {
+            if (preset == null) {
                 return;
             }
 
             EditorUtility.SetDirty(preset);
-            preset.NotifyChanged(flags, layerIndex);
+            preset.NotifyChanged();
         }
 
         private void DrawLayerInspectorBlocks(SerializedProperty layers, LayerSource source)
@@ -501,30 +394,28 @@ namespace Tripledot.CanvasKit.Editor
 
         private void ClearLayerDirties()
         {
-            layerDirtyFlags.Clear();
+            dirtyLayerIndices.Clear();
         }
 
-        private void MarkLayerDirty(int layerIndex, TextMeshProLayerStack.DirtyFlags flags)
+        private void MarkLayerDirty(int layerIndex)
         {
-            if (flags == TextMeshProLayerStack.DirtyFlags.None || layerIndex < 0) {
+            if (layerIndex < 0) {
                 return;
             }
 
-            for (int i = 0; i < layerDirtyFlags.Count; i++) {
-                var dirty = layerDirtyFlags[i];
-                if (dirty.layer == layerIndex && dirty.flags == flags) {
+            for (int i = 0; i < dirtyLayerIndices.Count; i++) {
+                if (dirtyLayerIndices[i] == layerIndex) {
                     return;
                 }
             }
 
-            layerDirtyFlags.Add((layerIndex, flags));
+            dirtyLayerIndices.Add(layerIndex);
         }
 
         private void FlushLayerDirties(LayerSource source)
         {
-            for (int i = 0; i < layerDirtyFlags.Count; i++) {
-                var dirty = layerDirtyFlags[i];
-                OnLayerDirty(source, dirty.layer, dirty.flags);
+            for (int i = 0; i < dirtyLayerIndices.Count; i++) {
+                OnLayerDirty(source, dirtyLayerIndices[i]);
             }
         }
 
@@ -533,7 +424,7 @@ namespace Tripledot.CanvasKit.Editor
             GUILayout.Space(4f);
             EditorGUILayout.PropertyField(layer.Label, Styles.Label);
 
-            using (new LayerDirtyChangeCheckScope(this, layerIndex, TextMeshProLayerStack.MaterialDirtyFlags)) {
+            using (new LayerChangeCheckScope(this, layerIndex)) {
                 EditorGUILayout.PropertyField(layer.BlendMode, Styles.BlendMode);
                 EditorGUILayout.Slider(layer.Opacity, 0f, 1f, Styles.Opacity);
             }
@@ -734,12 +625,12 @@ namespace Tripledot.CanvasKit.Editor
                 switch (layers.serializedObject.targetObjects[i]) {
                     case TextMeshProLayerStack stack when layers.propertyPath == "localLayers":
                         stack.LocalLayers.Add(layer);
+                        stack.SetLayerCompositionChanged();
                         EditorUtility.SetDirty(stack);
                         break;
                     case TextMeshProLayerPreset preset when layers.propertyPath == "layers":
                         preset.MutableLayers.Add(layer);
                         EditorUtility.SetDirty(preset);
-                        preset.NotifyChanged();
                         break;
                 }
             }
@@ -834,34 +725,34 @@ namespace Tripledot.CanvasKit.Editor
             var shadow = layer.Shadow;
             GUILayout.Space(6f);
 
-            var faceExpanded = BeginToggleSection(layer, Styles.Face, face.Enabled, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags);
+            var faceExpanded = BeginToggleSection(layer, Styles.Face, face.Enabled, layerIndex);
             if (faceExpanded) {
                 using (new EditorGUI.DisabledScope(face.Enabled is { hasMultipleDifferentValues: false, boolValue: false })) {
-                    using (new LayerDirtyChangeCheckScope(this, layerIndex, TextMeshProLayerStack.MaterialDirtyFlags)) {
+                    using (new LayerChangeCheckScope(this, layerIndex)) {
                         CanvasPaintDrawer.DrawFillMode(face.Paint);
                         CanvasPaintDrawer.DrawAppearance(face.Paint);
                         DrawPaintMapping(face.Paint, context.SceneTarget, layerIndex, true);
                     }
 
                     CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Shape);
-                    using (new LayerDirtyChangeCheckScope(this, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags)) {
+                    using (new LayerChangeCheckScope(this, layerIndex)) {
                         CanvasEditorGUI.SdfLengthSlider(face.Dilate, face.DilateUnit, Styles.Dilate, context.AvailablePadding, -context.AvailablePadding, context.AvailablePadding);
                     }
                 }
             }
             EndToggleSection(faceExpanded);
 
-            var strokeExpanded = BeginToggleSection(layer, Styles.Outline, stroke.Enabled, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags);
+            var strokeExpanded = BeginToggleSection(layer, Styles.Outline, stroke.Enabled, layerIndex);
             if (strokeExpanded) {
                 using (new EditorGUI.DisabledScope(stroke.Enabled is { hasMultipleDifferentValues: false, boolValue: false })) {
-                    using (new LayerDirtyChangeCheckScope(this, layerIndex, TextMeshProLayerStack.MaterialDirtyFlags)) {
+                    using (new LayerChangeCheckScope(this, layerIndex)) {
                         CanvasPaintDrawer.DrawFillMode(stroke.Paint);
                         CanvasPaintDrawer.DrawAppearance(stroke.Paint);
                         DrawPaintMapping(stroke.Paint, context.SceneTarget, layerIndex, true);
                     }
 
                     CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Shape);
-                    using (new LayerDirtyChangeCheckScope(this, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags)) {
+                    using (new LayerChangeCheckScope(this, layerIndex)) {
                         CanvasEditorGUI.PropertyField(stroke.Position, Styles.Position);
                         var reservedFacePadding = GetEffectivePositiveSdfBudget(face.Enabled, face.Dilate, context.AvailablePadding);
                         GetStrokeSliderBudgets(stroke.Width, stroke.Feather, stroke.Position, context.AvailablePadding, reservedFacePadding, out var widthMax, out var featherMax);
@@ -873,17 +764,17 @@ namespace Tripledot.CanvasKit.Editor
             }
             EndToggleSection(strokeExpanded);
 
-            var shadowExpanded = BeginToggleSection(layer, Styles.Underlay, shadow.Enabled, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags);
+            var shadowExpanded = BeginToggleSection(layer, Styles.Underlay, shadow.Enabled, layerIndex);
             if (shadowExpanded) {
                 using (new EditorGUI.DisabledScope(shadow.Enabled is { hasMultipleDifferentValues: false, boolValue: false })) {
-                    using (new LayerDirtyChangeCheckScope(this, layerIndex, TextMeshProLayerStack.MaterialDirtyFlags)) {
+                    using (new LayerChangeCheckScope(this, layerIndex)) {
                         CanvasPaintDrawer.DrawFillMode(shadow.Paint);
                         CanvasPaintDrawer.DrawAppearance(shadow.Paint);
                         DrawPaintMapping(shadow.Paint, context.SceneTarget, layerIndex, true);
                     }
 
                     CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Effect);
-                    using (new LayerDirtyChangeCheckScope(this, layerIndex, TextMeshProLayerStack.PaddingDirtyFlags)) {
+                    using (new LayerChangeCheckScope(this, layerIndex)) {
                         var reservedFacePadding = GetEffectivePositiveSdfBudget(face.Enabled, face.Dilate, context.AvailablePadding);
                         GetShadowSliderBudgets(shadow.Spread, shadow.Blur, context.AvailablePadding, reservedFacePadding, out var spreadMin, out var spreadMax, out var blurMax);
                         CanvasEditorGUI.ConstrainedSdfLengthSlider(shadow.Spread, shadow.SpreadUnit, Styles.Spread, context.AvailablePadding, spreadMin, spreadMax);
@@ -964,13 +855,13 @@ namespace Tripledot.CanvasKit.Editor
         }
 
         private bool BeginToggleSection(
-            SerializedLayer layer, GUIContent title, SerializedProperty enabledProperty, int layerIndex, TextMeshProLayerStack.DirtyFlags flags)
+            SerializedLayer layer, GUIContent title, SerializedProperty enabledProperty, int layerIndex)
         {
             var key = layer.Root.serializedObject.targetObject.GetInstanceID() + "." + layer.Root.propertyPath + "." + title.text;
             var expanded = SessionState.GetBool(key, true);
 
             EditorGUILayout.BeginVertical(CanvasEditorGUI.Styles.RoundedInspectorPanelStyle);
-            expanded = DrawHeaderToggleFoldout(title, expanded, enabledProperty, layerIndex, flags);
+            expanded = DrawHeaderToggleFoldout(title, expanded, enabledProperty, layerIndex);
             SessionState.SetBool(key, expanded);
             if (expanded) {
                 EditorGUILayout.BeginVertical(CanvasEditorGUI.Styles.RoundedInspectorPanelContentStyle);
@@ -990,7 +881,7 @@ namespace Tripledot.CanvasKit.Editor
         }
 
         private bool DrawHeaderToggleFoldout(
-            GUIContent title, bool expanded, SerializedProperty enabledProperty, int layerIndex, TextMeshProLayerStack.DirtyFlags flags)
+            GUIContent title, bool expanded, SerializedProperty enabledProperty, int layerIndex)
         {
             var headerRect = GUILayoutUtility.GetRect(1f, Styles.FillSectionHeaderHeight);
             GUI.Label(headerRect, GUIContent.none, CanvasEditorGUI.Styles.GetRoundedInspectorPanelHeaderStyle(expanded));
@@ -1038,7 +929,7 @@ namespace Tripledot.CanvasKit.Editor
             EditorGUI.showMixedValue = false;
             if (EditorGUI.EndChangeCheck()) {
                 enabledProperty.boolValue = enabled;
-                MarkLayerDirty(layerIndex, flags);
+                MarkLayerDirty(layerIndex);
             }
 
             var evt = Event.current;
@@ -1250,25 +1141,23 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        private readonly struct LayerDirtyChangeCheckScope : IDisposable
+        private readonly struct LayerChangeCheckScope : IDisposable
         {
             private readonly TextMeshProLayerInspector inspector;
             private readonly int layerIndex;
-            private readonly TextMeshProLayerStack.DirtyFlags flags;
 
-            public LayerDirtyChangeCheckScope(
-                TextMeshProLayerInspector inspector, int layerIndex, TextMeshProLayerStack.DirtyFlags flags)
+            public LayerChangeCheckScope(
+                TextMeshProLayerInspector inspector, int layerIndex)
             {
                 this.inspector = inspector;
                 this.layerIndex = layerIndex;
-                this.flags = flags;
                 EditorGUI.BeginChangeCheck();
             }
 
             public void Dispose()
             {
                 if (EditorGUI.EndChangeCheck()) {
-                    inspector?.MarkLayerDirty(layerIndex, flags);
+                    inspector?.MarkLayerDirty(layerIndex);
                 }
             }
         }

@@ -7,8 +7,6 @@ namespace Tripledot.CanvasKit
 {
     internal sealed class TextMeshProLayerMeshBuilder
     {
-        #region Fields
-
         private readonly List<Vector3> vertices = new List<Vector3>(256);
         private readonly List<Vector3> normals = new List<Vector3>(256);
         private readonly List<Color32> colors = new List<Color32>(256);
@@ -21,10 +19,6 @@ namespace Tripledot.CanvasKit
         private Vector3 boundsMin;
         private Vector3 boundsMax;
         private bool hasBounds;
-
-        #endregion
-
-        #region Types
 
         private readonly struct VisibleGlyph
         {
@@ -43,10 +37,6 @@ namespace Tripledot.CanvasKit
                 AtlasHeight = atlasHeight;
             }
         }
-
-        #endregion
-
-        #region Public API
 
         public void Build(Mesh mesh, TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit)
         {
@@ -96,9 +86,7 @@ namespace Tripledot.CanvasKit
             mesh.bounds = hasBounds ? new Bounds((boundsMin + boundsMax) * 0.5f, boundsMax - boundsMin) : default;
         }
 
-        #endregion
-
-        #region Glyph Collection
+        #region Mesh Building
 
         private void CollectVisibleGlyphs(TMP_TextInfo textInfo)
         {
@@ -121,10 +109,6 @@ namespace Tripledot.CanvasKit
                 visibleGlyphs.Add(new VisibleGlyph(meshInfo, character, glyphUv, GetAtlasWidth(character), GetAtlasHeight(character)));
             }
         }
-
-        #endregion
-
-        #region Mesh Building
 
         private void AddCharacterQuad(VisibleGlyph glyph, TextMeshProLayerData layer, float sdfPaddingLimit, List<int> triangles)
         {
@@ -177,10 +161,6 @@ namespace Tripledot.CanvasKit
             uv0Upload.Add(new Vector4(targetUv.x, targetUv.y, sourceUv.z, sourceUv.w));
             uv1Upload.Add(safeUv);
         }
-
-        #endregion
-
-        #region Utility
 
         private static Vector3 MapUvToSourceQuad(Vector3[] sourceVertices, Vector4[] sourceUv0, int vertexIndex, Vector2 targetUv)
         {

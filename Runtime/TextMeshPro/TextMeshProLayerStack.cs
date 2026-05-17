@@ -127,29 +127,12 @@ namespace Tripledot.CanvasKit
         #region Internal API
 
         internal List<TextMeshProLayerData> LocalLayers => localLayers;
-
         internal List<TextMeshProLayerOverride> PresetLayerOverrides => presetLayerOverrides;
 
         internal bool TryGetCurrentPaintBounds(out Vector4 bounds)
         {
             bounds = paintBounds;
             return hasPaintBounds && paintBounds.z > 0f && paintBounds.w > 0f;
-        }
-
-        internal void GetLocalLayers(List<TextMeshProLayerData> results)
-        {
-            results.Clear();
-            for (int i = 0; i < localLayers.Count; i++) {
-                if (localLayers[i] != null) {
-                    results.Add(localLayers[i]);
-                }
-            }
-        }
-
-        internal void GetResolvedLayers(List<TextMeshProLayerData> results)
-        {
-            results.Clear();
-            ResolveRenderableLayers(results, null);
         }
 
         internal void SetLayerStackDirty(DirtyFlags flags)
@@ -163,11 +146,6 @@ namespace Tripledot.CanvasKit
             QueueGraphicRebuild();
         }
 
-        internal void SetLayerChanged()
-        {
-            SetLayerGeometryChanged();
-        }
-
         internal void SetLayerMaterialChanged()
         {
             MarkDirty(MaterialDirtyFlags);
@@ -179,19 +157,6 @@ namespace Tripledot.CanvasKit
         {
             MarkDirty(MaterialDirtyFlags);
             MarkRuntimeMaterialDirty(layerIndex);
-            QueueGraphicRebuild();
-        }
-
-        internal void SetLayerGeometryChanged()
-        {
-            MarkDirty(GeometryDirtyFlags);
-            QueueGraphicRebuild();
-        }
-
-        internal void SetLayerPaddingChanged()
-        {
-            MarkDirty(PaddingDirtyFlags);
-            MarkRuntimeMaterialsDirty();
             QueueGraphicRebuild();
         }
 
@@ -574,9 +539,11 @@ namespace Tripledot.CanvasKit
             layerCompositionDirty = false;
             layers.Clear();
             layerMaterialScopes.Clear();
+            
             ResolveRenderableLayers(layers, layerMaterialScopes);
             EnsureLayerRuntimeStates(layers.Count);
             ResetCanvasRendererState();
+            
             MarkRuntimeMaterialsDirty();
             MarkDirty(DirtyFlags.Layers | DirtyFlags.Geometry | DirtyFlags.Material | DirtyFlags.Padding | DirtyFlags.Canvas);
 
@@ -588,6 +555,7 @@ namespace Tripledot.CanvasKit
             var requiredPadding = CalculateMaxSdfPadding(layers);
             var availableSdfPadding = TextMeshProUtility.CalculateAvailablePadding(text);
             var effectPaddingBudget = Mathf.Min(requiredPadding, availableSdfPadding);
+            
             appliedEffectPaddingBudget = effectPaddingBudget;
             appliedGeometryPaddingLimit = TextMeshProUtility.GetGeometryPaddingLimit(effectPaddingBudget);
         }
@@ -608,30 +576,25 @@ namespace Tripledot.CanvasKit
         {
             if (preset == null) {
                 for (int i = 0; i < localLayers.Count; i++) {
-                    if (IsRenderableLayer(localLayers[i])) {
+                    if (localLayers[i].Enabled) {
                         results.Add(localLayers[i]);
                         materialScopes?.Add(LayerMaterialScope.Unique);
                     }
                 }
-
-                return;
-            }
-
-            EnsurePresetOverrideSlots();
-            for (int i = 0; i < preset.LayerCount; i++) {
-                var presetLayer = preset.GetLayer(i);
-                var layerOverride = presetLayerOverrides[i];
-                var layer = layerOverride.OverrideLayer ? layerOverride.Layer : presetLayer;
-                if (IsRenderableLayer(layer)) {
-                    results.Add(layer);
-                    materialScopes?.Add(layerOverride.OverrideLayer ? LayerMaterialScope.Unique : LayerMaterialScope.Shared(preset, i, preset.GetLayerVersion(i)));
+            } else {
+                EnsurePresetOverrideSlots();
+            
+                for (int i = 0; i < preset.LayerCount; i++) {
+                    var presetLayer = preset.GetLayer(i);
+                    var layerOverride = presetLayerOverrides[i];
+                    var layer = layerOverride.OverrideLayer ? layerOverride.Layer : presetLayer;
+                    
+                    if (layer.Enabled) {
+                        results.Add(layer);
+                        materialScopes?.Add(layerOverride.OverrideLayer ? LayerMaterialScope.Unique : LayerMaterialScope.Shared(preset, i, preset.GetLayerVersion(i)));
+                    }
                 }
             }
-        }
-
-        private static bool IsRenderableLayer(TextMeshProLayerData layer)
-        {
-            return layer is { Enabled: true };
         }
 
         #endregion
@@ -658,7 +621,8 @@ namespace Tripledot.CanvasKit
         internal bool IsPresetLayerInstance(int index)
         {
             EnsurePresetOverrideSlots();
-            return index >= 0 && index < presetLayerOverrides.Count && presetLayerOverrides[index].OverrideLayer;
+            return index >= 0 && index < presetLayerOverrides.Count &&
+                   presetLayerOverrides[index].OverrideLayer;
         }
 
         internal void SetPresetLayerInstance(int index, bool instance)
@@ -699,28 +663,25 @@ namespace Tripledot.CanvasKit
 
         internal void CopyEffectivePresetLayersTo(IList<TextMeshProLayerData> destination)
         {
-            if (destination == null) {
-                return;
-            }
-
             destination.Clear();
+            
             if (preset == null) {
                 for (int i = 0; i < localLayers.Count; i++) {
                     destination.Add(localLayers[i]?.Clone());
                 }
-
-                return;
-            }
-
-            EnsurePresetOverrideSlots();
-            for (int i = 0; i < preset.LayerCount; i++) {
-                destination.Add(GetEffectivePresetLayer(i)?.Clone());
+            } else {
+                EnsurePresetOverrideSlots();
+            
+                for (int i = 0; i < preset.LayerCount; i++) {
+                    destination.Add(GetEffectivePresetLayer(i)?.Clone());
+                }
             }
         }
 
         internal void ClearPresetLayerInstances()
         {
             EnsurePresetOverrideSlots();
+            
             for (int i = 0; i < presetLayerOverrides.Count; i++) {
                 presetLayerOverrides[i].OverrideLayer = false;
                 presetLayerOverrides[i].EnsureLayerCopy(preset != null ? preset.GetLayer(i) : null);
@@ -761,6 +722,7 @@ namespace Tripledot.CanvasKit
         {
             allRuntimeMaterialsDirty = true;
             dirtyRuntimeMaterialLayerIndices.Clear();
+            
             for (int i = 0; i < layerRuntimeStates.Count; i++) {
                 layerRuntimeStates[i].SetMaterialDirty();
             }
@@ -782,12 +744,7 @@ namespace Tripledot.CanvasKit
 
         private void ApplyPendingRuntimeMaterialDirties()
         {
-            if (allRuntimeMaterialsDirty) {
-                MarkRuntimeMaterialsDirty();
-                return;
-            }
-
-            if (dirtyRuntimeMaterialLayerIndices.Count == 0) {
+            if (allRuntimeMaterialsDirty || dirtyRuntimeMaterialLayerIndices.Count == 0) {
                 MarkRuntimeMaterialsDirty();
                 return;
             }
@@ -840,6 +797,7 @@ namespace Tripledot.CanvasKit
             }
 
             EnsurePresetOverrideSlots();
+            
             var layerOverride = layerIndex < presetLayerOverrides.Count ? presetLayerOverrides[layerIndex] : null;
             return layerOverride is { OverrideLayer: true } ? layerOverride.Layer : preset.GetLayer(layerIndex);
         }
@@ -848,6 +806,7 @@ namespace Tripledot.CanvasKit
         {
             dirtyFlags = DirtyFlags.All;
             ClearPendingRuntimeMaterialDirties();
+            
             sourceSdfPaddingState = 0f;
             materialContextState = default;
             hasSourceSdfPaddingState = false;
@@ -882,12 +841,8 @@ namespace Tripledot.CanvasKit
         }
 
         private void ApplyCanvasRenderer(
-            TextMeshProUGUI text,
-            Mesh mesh,
-            IList<TextMeshProLayerData> layers,
-            IList<LayerMaterialScope> materialScopes,
-            TextMeshProLayerMaterialContext materialContext,
-            bool materialSharingAllowed,
+            TextMeshProUGUI text, Mesh mesh, IList<TextMeshProLayerData> layers,
+            IList<LayerMaterialScope> materialScopes, TextMeshProLayerMaterialContext materialContext, bool materialSharingAllowed, 
             ApplyCanvasRendererFlags applyFlags)
         {
             var canvasRenderer = text.canvasRenderer;
@@ -936,8 +891,7 @@ namespace Tripledot.CanvasKit
 
         private static bool CanSharePresetMaterials(CanvasRenderer canvasRenderer)
         {
-            return canvasRenderer == null
-                || (!canvasRenderer.hasRectClipping && canvasRenderer.clippingSoftness == Vector2.zero);
+            return canvasRenderer == null || (!canvasRenderer.hasRectClipping && canvasRenderer.clippingSoftness == Vector2.zero);
         }
 
         private void EnsureAppliedMaterialSlots(int count)
@@ -987,27 +941,25 @@ namespace Tripledot.CanvasKit
 
         private void RegisterCanvasValidation()
         {
-            if (isRegisteredForCanvasValidation) {
-                return;
-            }
-
-            isRegisteredForCanvasValidation = true;
-            CanvasValidationStacks.Add(this);
-            if (CanvasValidationStacks.Count == 1) {
-                Canvas.willRenderCanvases += OnWillRenderCanvasesValidateStacks;
+            if (!isRegisteredForCanvasValidation) {
+                isRegisteredForCanvasValidation = true;
+                CanvasValidationStacks.Add(this);
+                if (CanvasValidationStacks.Count == 1)
+                {
+                    Canvas.willRenderCanvases += OnWillRenderCanvasesValidateStacks;
+                }
             }
         }
 
         private void UnregisterCanvasValidation()
         {
-            if (!isRegisteredForCanvasValidation) {
-                return;
-            }
-
-            isRegisteredForCanvasValidation = false;
-            CanvasValidationStacks.Remove(this);
-            if (CanvasValidationStacks.Count == 0) {
-                Canvas.willRenderCanvases -= OnWillRenderCanvasesValidateStacks;
+            if (isRegisteredForCanvasValidation) {
+                isRegisteredForCanvasValidation = false;
+                CanvasValidationStacks.Remove(this);
+                if (CanvasValidationStacks.Count == 0)
+                {
+                    Canvas.willRenderCanvases -= OnWillRenderCanvasesValidateStacks;
+                }
             }
         }
 
@@ -1023,18 +975,13 @@ namespace Tripledot.CanvasKit
                 return;
             }
 
-            var canvasRenderer = text != null ? text.canvasRenderer : null;
-            if (HasCanvasRendererDrifted(canvasRenderer)) {
+            if (HasCanvasRendererDrifted(text.canvasRenderer)) {
                 ReapplyCanvasRenderer();
             }
         }
 
         private bool HasCanvasRendererDrifted(CanvasRenderer canvasRenderer)
         {
-            if (canvasRenderer == null) {
-                return false;
-            }
-
             if (canvasRenderer.cull || canvasRenderer.materialCount != appliedMaterialCount) {
                 return true;
             }
@@ -1059,7 +1006,7 @@ namespace Tripledot.CanvasKit
 
         private bool TryMarkCanvasStateDirty()
         {
-            if (!hasAssignedMesh || text == null) {
+            if (!hasAssignedMesh) {
                 return false;
             }
 
@@ -1098,12 +1045,6 @@ namespace Tripledot.CanvasKit
         private static TextMeshProLayerData GetRenderLayerForSlot(IList<TextMeshProLayerData> layers, int materialSlot)
         {
             return layers[layers.Count - 1 - materialSlot];
-        }
-
-        private Material GetSourceMaterial()
-        {
-            var renderMaterial = text != null && text.materialForRendering != null ? text.materialForRendering : text != null ? text.fontSharedMaterial : null;
-            return GetSourceSharedMaterial(renderMaterial);
         }
 
         private Material GetSourceSharedMaterial(Material renderMaterial)

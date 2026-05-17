@@ -288,20 +288,21 @@ namespace Tripledot.CanvasKit.Editor
             public static readonly Color ActiveButtonColorDark = new Color(0.36f, 0.58f, 0.78f, 1f);
             public static readonly Color ActiveButtonColorLight = new Color(0.66f, 0.82f, 1f, 1f);
 
-            private static GUIStyle _mappingButtonStyle;
-            public static GUIStyle MappingButtonStyle => _mappingButtonStyle ??= new GUIStyle(EditorStyles.miniButton) {
-                alignment = TextAnchor.MiddleCenter,
-                fixedWidth = HeaderButtonWidth,
-                fixedHeight = HeaderButtonHeight,
-                imagePosition = ImagePosition.ImageOnly,
-                margin = new RectOffset(0, 0, 0, 0),
-                padding = new RectOffset(5, 5, 2, 2)
-            };
+            public static readonly GUIStyle MappingButtonStyle;
 
             static Styles()
             {
                 EditGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/EditGradientIcon.png");
                 ResetGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/ResetIcon.png");
+                
+                MappingButtonStyle = new GUIStyle(EditorStyles.miniButton) {
+                    alignment = TextAnchor.MiddleCenter,
+                    fixedWidth = HeaderButtonWidth,
+                    fixedHeight = HeaderButtonHeight,
+                    imagePosition = ImagePosition.ImageOnly,
+                    margin = new RectOffset(0, 0, 0, 0),
+                    padding = new RectOffset(5, 5, 2, 2)
+                };
             }
         }
     }
