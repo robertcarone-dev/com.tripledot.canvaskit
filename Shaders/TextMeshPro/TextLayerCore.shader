@@ -15,6 +15,12 @@ Shader "TextMeshPro/Tripledot/Text Core"
         _FacePaintTransform1 ("Fill Paint Transform 1", Vector) = (1,1,0,0)
         _FaceEnabled ("Face Enabled", Integer) = 1
         _FaceDilate ("Face Dilate", Float) = 0
+        _FaceLightingEnabled ("Fill Lighting Enabled", Integer) = 0
+        _FaceBevelWidth ("Fill Bevel Width", Float) = 0.35
+        _FaceBevelSoftness ("Fill Bevel Softness", Float) = 0.35
+        _FaceLightDirection ("Fill Light Direction", Vector) = (-0.7071,0.7071,0,0)
+        _FaceHighlightColor ("Fill Highlight Color", Color) = (1,1,1,0.65)
+        _FaceShadowColor ("Fill Shadow Color", Color) = (0.45,0.24,0.05,0.35)
         _PaintBounds ("Paint Bounds", Vector) = (0,0,1,1)
         _LayerOpacity ("Layer Opacity", Range(0,1)) = 1
         [HideInInspector] _BlendMode ("Blend Mode", Integer) = 0
@@ -117,6 +123,7 @@ Shader "TextMeshPro/Tripledot/Text Core"
             #pragma multi_compile_local_fragment _ STROKE_TEXTURE_ON
             #pragma multi_compile_local_fragment _ SHADOW_TEXTURE_ON
             #pragma multi_compile_local_fragment _ GRADIENT_ATLAS_ON
+            #pragma multi_compile_local_fragment _ FACE_LIGHTING_ON
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"

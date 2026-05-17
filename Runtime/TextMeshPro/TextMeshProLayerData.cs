@@ -171,6 +171,15 @@ namespace Tripledot.CanvasKit
             var faceUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
                 material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled, gradientState.Face);
             material.SetFloat(ShaderIds.FaceDilate, TextMeshProUtility.PixelsToFaceDilate(face.Dilate, context.GradientScale));
+            var faceLightingEnabled = face.Enabled && face.Lighting.Enabled;
+            var faceBevelWidth = Mathf.Clamp01(face.Lighting.BevelWidth);
+            material.SetInteger(ShaderIds.FaceLightingEnabled, faceLightingEnabled ? 1 : 0);
+            material.SetFloat(ShaderIds.FaceBevelWidth, faceBevelWidth);
+            material.SetFloat(ShaderIds.FaceBevelSoftness, Mathf.Clamp01(face.Lighting.BevelSoftness));
+            material.SetVector(ShaderIds.FaceLightDirection, AngleToDirection(face.Lighting.LightAngle));
+            material.SetColor(ShaderIds.FaceHighlightColor, face.Lighting.HighlightColor);
+            material.SetColor(ShaderIds.FaceShadowColor, face.Lighting.ShadowColor);
+            CanvasUtility.SetKeyword(material, ShaderKeywords.FaceLighting, faceLightingEnabled && faceBevelWidth > 0f);
 
             TextMeshProUtility.ClampStrokeEffect(
                 stroke.Width, stroke.Feather, stroke.Position, context.AppliedSdfPadding, face.Dilate, 
@@ -182,7 +191,7 @@ namespace Tripledot.CanvasKit
             material.SetVector(ShaderIds.StrokeOffset, new Vector4(stroke.Offset.x, stroke.Offset.y, 0f, 0f));
             var strokeUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
                 material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled, gradientState.Stroke);
-            
+
             TextMeshProUtility.ClampShadowEffect(
                 shadow.Spread, shadow.Blur, context.AppliedSdfPadding, face.Dilate,
                 out var shadowSpread, out var shadowBlur);
@@ -197,6 +206,12 @@ namespace Tripledot.CanvasKit
                 faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
             
             TextMeshProLayerMaterial.ApplySharedTextProperties(material, context, blendMode, Opacity);
+        }
+
+        private static Vector4 AngleToDirection(float angle)
+        {
+            var radians = angle * Mathf.Deg2Rad;
+            return new Vector4(Mathf.Cos(radians), Mathf.Sin(radians), 0f, 0f);
         }
 
         #endregion
@@ -234,6 +249,7 @@ namespace Tripledot.CanvasKit
             public const string StrokeTexture = "STROKE_TEXTURE_ON";
             public const string ShadowTexture = "SHADOW_TEXTURE_ON";
             public const string GradientAtlas = "GRADIENT_ATLAS_ON";
+            public const string FaceLighting = "FACE_LIGHTING_ON";
         }
 
         private static class ShaderIds
@@ -242,6 +258,13 @@ namespace Tripledot.CanvasKit
             public static readonly int FaceColor = Shader.PropertyToID("_FaceColor");
             public static readonly int FaceColorB = Shader.PropertyToID("_FaceColorB");
             public static readonly int FaceDilate = Shader.PropertyToID("_FaceDilate");
+
+            public static readonly int FaceLightingEnabled = Shader.PropertyToID("_FaceLightingEnabled");
+            public static readonly int FaceBevelWidth = Shader.PropertyToID("_FaceBevelWidth");
+            public static readonly int FaceBevelSoftness = Shader.PropertyToID("_FaceBevelSoftness");
+            public static readonly int FaceLightDirection = Shader.PropertyToID("_FaceLightDirection");
+            public static readonly int FaceHighlightColor = Shader.PropertyToID("_FaceHighlightColor");
+            public static readonly int FaceShadowColor = Shader.PropertyToID("_FaceShadowColor");
 
             public static readonly TextMeshProLayerMaterial.PaintShaderIds FacePaint = new TextMeshProLayerMaterial.PaintShaderIds(
                 Shader.PropertyToID("_FacePaintMode"),

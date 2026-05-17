@@ -121,7 +121,8 @@ namespace Tripledot.CanvasKit.Editor
                 Enabled = true,
                 Paint = CanvasPaint.Solid(GetColor(material, ShaderUtilities.ID_FaceColor, Color.white)),
                 Dilate = NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_FaceDilate, 0f), gradientScale),
-                DilateUnit = TextMeshProSdfLengthUnit.Pixels
+                DilateUnit = TextMeshProSdfLengthUnit.Pixels,
+                Lighting = CreateFaceLighting(material)
             };
 
             var outlineWidth = GetFloat(material, ShaderUtilities.ID_OutlineWidth, 0f);
@@ -197,6 +198,42 @@ namespace Tripledot.CanvasKit.Editor
                 && material.IsKeywordEnabled("GLOW_ON");
         }
 
+        private static TextMeshProFaceLighting CreateFaceLighting(Material material)
+        {
+            if (!HasBevel(material)) {
+                return TextMeshProFaceLighting.Default;
+            }
+
+            // TMP bevel also supports offset, clamp, bump maps, reflections, and exact specular exponent.
+            // Canvas Kit face lighting keeps only the approximate face-only highlight/shadow intent.
+            var specular = GetColor(material, "_SpecularColor", Color.white);
+            var highlightColor = new Color(specular.r, specular.g, specular.b, Mathf.Clamp01(GetFloat(material, "_SpecularPower", 0f) / 4f));
+            var shadowStrength = Mathf.Clamp01(Mathf.Max(GetFloat(material, "_Diffuse", 0f), 1f - GetFloat(material, "_Ambient", 1f)) * 0.5f);
+
+            return new TextMeshProFaceLighting {
+                Enabled = true,
+                BevelWidth = Mathf.Clamp01(Mathf.Max(Mathf.Abs(GetFloat(material, "_BevelWidth", 0f)) * 2f, 0.2f)),
+                BevelSoftness = Mathf.Clamp01(Mathf.Lerp(0.2f, 0.75f, GetFloat(material, "_BevelRoundness", 0f))),
+                LightAngle = Mathf.Repeat(90f - GetFloat(material, ShaderUtilities.ID_LightAngle, Mathf.PI) * Mathf.Rad2Deg, 360f),
+                HighlightColor = highlightColor,
+                HighlightColorUsesHdrPicker = IsHdrColor(highlightColor),
+                ShadowColor = new Color(0f, 0f, 0f, shadowStrength)
+            };
+        }
+
+        private static bool HasBevel(Material material)
+        {
+            return material != null
+                && material.HasProperty(ShaderUtilities.ID_BevelAmount)
+                && material.IsKeywordEnabled(ShaderUtilities.Keyword_Bevel)
+                && GetFloat(material, ShaderUtilities.ID_BevelAmount, 0f) > 0f;
+        }
+
+        private static bool IsHdrColor(Color color)
+        {
+            return color.r > 1f || color.g > 1f || color.b > 1f;
+        }
+
         private static float NormalizedOutlineWidthToPixels(float value, float gradientScale)
         {
             return Mathf.Max(0f, value) * gradientScale;
@@ -217,9 +254,19 @@ namespace Tripledot.CanvasKit.Editor
             return material != null && material.HasProperty(propertyId) ? material.GetColor(propertyId) : fallback;
         }
 
+        private static Color GetColor(Material material, string propertyName, Color fallback)
+        {
+            return material != null && material.HasProperty(propertyName) ? material.GetColor(propertyName) : fallback;
+        }
+
         private static float GetFloat(Material material, int propertyId, float fallback)
         {
             return material != null && material.HasProperty(propertyId) ? material.GetFloat(propertyId) : fallback;
+        }
+
+        private static float GetFloat(Material material, string propertyName, float fallback)
+        {
+            return material != null && material.HasProperty(propertyName) ? material.GetFloat(propertyName) : fallback;
         }
 
         private static Texture GetTexture(Material material, int propertyId)

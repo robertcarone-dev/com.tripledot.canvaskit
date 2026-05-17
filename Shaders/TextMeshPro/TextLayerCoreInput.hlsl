@@ -3,6 +3,7 @@
 
 TEXTURE2D(_MainTex);
 SAMPLER(sampler_MainTex);
+float4 _MainTex_TexelSize;
 
 #if defined(FACE_TEXTURE_ON)
 TEXTURE2D(_FaceTexture);
@@ -36,6 +37,12 @@ CBUFFER_START(UnityPerMaterial)
     float4 _FacePaintTransform1;
     int _FaceEnabled;
     float _FaceDilate;
+    int _FaceLightingEnabled;
+    float _FaceBevelWidth;
+    float _FaceBevelSoftness;
+    float4 _FaceLightDirection;
+    float4 _FaceHighlightColor;
+    float4 _FaceShadowColor;
     float4 _PaintBounds;
     float _LayerOpacity;
     int _BlendMode;

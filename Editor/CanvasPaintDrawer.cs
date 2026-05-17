@@ -180,7 +180,7 @@ namespace Tripledot.CanvasKit.Editor
             return Styles.ColorB;
         }
 
-        private static void DrawColor(SerializedProperty property, GUIContent label, SerializedProperty hdr)
+        internal static void DrawColor(SerializedProperty property, GUIContent label, SerializedProperty hdr)
         {
             EditorGUILayout.BeginHorizontal();
             EditorGUI.showMixedValue = property.hasMultipleDifferentValues;

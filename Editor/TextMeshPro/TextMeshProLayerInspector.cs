@@ -738,6 +738,11 @@ namespace Tripledot.CanvasKit.Editor
                     using (new LayerChangeCheckScope(this, layerIndex)) {
                         CanvasEditorGUI.SdfLengthSlider(face.Dilate, face.DilateUnit, Styles.Dilate, context.AvailablePadding, -context.AvailablePadding, context.AvailablePadding);
                     }
+
+                    CanvasEditorGUI.DrawRoundedInspectorSubsection(Styles.Lighting);
+                    using (new LayerChangeCheckScope(this, layerIndex)) {
+                        DrawFaceLighting(face.Lighting);
+                    }
                 }
             }
             EndToggleSection(faceExpanded);
@@ -852,6 +857,62 @@ namespace Tripledot.CanvasKit.Editor
                 CanvasPaintDrawer.DrawMappingHeader(paint, sceneTarget, boxed, layerIndex);
                 CanvasPaintDrawer.DrawMapping(paint);
             }
+        }
+
+        private static void DrawFaceLighting(SerializedFaceLighting lighting)
+        {
+            var wasEnabled = lighting.Enabled is { hasMultipleDifferentValues: false, boolValue: true };
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(lighting.Enabled, Styles.EnableLighting);
+            if (EditorGUI.EndChangeCheck()
+                && !wasEnabled
+                && lighting.Enabled is { hasMultipleDifferentValues: false, boolValue: true }) {
+                SeedDefaultFaceLightingIfUninitialized(lighting.Root);
+            }
+
+            using (new EditorGUI.DisabledScope(lighting.Enabled is { hasMultipleDifferentValues: false, boolValue: false })) {
+                EditorGUILayout.Slider(lighting.BevelWidth, 0f, 1f, Styles.BevelWidth);
+                EditorGUILayout.Slider(lighting.BevelSoftness, 0f, 1f, Styles.BevelSoftness);
+                EditorGUILayout.Slider(lighting.LightAngle, 0f, 360f, Styles.LightAngle);
+                CanvasPaintDrawer.DrawColor(lighting.HighlightColor, Styles.HighlightColor, lighting.HighlightColorUsesHdrPicker);
+                CanvasPaintDrawer.DrawColor(lighting.ShadowColor, Styles.ShadowColor, lighting.ShadowColorUsesHdrPicker);
+            }
+        }
+
+        internal static void SeedDefaultFaceLightingIfUninitialized(SerializedProperty lightingRoot)
+        {
+            if (!IsUninitializedFaceLighting(lightingRoot)) {
+                return;
+            }
+
+            var defaults = TextMeshProFaceLighting.Default;
+            lightingRoot.FindPropertyRelative("Enabled").boolValue = true;
+            lightingRoot.FindPropertyRelative("BevelWidth").floatValue = defaults.BevelWidth;
+            lightingRoot.FindPropertyRelative("BevelSoftness").floatValue = defaults.BevelSoftness;
+            lightingRoot.FindPropertyRelative("LightAngle").floatValue = defaults.LightAngle;
+            lightingRoot.FindPropertyRelative("HighlightColor").colorValue = defaults.HighlightColor;
+            lightingRoot.FindPropertyRelative("HighlightColorUsesHdrPicker").boolValue = defaults.HighlightColorUsesHdrPicker;
+            lightingRoot.FindPropertyRelative("ShadowColor").colorValue = defaults.ShadowColor;
+            lightingRoot.FindPropertyRelative("ShadowColorUsesHdrPicker").boolValue = defaults.ShadowColorUsesHdrPicker;
+        }
+
+        private static bool IsUninitializedFaceLighting(SerializedProperty lightingRoot)
+        {
+            return IsZero(lightingRoot.FindPropertyRelative("BevelWidth"))
+                && IsZero(lightingRoot.FindPropertyRelative("BevelSoftness"))
+                && IsZero(lightingRoot.FindPropertyRelative("LightAngle"))
+                && IsDefaultColor(lightingRoot.FindPropertyRelative("HighlightColor"))
+                && IsDefaultColor(lightingRoot.FindPropertyRelative("ShadowColor"));
+        }
+
+        private static bool IsZero(SerializedProperty property)
+        {
+            return property is { hasMultipleDifferentValues: false } && Mathf.Approximately(property.floatValue, 0f);
+        }
+
+        private static bool IsDefaultColor(SerializedProperty property)
+        {
+            return property is { hasMultipleDifferentValues: false } && property.colorValue == default;
         }
 
         private bool BeginToggleSection(
@@ -986,41 +1047,21 @@ namespace Tripledot.CanvasKit.Editor
             var strokePaint = strokeEnabled ? ReadPaintForSwatch(layer.Stroke.PaintRoot) : default;
             if (layer.Face.Enabled.boolValue) {
                 return new LayerSwatchDescriptor(
-                    true,
-                    ReadPaintForSwatch(layer.Face.PaintRoot),
-                    Color.white,
-                    strokeEnabled,
-                    strokePaint,
-                    Color.black);
+                    true, ReadPaintForSwatch(layer.Face.PaintRoot), strokeEnabled, strokePaint);
             }
 
             if (strokeEnabled) {
                 return new LayerSwatchDescriptor(
-                    false,
-                    default,
-                    Color.clear,
-                    true,
-                    strokePaint,
-                    Color.black);
+                    false, default, true, strokePaint);
             }
 
             if (layer.Shadow.Enabled.boolValue) {
                 return new LayerSwatchDescriptor(
-                    true,
-                    ReadPaintForSwatch(layer.Shadow.PaintRoot),
-                    Styles.UnderlayFallbackColor,
-                    false,
-                    default,
-                    Color.clear);
+                    true, ReadPaintForSwatch(layer.Shadow.PaintRoot), false, default);
             }
 
             return new LayerSwatchDescriptor(
-                true,
-                CanvasPaint.Solid(Color.clear),
-                Color.clear,
-                false,
-                default,
-                Color.clear);
+                true, CanvasPaint.Solid(Color.clear), false, default);
         }
 
         internal static CanvasPaint ReadPaintForSwatch(SerializedProperty paint)
@@ -1123,21 +1164,17 @@ namespace Tripledot.CanvasKit.Editor
         {
             public readonly bool HasFill;
             public readonly CanvasPaint Fill;
-            public readonly Color FillFallback;
             public readonly bool HasInsetOutline;
             public readonly CanvasPaint InsetOutline;
-            public readonly Color InsetOutlineFallback;
 
             public LayerSwatchDescriptor(
-                bool hasFill, CanvasPaint fill, Color fillFallback,
-                bool hasInsetOutline, CanvasPaint insetOutline, Color insetOutlineFallback)
+                bool hasFill, CanvasPaint fill,
+                bool hasInsetOutline, CanvasPaint insetOutline)
             {
                 HasFill = hasFill;
                 Fill = fill;
-                FillFallback = fillFallback;
                 HasInsetOutline = hasInsetOutline;
                 InsetOutline = insetOutline;
-                InsetOutlineFallback = insetOutlineFallback;
             }
         }
 
@@ -1191,6 +1228,7 @@ namespace Tripledot.CanvasKit.Editor
             private SerializedProperty paintRoot;
             private SerializedProperty dilate;
             private SerializedProperty dilateUnit;
+            private SerializedFaceLighting lighting;
 
             public SerializedFace(SerializedProperty root)
             {
@@ -1203,6 +1241,34 @@ namespace Tripledot.CanvasKit.Editor
             public SerializedCanvasPaint Paint => paint ??= new SerializedCanvasPaint(PaintRoot);
             public SerializedProperty Dilate => dilate ??= Root.FindPropertyRelative("Dilate");
             public SerializedProperty DilateUnit => dilateUnit ??= Root.FindPropertyRelative("DilateUnit");
+            public SerializedFaceLighting Lighting => lighting ??= new SerializedFaceLighting(Root.FindPropertyRelative("Lighting"));
+        }
+
+        private sealed class SerializedFaceLighting
+        {
+            public readonly SerializedProperty Root;
+            public readonly SerializedProperty Enabled;
+            private SerializedProperty bevelWidth;
+            private SerializedProperty bevelSoftness;
+            private SerializedProperty lightAngle;
+            private SerializedProperty highlightColor;
+            private SerializedProperty highlightColorUsesHdrPicker;
+            private SerializedProperty shadowColor;
+            private SerializedProperty shadowColorUsesHdrPicker;
+
+            public SerializedFaceLighting(SerializedProperty root)
+            {
+                Root = root;
+                Enabled = root.FindPropertyRelative("Enabled");
+            }
+
+            public SerializedProperty BevelWidth => bevelWidth ??= Root.FindPropertyRelative("BevelWidth");
+            public SerializedProperty BevelSoftness => bevelSoftness ??= Root.FindPropertyRelative("BevelSoftness");
+            public SerializedProperty LightAngle => lightAngle ??= Root.FindPropertyRelative("LightAngle");
+            public SerializedProperty HighlightColor => highlightColor ??= Root.FindPropertyRelative("HighlightColor");
+            public SerializedProperty HighlightColorUsesHdrPicker => highlightColorUsesHdrPicker ??= Root.FindPropertyRelative("HighlightColorUsesHdrPicker");
+            public SerializedProperty ShadowColor => shadowColor ??= Root.FindPropertyRelative("ShadowColor");
+            public SerializedProperty ShadowColorUsesHdrPicker => shadowColorUsesHdrPicker ??= Root.FindPropertyRelative("ShadowColorUsesHdrPicker");
         }
 
         private sealed class SerializedStroke
@@ -1264,12 +1330,16 @@ namespace Tripledot.CanvasKit.Editor
         private static class Styles
         {
             public static readonly GUIContent BlendMode = L10n.TextContent("Blend Mode", "Choose how this layer is composited with layers below it.");
+            public static readonly GUIContent BevelSoftness = L10n.TextContent("Softness", "Soften the normalized fake bevel lighting band.");
+            public static readonly GUIContent BevelWidth = L10n.TextContent("Width", "Set the normalized fake bevel lighting band width inside the fill edge.");
             public static readonly GUIContent Blur = L10n.TextContent("Blur", "Soften the shadow edge within the available SDF padding.");
             public static readonly GUIContent Dilate = L10n.TextContent("Dilate", "Expand or contract the face shape within the available SDF padding.");
             public static readonly GUIContent Effect = L10n.TextContent("Effect", "Controls for the shadow spread, blur, and offset.");
+            public static readonly GUIContent EnableLighting = L10n.TextContent("Enabled", "Enable fake bevel lighting on the fill.");
             public static readonly GUIContent Face = L10n.TextContent("Fill", "Enable and edit the main text fill for this layer.");
             public static readonly GUIContent Glow = L10n.TextContent("Glow", "Add an additive glow layer.");
             public static readonly GUIContent Feather = L10n.TextContent("Feather", "Soften the stroke edge within the available SDF padding.");
+            public static readonly GUIContent HighlightColor = L10n.TextContent("Highlight", "Tint and alpha used on fill edges facing the light.");
             public static readonly GUIContent Label = L10n.TextContent("Label", "Optional display name for this layer.");
             public static readonly GUIContent Layer = L10n.TextContent("Layer", "Add a text layer.");
             public static readonly GUIContent InstanceLayer = L10n.TextContent("I", "Instance layer: this row overrides the shared preset on this object.");
@@ -1278,11 +1348,14 @@ namespace Tripledot.CanvasKit.Editor
             public static readonly GUIContent SharedMode = L10n.TextContent("Shared", "Use the shared preset layer. Editing this row changes the preset asset.");
             public static readonly GUIContent Layers = L10n.TextContent("Layers", "TextMeshPro rendering layers applied by this stack or preset.");
             public static readonly GUIContent LayerStackEmptyInfo = L10n.TextContent("TextMeshPro renders normally until at least one TextMeshPro layer is added.");
+            public static readonly GUIContent LightAngle = L10n.TextContent("Angle", "Set the fake light direction in degrees.");
+            public static readonly GUIContent Lighting = L10n.TextContent("Lighting", "Controls for fake bevel highlights and shadows on the fill.");
             public static readonly GUIContent Offset = L10n.TextContent("Offset", "Shift this effect relative to the text face.");
             public static readonly GUIContent Opacity = L10n.TextContent("Opacity", "Fade the entire layer before it is blended with layers below it.");
             public static readonly GUIContent Outline = L10n.TextContent("Stroke", "Enable and edit the stroke effect for this layer.");
             public static readonly GUIContent Position = L10n.TextContent("Position", "Choose where the stroke is placed relative to the glyph edge.");
             public static readonly GUIContent Shadow = L10n.TextContent("Shadow", "Add or edit a shadow layer.");
+            public static readonly GUIContent ShadowColor = L10n.TextContent("Shadow", "Tint and alpha used on fill edges facing away from the light.");
             public static readonly GUIContent Shape = L10n.TextContent("Shape", "Controls for SDF shape expansion and edge softness.");
             public static readonly GUIContent Spread = L10n.TextContent("Spread", "Expand or contract the shadow shape within the available SDF padding.");
             public static readonly GUIContent Stroke = L10n.TextContent("Stroke", "Add or edit a stroke layer.");

@@ -212,12 +212,70 @@ half4 GetTextLayerBlendOutput(half4 premultiplied)
     return half4(premultiplied.rgb, alpha);
 }
 
+#if defined(FACE_LIGHTING_ON)
+float SampleTextLightingSignedDistance(float2 atlasUV, float4 atlasSafeRect, TextSDFParams sdfParams)
+{
+    half sdf = SampleTextAtlasSDF(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), atlasUV, atlasSafeRect);
+    return GetTextSignedDistance(sdf, sdfParams);
+}
+
+float2 GetTextFaceLightingAtlasNormal(float2 atlasUV, float4 atlasSafeRect, TextSDFParams sdfParams, out float confidence)
+{
+    float2 halfTexel = _MainTex_TexelSize.xy * 0.5;
+    float left = SampleTextLightingSignedDistance(atlasUV - float2(halfTexel.x, 0.0), atlasSafeRect, sdfParams);
+    float right = SampleTextLightingSignedDistance(atlasUV + float2(halfTexel.x, 0.0), atlasSafeRect, sdfParams);
+    float down = SampleTextLightingSignedDistance(atlasUV - float2(0.0, halfTexel.y), atlasSafeRect, sdfParams);
+    float up = SampleTextLightingSignedDistance(atlasUV + float2(0.0, halfTexel.y), atlasSafeRect, sdfParams);
+
+    float2 atlasGradient = float2(right - left, up - down);
+    float gradientLengthSq = dot(atlasGradient, atlasGradient);
+    float gradientLength = sqrt(gradientLengthSq);
+
+    confidence = smoothstep(0.0001, 0.01, gradientLength);
+
+    return atlasGradient * rsqrt(max(gradientLengthSq, 0.0000000001));
+}
+
+half4 ApplyTextFaceLighting(half4 facePaint, float signedDistance, float2 atlasUV, float4 atlasSafeRect, TextSDFParams sdfParams)
+{
+    if (_FaceBevelWidth <= 0.0) {
+        return facePaint;
+    }
+
+    float usableInteriorDistance = max((0.5 + sdfParams.weight) * sdfParams.scale, 0.0001);
+    float rawInsideDistance = max(-signedDistance, 0.0) / usableInteriorDistance;
+    float insideDistance = saturate(rawInsideDistance);
+
+    float bevelFeather = max(max(_FaceBevelWidth * _FaceBevelSoftness, fwidth(rawInsideDistance)), 0.0001);
+    float bevelStart = _FaceBevelWidth - bevelFeather;
+    float bevelMask = 1.0 - smoothstep(bevelStart, _FaceBevelWidth, insideDistance);
+
+    float normalConfidence;
+    float2 edgeNormal = GetTextFaceLightingAtlasNormal(atlasUV, atlasSafeRect, sdfParams, normalConfidence);
+
+    float lightLengthSq = dot(_FaceLightDirection.xy, _FaceLightDirection.xy);
+    float2 lightDirection = lightLengthSq > 0.0 ? _FaceLightDirection.xy * rsqrt(lightLengthSq) : float2(-0.7071068, 0.7071068);
+
+    float facing = dot(edgeNormal, lightDirection);
+    half lightingMask = bevelMask * normalConfidence;
+
+    half highlight = saturate(facing) * lightingMask * half(_FaceHighlightColor.a);
+    half shadow = saturate(-facing) * lightingMask * half(_FaceShadowColor.a);
+
+    facePaint.rgb = lerp(facePaint.rgb, half3(_FaceHighlightColor.rgb), highlight);
+    facePaint.rgb = lerp(facePaint.rgb, half3(_FaceShadowColor.rgb), shadow);
+
+    return facePaint;
+}
+#endif
+
 half4 Fragment(Varyings input) : SV_Target
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
     half sdf = SampleTextAtlasSDF(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), input.atlasUV, input.atlasSafeRect);
     TextSDFParams sdfParams = UnpackTextSDFParams(input.sdfParams);
+    float signedDistance = GetTextSignedDistance(sdf, sdfParams);
     float2 paintUV = input.paintUV;
     half4 result = half4(0.0, 0.0, 0.0, 0.0);
 
@@ -235,11 +293,14 @@ half4 Fragment(Varyings input) : SV_Target
     }
 
     if (_FaceEnabled != 0) {
-        half faceCoverage = GetTextFaceCoverage(sdf, sdfParams);
+        half faceCoverage = GetTextFaceCoverageFromDistance(signedDistance);
         faceCoverage = GetTextCoverageWithAtlasSafeMask(faceCoverage, input.atlasUV, input.atlasSafeRect);
         if (faceCoverage > 0.0) {
             half4 facePaint = SampleFaceCanvasPaint(paintUV, input.paintBoundsSize);
             facePaint *= input.color;
+#if defined(FACE_LIGHTING_ON)
+            facePaint = ApplyTextFaceLighting(facePaint, signedDistance, input.atlasUV, input.atlasSafeRect, sdfParams);
+#endif
             result = CompositePremultiplied(result, facePaint, faceCoverage);
         }
     }
