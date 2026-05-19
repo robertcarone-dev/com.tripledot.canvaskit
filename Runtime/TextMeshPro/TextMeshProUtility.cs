@@ -257,7 +257,7 @@ namespace Tripledot.CanvasKit
             max = default;
             localUnitsPerAtlasPixel = Vector2.zero;
 
-            if (!character.isVisible || character.elementType != TMP_TextElementType.Character) {
+            if (!character.isVisible || character.elementType is not (TMP_TextElementType.Character or TMP_TextElementType.Sprite)) {
                 return false;
             }
 

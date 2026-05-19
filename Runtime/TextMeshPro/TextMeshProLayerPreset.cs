@@ -164,10 +164,6 @@ namespace Tripledot.CanvasKit
             return string.IsNullOrWhiteSpace(previewText) ? DefaultPreviewText : previewText;
         }
 
-        internal void SetPreviewTextForTests(string value)
-        {
-            PreviewText = value;
-        }
 #endif
     }
 }

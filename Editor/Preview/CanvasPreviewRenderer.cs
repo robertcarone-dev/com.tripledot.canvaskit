@@ -143,11 +143,6 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        internal static Canvas SelectBaseCanvasForTests(GameObject[] sceneRoots, Transform previewRoot)
-        {
-            return CanvasPreviewEnvironment.SelectEnvironmentCanvas(sceneRoots, previewRoot);
-        }
-
         private static GameObject CreateReferenceCanvas(Vector2 referenceSize)
         {
             var canvasObject = new GameObject(

@@ -60,37 +60,6 @@ namespace Tripledot.CanvasKit.Editor
             SetKeywordRules(SplitKeywords(screen), SplitKeywords(popup), SplitKeywords(element), true);
         }
 
-        internal static void SetKeywordRulesForTests(string[] screen, string[] popup, string[] element)
-        {
-            SetKeywordRules(screen, popup, element, false);
-        }
-
-        internal static void SetLegacyKeywordRulesForTests(string[] screen, string[] popup, string[] control, string[] content)
-        {
-            var settings = instance;
-            settings.screenKeywords = SanitizeKeywords(screen);
-            settings.popupKeywords = SanitizeKeywords(popup);
-            settings.elementKeywords = Array.Empty<string>();
-            settings.controlKeywords = SanitizeKeywords(control);
-            settings.contentKeywords = SanitizeKeywords(content);
-            settings.legacyKeywordRulesMigrated = false;
-            settings.MigrateLegacyKeywordRules();
-            Revision++;
-            CanvasInspectorPreview.ClearPreviewCache();
-        }
-
-        internal static void ResetForTests()
-        {
-            SetKeywordRules(
-                new[] { "screen", "page", "view" },
-                new[] { "popup", "modal", "dialog" },
-                new[] { "button", "btn", "control", "toggle", "slider", "cell", "item", "content", "icon", "image" },
-                false);
-            
-            SetScalerDefaults(CanvasScaler.ScaleMode.ScaleWithScreenSize, new Vector2(1080f, 1920f), 100f, false);
-            SetSelectedReferenceSizeIndex(CanvasPreviewSize.DefaultIndex, false);
-        }
-
         internal static void SaveScalerDefaults(CanvasScaler.ScaleMode uiScaleMode, Vector2 referenceResolution, float referencePixelsPerUnit)
         {
             SetScalerDefaults(uiScaleMode, referenceResolution, referencePixelsPerUnit, true);
@@ -99,11 +68,6 @@ namespace Tripledot.CanvasKit.Editor
         internal static void SaveSelectedReferenceSizeIndex(int selectedSizeIndex)
         {
             SetSelectedReferenceSizeIndex(selectedSizeIndex, true);
-        }
-
-        internal static void SetSelectedReferenceSizeIndexForTests(int selectedSizeIndex)
-        {
-            SetSelectedReferenceSizeIndex(selectedSizeIndex, false);
         }
 
         internal static void ConfigureScaler(CanvasScaler scaler)

@@ -130,16 +130,6 @@ namespace Tripledot.CanvasKit.Editor
             return new DrawResult(true, layerIndex);
         }
 
-        public static bool TryGetEditingLayerIndexForTests(Object sceneTarget, out int layerIndex)
-        {
-            if (TryGetEditingPaint(sceneTarget, out _, out _, out layerIndex)) {
-                return true;
-            }
-
-            layerIndex = -1;
-            return false;
-        }
-
         private static bool DrawLinear(RectTransform rectTransform, Vector4 paintBounds, SerializedProperty center, SerializedProperty offset,
             SerializedProperty scale, SerializedProperty rotation)
         {
