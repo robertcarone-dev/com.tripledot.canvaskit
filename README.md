@@ -198,6 +198,7 @@ Shared presets are useful for consistency and predictable authoring, but they do
 
 - Text effects are limited by the active TMP SDF font asset and available atlas padding
 - Large combined face, stroke, shadow, and glow widths may be clamped by the shared SDF budget
+- Layer-stack meshes currently render only the primary TMP material reference, so fallback-font or submaterial glyphs do not receive Canvas Kit layer effects such as shadows
 - Gradient, texture, blend, mask, clipping, and instance workflows can affect batching
 - Instance rows are useful for object-specific animation but require a unique material
 

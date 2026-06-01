@@ -145,10 +145,11 @@ namespace Tripledot.CanvasKit
                 return Vector4.zero;
             }
 
+            var faceSdfRange = face.GetSdfRange();
             var padding = Vector4.zero;
             padding = TextMeshProUtility.PaddingMax(padding, face.GetVisualPadding(sdfPaddingLimit));
-            padding = TextMeshProUtility.PaddingMax(padding, stroke.GetVisualPadding(sdfPaddingLimit, face.Dilate, true, localUnitsPerAtlasPixel));
-            padding = TextMeshProUtility.PaddingMax(padding, shadow.GetVisualPadding(sdfPaddingLimit, face.Dilate, true, localUnitsPerAtlasPixel));
+            padding = TextMeshProUtility.PaddingMax(padding, stroke.GetVisualPadding(sdfPaddingLimit, faceSdfRange, true, localUnitsPerAtlasPixel));
+            padding = TextMeshProUtility.PaddingMax(padding, shadow.GetVisualPadding(sdfPaddingLimit, faceSdfRange, true, localUnitsPerAtlasPixel));
             return padding;
         }
 
@@ -158,7 +159,7 @@ namespace Tripledot.CanvasKit
                 return 0f;
             }
 
-            return face.Dilate + Mathf.Max(stroke.GetSdfRange(), shadow.GetSdfRange());
+            return face.GetSdfRange() + Mathf.Max(stroke.GetSdfRange(), shadow.GetSdfRange());
         }
         
         #endregion
@@ -170,7 +171,8 @@ namespace Tripledot.CanvasKit
             material.SetInteger(ShaderIds.FaceEnabled, face.Enabled ? 1 : 0);
             var faceUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
                 material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled, gradientState.Face);
-            material.SetFloat(ShaderIds.FaceDilate, TextMeshProUtility.PixelsToFaceDilate(face.Dilate, context.GradientScale));
+            var faceSdfRange = face.GetSdfRange();
+            material.SetFloat(ShaderIds.FaceDilate, TextMeshProUtility.PixelsToFaceDilate(faceSdfRange, context.GradientScale));
             var faceLightingEnabled = face.Enabled && face.Lighting.Enabled;
             var faceBevelWidth = Mathf.Clamp01(face.Lighting.BevelWidth);
             material.SetInteger(ShaderIds.FaceLightingEnabled, faceLightingEnabled ? 1 : 0);
@@ -182,7 +184,7 @@ namespace Tripledot.CanvasKit
             CanvasUtility.SetKeyword(material, ShaderKeywords.FaceLighting, faceLightingEnabled && faceBevelWidth > 0f);
 
             TextMeshProUtility.ClampStrokeEffect(
-                stroke.Width, stroke.Feather, stroke.Position, context.AppliedSdfPadding, face.Dilate, 
+                stroke.Width, stroke.Feather, stroke.Position, context.AppliedSdfPadding, faceSdfRange,
                 out var strokeWidth, out var strokeFeather);
             material.SetInteger(ShaderIds.StrokeEnabled, stroke.Enabled ? 1 : 0);
             material.SetFloat(ShaderIds.StrokeWeight, strokeWidth);
@@ -193,7 +195,7 @@ namespace Tripledot.CanvasKit
                 material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled, gradientState.Stroke);
 
             TextMeshProUtility.ClampShadowEffect(
-                shadow.Spread, shadow.Blur, context.AppliedSdfPadding, face.Dilate,
+                shadow.Spread, shadow.Blur, context.AppliedSdfPadding, faceSdfRange,
                 out var shadowSpread, out var shadowBlur);
             material.SetInteger(ShaderIds.ShadowEnabled, shadow.Enabled ? 1 : 0);
             material.SetFloat(ShaderIds.ShadowWeight, shadowBlur);

@@ -785,6 +785,9 @@ namespace Tripledot.CanvasKit.Editor
                         CanvasEditorGUI.ConstrainedSdfLengthSlider(shadow.Spread, shadow.SpreadUnit, Styles.Spread, context.AvailablePadding, spreadMin, spreadMax);
                         CanvasEditorGUI.ConstrainedSdfLengthSlider(shadow.Blur, shadow.BlurUnit, Styles.Blur, context.AvailablePadding, 0f, blurMax);
                         CanvasEditorGUI.Vector2Field(shadow.Offset, Styles.Offset);
+                        if (shadow.Enabled is { hasMultipleDifferentValues: false, boolValue: true }) {
+                            DrawShadowClampWarning(shadow.Spread, shadow.Blur, context.AvailablePadding, reservedFacePadding);
+                        }
                     }
                 }
             }
@@ -835,6 +838,25 @@ namespace Tripledot.CanvasKit.Editor
             spreadMin = -availablePadding;
             TextMeshProUtility.ClampShadowEffect(spread, blur, availablePadding, reservedPadding, out var effectiveSpread, out _);
             blurMax = GetRemainingSdfBudget(spreadMax, effectiveSpread);
+        }
+
+        internal static bool IsShadowEffectClamped(float spread, float blur, float availablePadding, float reservedPadding)
+        {
+            TextMeshProUtility.ClampShadowEffect(spread, blur, availablePadding, reservedPadding, out var effectiveSpread, out var effectiveBlur);
+            return !Mathf.Approximately(spread, effectiveSpread) || !Mathf.Approximately(blur, effectiveBlur);
+        }
+
+        private static void DrawShadowClampWarning(SerializedProperty spread, SerializedProperty blur, float availablePadding, float reservedPadding)
+        {
+            if (spread.hasMultipleDifferentValues || blur.hasMultipleDifferentValues) {
+                return;
+            }
+
+            if (!IsShadowEffectClamped(spread.floatValue, blur.floatValue, availablePadding, reservedPadding)) {
+                return;
+            }
+
+            EditorGUILayout.HelpBox(Styles.ShadowClampWarning.text, MessageType.Warning);
         }
 
         private static float GetFloatValueIfSame(SerializedProperty property)
@@ -1355,6 +1377,7 @@ namespace Tripledot.CanvasKit.Editor
             public static readonly GUIContent Outline = L10n.TextContent("Stroke", "Enable and edit the stroke effect for this layer.");
             public static readonly GUIContent Position = L10n.TextContent("Position", "Choose where the stroke is placed relative to the glyph edge.");
             public static readonly GUIContent Shadow = L10n.TextContent("Shadow", "Add or edit a shadow layer.");
+            public static readonly GUIContent ShadowClampWarning = L10n.TextContent("Shadow spread or blur is clamped by the available TMP font atlas padding. Increase the font asset padding or reduce other SDF effects that consume this layer's padding budget.");
             public static readonly GUIContent ShadowColor = L10n.TextContent("Shadow", "Tint and alpha used on fill edges facing away from the light.");
             public static readonly GUIContent Shape = L10n.TextContent("Shape", "Controls for SDF shape expansion and edge softness.");
             public static readonly GUIContent Spread = L10n.TextContent("Spread", "Expand or contract the shadow shape within the available SDF padding.");

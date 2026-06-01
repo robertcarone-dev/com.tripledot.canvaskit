@@ -166,6 +166,10 @@ half GetTextOutsideRamp(float signedDistance, float spreadPixels, float weightPi
 {
     float spread = GetTextPixelsToScaledDistance(spreadPixels, sdfParams, gradientScale, scaleRatio);
     float feather = GetTextPixelsToScaledDistance(weightPixels, sdfParams, gradientScale, scaleRatio);
+    if (feather <= 0.0001) {
+        return signedDistance <= spread ? 1.0 : 0.0;
+    }
+
     return 1.0 - smoothstep(spread, spread + feather, signedDistance);
 }
 
