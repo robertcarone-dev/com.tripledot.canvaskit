@@ -5,6 +5,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.4.3-preview] - 2026-06-01
+
+### Added
+- Added a TextMeshPro layer inspector warning when shadow spread or blur is clamped by the available font atlas padding or other SDF effects consuming the layer budget.
+
+### Changed
+- Removed unused internal editor and preview helper methods.
+
+### Fixed
+- Fixed disabled TextMeshPro fill dilate values incorrectly consuming stroke and shadow SDF budget.
+- Fixed zero-blur TextMeshPro shadows rendering inconsistently by using a deterministic hard outside-coverage path.
+- Fixed TextMeshPro visual padding bounds calculation to include sprite glyphs.
+
+
 ## [0.4.2-preview] - 2026-05-18
 
 ### Added
