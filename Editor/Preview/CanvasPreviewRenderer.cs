@@ -46,7 +46,7 @@ namespace Tripledot.CanvasKit.Editor
                 bool usesEnvironmentScene;
                 using (new SampleScope("CanvasPreview.Instantiate")) {
                     previewScene = CanvasPreviewEnvironment.OpenPreviewScene(out usesEnvironmentScene);
-                    PrefabUtility.LoadPrefabContentsIntoPreviewScene(prefabPath, previewScene, out prefabRoot);
+                    prefabRoot = LoadPrefabContentsIntoPreviewScene(prefabPath, previewScene);
                     if (prefabRoot == null) {
                         return PreviewResult.Empty;
                     }
@@ -141,6 +141,22 @@ namespace Tripledot.CanvasKit.Editor
                     UnityEngine.Object.DestroyImmediate(prefabRoot);
                 }
             }
+        }
+
+        private static GameObject LoadPrefabContentsIntoPreviewScene(string prefabPath, Scene previewScene)
+        {
+            var existingRoots = previewScene.GetRootGameObjects();
+            PrefabUtility.LoadPrefabContentsIntoPreviewScene(prefabPath, previewScene);
+            var currentRoots = previewScene.GetRootGameObjects();
+
+            for (int i = 0; i < currentRoots.Length; i++) {
+                var root = currentRoots[i];
+                if (root != null && Array.IndexOf(existingRoots, root) < 0) {
+                    return root;
+                }
+            }
+
+            return null;
         }
 
         private static GameObject CreateReferenceCanvas(Vector2 referenceSize)
