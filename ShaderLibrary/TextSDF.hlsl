@@ -165,11 +165,7 @@ float GetTextEffectFeather(float weightPixels, TextSDFParams sdfParams, float gr
 half GetTextOutsideRamp(float signedDistance, float spreadPixels, float weightPixels, TextSDFParams sdfParams, float gradientScale, float scaleRatio)
 {
     float spread = GetTextPixelsToScaledDistance(spreadPixels, sdfParams, gradientScale, scaleRatio);
-    float feather = GetTextPixelsToScaledDistance(weightPixels, sdfParams, gradientScale, scaleRatio);
-    if (feather <= 0.0001) {
-        return signedDistance <= spread ? 1.0 : 0.0;
-    }
-
+    float feather = GetTextEffectFeather(weightPixels, sdfParams, gradientScale, scaleRatio);
     return 1.0 - smoothstep(spread, spread + feather, signedDistance);
 }
 

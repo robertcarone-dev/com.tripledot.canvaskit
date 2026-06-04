@@ -117,16 +117,37 @@ half4 ApplyCanvasGradientAtlasOpacity(half4 color, half opacity)
 // Paint
 // ----------------------------------------------------------------------------
 
-half4 SampleCanvasPaint(int paintMode, 
-    half4 colorA, half4 colorB, 
-    TEXTURE2D_PARAM(paintTexture, sampler_paintTexture),
-    TEXTURE2D_PARAM(gradientAtlas, sampler_gradientAtlas), 
-    float4 gradientAtlasRect,
-    float2 paintUV, 
+half4 SampleCanvasSimplePaint(int paintMode,
+    half4 colorA, half4 colorB,
+    float2 paintUV,
     float gradientAngle,
-    float4 textureTransform,
     float4 transform0,
-    float4 transform1, 
+    float4 transform1,
+    float2 paintBoundsSize)
+{
+    switch (paintMode) {
+        case 1: {
+            float t = SampleCanvasLinearGradientT(paintUV, transform0, transform1, gradientAngle, paintBoundsSize);
+            return lerp(colorA, colorB, saturate(t));
+        } case 2: {
+            float t = SampleCanvasRadialGradientT(paintUV, transform0, transform1);
+            return lerp(colorA, colorB, saturate(t));
+        }
+        default:
+            return colorA;
+    }
+
+    return colorA;
+}
+
+half4 SampleCanvasGradientAtlasPaint(int paintMode,
+    half4 colorA, half4 colorB,
+    TEXTURE2D_PARAM(gradientAtlas, sampler_gradientAtlas),
+    float4 gradientAtlasRect,
+    float2 paintUV,
+    float gradientAngle,
+    float4 transform0,
+    float4 transform1,
     float2 paintBoundsSize,
     float4 gradientAtlasTexelSize)
 {
@@ -145,10 +166,46 @@ half4 SampleCanvasPaint(int paintMode,
             }
 
             return lerp(colorA, colorB, saturate(t));
-        } case 3: {
-            float2 transformedUV = TransformCanvasPaintTextureUV(paintUV, transform0, transform1);
-            return half4(SAMPLE_TEXTURE2D(paintTexture, sampler_paintTexture, transformedUV * textureTransform.zw + textureTransform.xy)) * colorA;
         }
+        default:
+            return colorA;
+    }
+
+    return colorA;
+}
+
+half4 SampleCanvasTexturePaint(half4 colorA,
+    TEXTURE2D_PARAM(paintTexture, sampler_paintTexture),
+    float2 paintUV,
+    float4 textureTransform,
+    float4 transform0,
+    float4 transform1)
+{
+    float2 transformedUV = TransformCanvasPaintTextureUV(paintUV, transform0, transform1);
+    return half4(SAMPLE_TEXTURE2D(paintTexture, sampler_paintTexture, transformedUV * textureTransform.zw + textureTransform.xy)) * colorA;
+}
+
+half4 SampleCanvasPaint(int paintMode,
+    half4 colorA, half4 colorB,
+    TEXTURE2D_PARAM(paintTexture, sampler_paintTexture),
+    TEXTURE2D_PARAM(gradientAtlas, sampler_gradientAtlas),
+    float4 gradientAtlasRect,
+    float2 paintUV,
+    float gradientAngle,
+    float4 textureTransform,
+    float4 transform0,
+    float4 transform1,
+    float2 paintBoundsSize,
+    float4 gradientAtlasTexelSize)
+{
+    switch (paintMode) {
+        case 1:
+        case 2:
+            return SampleCanvasGradientAtlasPaint(paintMode, colorA, colorB, TEXTURE2D_ARGS(gradientAtlas, sampler_gradientAtlas),
+                gradientAtlasRect, paintUV, gradientAngle, transform0, transform1, paintBoundsSize, gradientAtlasTexelSize);
+        case 3:
+            return SampleCanvasTexturePaint(colorA, TEXTURE2D_ARGS(paintTexture, sampler_paintTexture),
+                paintUV, textureTransform, transform0, transform1);
         default:
             return colorA;
     }

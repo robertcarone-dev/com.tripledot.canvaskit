@@ -40,25 +40,27 @@ namespace Tripledot.CanvasKit
             ApplyBlend(material, blendPreset);
         }
 
-        public static bool ApplyPaint(Material material, CanvasPaint paint, PaintShaderIds ids, string textureKeyword, bool resourcesEnabled,
-            CanvasGradientAtlas.Lease gradientLease)
+        public static bool ApplyPaint(Material material, CanvasPaint paint, PaintShaderIds ids, string textureKeyword, bool resourcesEnabled, CanvasGradientAtlas.Lease gradientLease)
         {
             var transform = paint.Transform;
-            var primaryColor = paint.HasFullGradient ? Color.white : GetPrimaryPaintColor(paint);
-            var secondaryColor = paint.HasFullGradient ? Color.white : GetSecondaryPaintColor(paint);
-            
-            material.SetInteger(ids.PaintMode, (int)paint.Type);
+            var textureEnabled = resourcesEnabled && paint.Type == CanvasPaintType.Texture && paint.Texture != null;
+            var paintMode = paint.Type == CanvasPaintType.Texture && !textureEnabled ? CanvasPaintType.Solid : paint.Type;
+            var primaryColor = paint.HasFullGradient ? Color.white : GetPrimaryPaintColor(paint, paintMode);
+            var secondaryColor = paint.HasFullGradient ? Color.white : GetSecondaryPaintColor(paint, paintMode);
+
+            material.SetInteger(ids.PaintMode, (int)paintMode);
             material.SetColor(ids.Color, CanvasUtility.WithOpacity(primaryColor, paint.Opacity));
             material.SetColor(ids.ColorB, CanvasUtility.WithOpacity(secondaryColor, paint.Opacity));
-            material.SetTexture(ids.Texture, paint.Texture);
+            material.SetTexture(ids.Texture, textureEnabled ? paint.Texture : Texture2D.whiteTexture);
             material.SetFloat(ids.GradientAngle, transform.Rotation);
             material.SetVector(ids.TextureTransform, new Vector4(transform.Offset.x, transform.Offset.y, transform.Scale.x, transform.Scale.y));
             SetPaintTransform(material, ids.PaintTransform0, ids.PaintTransform1, transform);
 
-            var textureEnabled = resourcesEnabled && paint.Type == CanvasPaintType.Texture;
             var gradientAtlasEnabled = SetGradientAtlas(material, ids.GradientAtlasRect, paint, resourcesEnabled, gradientLease);
-            CanvasUtility.SetKeyword(material, textureKeyword, textureEnabled);
-            
+            if (!string.IsNullOrEmpty(textureKeyword)) {
+                CanvasUtility.SetKeyword(material, textureKeyword, textureEnabled);
+            }
+
             return gradientAtlasEnabled;
         }
 
@@ -130,14 +132,14 @@ namespace Tripledot.CanvasKit
             return false;
         }
 
-        private static Color GetPrimaryPaintColor(CanvasPaint paint)
+        private static Color GetPrimaryPaintColor(CanvasPaint paint, CanvasPaintType paintMode)
         {
-            return paint.Type == CanvasPaintType.Texture ? Color.white : paint.Color;
+            return paintMode == CanvasPaintType.Texture ? Color.white : paint.Color;
         }
 
-        private static Color GetSecondaryPaintColor(CanvasPaint paint)
+        private static Color GetSecondaryPaintColor(CanvasPaint paint, CanvasPaintType paintMode)
         {
-            return paint.Type == CanvasPaintType.Texture ? Color.white : paint.SecondaryColor;
+            return paintMode == CanvasPaintType.Texture ? Color.white : paint.SecondaryColor;
         }
 
         internal readonly struct PaintShaderIds

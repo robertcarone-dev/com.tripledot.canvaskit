@@ -79,98 +79,59 @@ TextSDFParams UnpackTextSDFParams(half3 packedParams)
 
 half4 SampleFaceCanvasPaint(float2 paintUV, float2 paintBoundsSize)
 {
-    if (_FacePaintMode == 1) {
-        float t = SampleCanvasLinearGradientT(paintUV, _FacePaintTransform0, _FacePaintTransform1, _FaceGradientAngle, paintBoundsSize);
-#if defined(GRADIENT_ATLAS_ON)
-        if (_FaceGradientAtlasRect.w > 0.5) {
-            return ApplyCanvasGradientAtlasOpacity(SampleCanvasGradientAtlas(TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _FaceGradientAtlasRect, t, _GradientAtlas_TexelSize), half4(_FaceColor).a);
-        }
-#endif
-        return lerp(half4(_FaceColor), half4(_FaceColorB), saturate(t));
-    }
-
-    if (_FacePaintMode == 2) {
-        float t = SampleCanvasRadialGradientT(paintUV, _FacePaintTransform0, _FacePaintTransform1);
-#if defined(GRADIENT_ATLAS_ON)
-        if (_FaceGradientAtlasRect.w > 0.5) {
-            return ApplyCanvasGradientAtlasOpacity(SampleCanvasGradientAtlas(TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _FaceGradientAtlasRect, t, _GradientAtlas_TexelSize), half4(_FaceColor).a);
-        }
-#endif
-        return lerp(half4(_FaceColor), half4(_FaceColorB), saturate(t));
-    }
-
 #if defined(FACE_TEXTURE_ON)
     if (_FacePaintMode == 3) {
-        float2 transformedUV = TransformCanvasPaintTextureUV(paintUV, _FacePaintTransform0, _FacePaintTransform1);
-        return half4(SAMPLE_TEXTURE2D(_FaceTexture, sampler_FaceTexture, transformedUV * _FaceTextureTransform.zw + _FaceTextureTransform.xy)) * half4(_FaceColor);
+        return SampleCanvasTexturePaint(half4(_FaceColor), TEXTURE2D_ARGS(_FaceTexture, sampler_FaceTexture),
+            paintUV, _FaceTextureTransform, _FacePaintTransform0, _FacePaintTransform1);
     }
 #endif
 
-    return half4(_FaceColor);
+#if defined(GRADIENT_ATLAS_ON)
+    return SampleCanvasGradientAtlasPaint(_FacePaintMode, half4(_FaceColor), half4(_FaceColorB),
+        TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _FaceGradientAtlasRect,
+        paintUV, _FaceGradientAngle, _FacePaintTransform0, _FacePaintTransform1, paintBoundsSize, _GradientAtlas_TexelSize);
+#else
+    return SampleCanvasSimplePaint(_FacePaintMode, half4(_FaceColor), half4(_FaceColorB),
+        paintUV, _FaceGradientAngle, _FacePaintTransform0, _FacePaintTransform1, paintBoundsSize);
+#endif
 }
 
 half4 SampleStrokeCanvasPaint(float2 paintUV, float2 paintBoundsSize)
 {
-    if (_StrokePaintMode == 1) {
-        float t = SampleCanvasLinearGradientT(paintUV, _StrokePaintTransform0, _StrokePaintTransform1, _StrokeGradientAngle, paintBoundsSize);
-#if defined(GRADIENT_ATLAS_ON)
-        if (_StrokeGradientAtlasRect.w > 0.5) {
-            return ApplyCanvasGradientAtlasOpacity(SampleCanvasGradientAtlas(TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _StrokeGradientAtlasRect, t, _GradientAtlas_TexelSize), half4(_StrokeColor).a);
-        }
-#endif
-        return lerp(half4(_StrokeColor), half4(_StrokeColorB), saturate(t));
-    }
-
-    if (_StrokePaintMode == 2) {
-        float t = SampleCanvasRadialGradientT(paintUV, _StrokePaintTransform0, _StrokePaintTransform1);
-#if defined(GRADIENT_ATLAS_ON)
-        if (_StrokeGradientAtlasRect.w > 0.5) {
-            return ApplyCanvasGradientAtlasOpacity(SampleCanvasGradientAtlas(TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _StrokeGradientAtlasRect, t, _GradientAtlas_TexelSize), half4(_StrokeColor).a);
-        }
-#endif
-        return lerp(half4(_StrokeColor), half4(_StrokeColorB), saturate(t));
-    }
-
 #if defined(STROKE_TEXTURE_ON)
     if (_StrokePaintMode == 3) {
-        float2 transformedUV = TransformCanvasPaintTextureUV(paintUV, _StrokePaintTransform0, _StrokePaintTransform1);
-        return half4(SAMPLE_TEXTURE2D(_StrokeTexture, sampler_StrokeTexture, transformedUV * _StrokeTextureTransform.zw + _StrokeTextureTransform.xy)) * half4(_StrokeColor);
+        return SampleCanvasTexturePaint(half4(_StrokeColor), TEXTURE2D_ARGS(_StrokeTexture, sampler_StrokeTexture),
+            paintUV, _StrokeTextureTransform, _StrokePaintTransform0, _StrokePaintTransform1);
     }
 #endif
 
-    return half4(_StrokeColor);
+#if defined(GRADIENT_ATLAS_ON)
+    return SampleCanvasGradientAtlasPaint(_StrokePaintMode, half4(_StrokeColor), half4(_StrokeColorB),
+        TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _StrokeGradientAtlasRect,
+        paintUV, _StrokeGradientAngle, _StrokePaintTransform0, _StrokePaintTransform1, paintBoundsSize, _GradientAtlas_TexelSize);
+#else
+    return SampleCanvasSimplePaint(_StrokePaintMode, half4(_StrokeColor), half4(_StrokeColorB),
+        paintUV, _StrokeGradientAngle, _StrokePaintTransform0, _StrokePaintTransform1, paintBoundsSize);
+#endif
 }
 
 half4 SampleShadowCanvasPaint(float2 paintUV, float2 paintBoundsSize)
 {
-    if (_ShadowPaintMode == 1) {
-        float t = SampleCanvasLinearGradientT(paintUV, _ShadowPaintTransform0, _ShadowPaintTransform1, _ShadowGradientAngle, paintBoundsSize);
-#if defined(GRADIENT_ATLAS_ON)
-        if (_ShadowGradientAtlasRect.w > 0.5) {
-            return ApplyCanvasGradientAtlasOpacity(SampleCanvasGradientAtlas(TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _ShadowGradientAtlasRect, t, _GradientAtlas_TexelSize), half4(_ShadowColor).a);
-        }
-#endif
-        return lerp(half4(_ShadowColor), half4(_ShadowColorB), saturate(t));
-    }
-
-    if (_ShadowPaintMode == 2) {
-        float t = SampleCanvasRadialGradientT(paintUV, _ShadowPaintTransform0, _ShadowPaintTransform1);
-#if defined(GRADIENT_ATLAS_ON)
-        if (_ShadowGradientAtlasRect.w > 0.5) {
-            return ApplyCanvasGradientAtlasOpacity(SampleCanvasGradientAtlas(TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _ShadowGradientAtlasRect, t, _GradientAtlas_TexelSize), half4(_ShadowColor).a);
-        }
-#endif
-        return lerp(half4(_ShadowColor), half4(_ShadowColorB), saturate(t));
-    }
-
 #if defined(SHADOW_TEXTURE_ON)
     if (_ShadowPaintMode == 3) {
-        float2 transformedUV = TransformCanvasPaintTextureUV(paintUV, _ShadowPaintTransform0, _ShadowPaintTransform1);
-        return half4(SAMPLE_TEXTURE2D(_ShadowTexture, sampler_ShadowTexture, transformedUV * _ShadowTextureTransform.zw + _ShadowTextureTransform.xy)) * half4(_ShadowColor);
+        return SampleCanvasTexturePaint(half4(_ShadowColor), TEXTURE2D_ARGS(_ShadowTexture, sampler_ShadowTexture),
+            paintUV, _ShadowTextureTransform, _ShadowPaintTransform0, _ShadowPaintTransform1);
     }
 #endif
 
-    return half4(_ShadowColor);
+#if defined(GRADIENT_ATLAS_ON)
+    return SampleCanvasGradientAtlasPaint(_ShadowPaintMode, half4(_ShadowColor), half4(_ShadowColorB),
+        TEXTURE2D_ARGS(_GradientAtlas, sampler_GradientAtlas), _ShadowGradientAtlasRect,
+        paintUV, _ShadowGradientAngle, _ShadowPaintTransform0, _ShadowPaintTransform1, paintBoundsSize, _GradientAtlas_TexelSize);
+#else
+    return SampleCanvasSimplePaint(_ShadowPaintMode, half4(_ShadowColor), half4(_ShadowColorB),
+        paintUV, _ShadowGradientAngle, _ShadowPaintTransform0, _ShadowPaintTransform1, paintBoundsSize);
+#endif
 }
 
 // ----------------------------------------------------------------------------

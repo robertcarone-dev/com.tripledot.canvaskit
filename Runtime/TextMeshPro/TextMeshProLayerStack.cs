@@ -68,6 +68,7 @@ namespace Tripledot.CanvasKit
         private readonly List<LayerMaterialScope> layerMaterialScopes = new List<LayerMaterialScope>();
         private readonly List<Material> appliedCanvasMaterials = new List<Material>();
         private readonly List<LayerRuntimeState> layerRuntimeStates = new List<LayerRuntimeState>();
+        private readonly List<LayerGeometryState> layerGeometryStates = new List<LayerGeometryState>();
         private readonly List<int> dirtyRuntimeMaterialLayerIndices = new List<int>();
         private readonly TextMeshProLayerMeshBuilder meshBuilder = new TextMeshProLayerMeshBuilder();
 
@@ -428,6 +429,9 @@ namespace Tripledot.CanvasKit
                 materialSharingAllowedState = renderMaterial == sourceMaterial;
 
                 UpdateSourcePaddingState();
+                if (TryMarkLayerGeometryStateDirty()) {
+                    MarkDirty(PaddingDirtyFlags);
+                }
                 
                 var sourceGeometryDirty = (dirtyFlags & DirtyFlags.SourceGeometry) != 0;
                 var geometryDirty = (dirtyFlags & (DirtyFlags.Geometry | DirtyFlags.Padding | DirtyFlags.Layers | DirtyFlags.SourceGeometry)) != 0;
@@ -817,6 +821,33 @@ namespace Tripledot.CanvasKit
             appliedGeometryPaddingLimit = 0f;
             hasPaintBounds = false;
             layerCompositionDirty = true;
+            layerGeometryStates.Clear();
+        }
+
+        #endregion
+
+        #region Geometry State
+
+        private bool TryMarkLayerGeometryStateDirty()
+        {
+            var changed = layerGeometryStates.Count != layers.Count;
+            while (layerGeometryStates.Count < layers.Count) {
+                layerGeometryStates.Add(default);
+            }
+
+            for (int i = 0; i < layers.Count; i++) {
+                var nextState = LayerGeometryState.Capture(layers[i]);
+                if (!layerGeometryStates[i].Equals(nextState)) {
+                    layerGeometryStates[i] = nextState;
+                    changed = true;
+                }
+            }
+
+            if (layerGeometryStates.Count > layers.Count) {
+                layerGeometryStates.RemoveRange(layers.Count, layerGeometryStates.Count - layers.Count);
+            }
+
+            return changed;
         }
 
         #endregion
@@ -1264,6 +1295,65 @@ namespace Tripledot.CanvasKit
                 sharedMaterialEntry = null;
                 sharedMaterialKey = default;
                 hasSharedMaterialKey = false;
+            }
+        }
+
+        private readonly struct LayerGeometryState : IEquatable<LayerGeometryState>
+        {
+            private readonly Vector2 layerOffset;
+            private readonly bool faceEnabled;
+            private readonly float faceDilate;
+            private readonly bool strokeEnabled;
+            private readonly TextMeshProStrokePosition strokePosition;
+            private readonly float strokeWidth;
+            private readonly float strokeFeather;
+            private readonly Vector2 strokeOffset;
+            private readonly bool shadowEnabled;
+            private readonly float shadowSpread;
+            private readonly float shadowBlur;
+            private readonly Vector2 shadowOffset;
+
+            private LayerGeometryState(TextMeshProLayerData layer)
+            {
+                layerOffset = layer?.GeometryOffset ?? Vector2.zero;
+
+                var face = layer?.Face ?? default;
+                faceEnabled = face.Enabled;
+                faceDilate = face.Dilate;
+
+                var stroke = layer?.Stroke ?? default;
+                strokeEnabled = stroke.Enabled;
+                strokePosition = stroke.Position;
+                strokeWidth = stroke.Width;
+                strokeFeather = stroke.Feather;
+                strokeOffset = stroke.Offset;
+
+                var shadow = layer?.Shadow ?? default;
+                shadowEnabled = shadow.Enabled;
+                shadowSpread = shadow.Spread;
+                shadowBlur = shadow.Blur;
+                shadowOffset = shadow.Offset;
+            }
+
+            public static LayerGeometryState Capture(TextMeshProLayerData layer)
+            {
+                return new LayerGeometryState(layer);
+            }
+
+            public bool Equals(LayerGeometryState other)
+            {
+                return layerOffset == other.layerOffset
+                    && faceEnabled == other.faceEnabled
+                    && faceDilate == other.faceDilate
+                    && strokeEnabled == other.strokeEnabled
+                    && strokePosition == other.strokePosition
+                    && strokeWidth == other.strokeWidth
+                    && strokeFeather == other.strokeFeather
+                    && strokeOffset == other.strokeOffset
+                    && shadowEnabled == other.shadowEnabled
+                    && shadowSpread == other.shadowSpread
+                    && shadowBlur == other.shadowBlur
+                    && shadowOffset == other.shadowOffset;
             }
         }
 
