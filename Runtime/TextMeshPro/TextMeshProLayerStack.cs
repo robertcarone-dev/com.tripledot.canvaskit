@@ -219,20 +219,6 @@ namespace Tripledot.CanvasKit
             base.OnDidApplyAnimationProperties();
         }
 
-        protected override void Reset()
-        {
-            base.Reset();
-            
-            layerCompositionDirty = true;
-            if (preset != null || localLayers.Count > 0) {
-                SetLayerCompositionChanged();
-                return;
-            }
-
-            localLayers.Add(TextMeshProLayerData.Default());
-            SetLayerCompositionChanged();
-        }
-
         protected override void OnTransformParentChanged()
         {
             SetLayerStackDirty(DirtyFlags.Canvas);
@@ -249,6 +235,20 @@ namespace Tripledot.CanvasKit
         protected override void OnValidate()
         {
             EnsurePresetOverrideSlots();
+            SetLayerCompositionChanged();
+        }
+
+        protected override void Reset()
+        {
+            base.Reset();
+            
+            layerCompositionDirty = true;
+            if (preset != null || localLayers.Count > 0) {
+                SetLayerCompositionChanged();
+                return;
+            }
+
+            localLayers.Add(TextMeshProLayerData.Default());
             SetLayerCompositionChanged();
         }
 #endif
