@@ -1,0 +1,136 @@
+.ck-keyframe-window {
+    padding: 8px;
+}
+
+.ck-keyframe-graph {
+    position: relative;
+    min-height: 96px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-bottom: 5px;
+}
+
+.ck-keyframe-toolbar-strip {
+    align-self: flex-start;
+    flex-direction: row;
+    height: 22px;
+    min-height: 22px;
+    margin-bottom: 6px;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-top-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
+}
+
+.ck-keyframe-toolbar__button {
+    width: 28px;
+    min-width: 28px;
+    height: 22px;
+    min-height: 22px;
+    margin: 0;
+    padding: 0;
+    border-top-width: 1px;
+    border-right-width: 0;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgb(31, 31, 31);
+    border-bottom-color: rgb(31, 31, 31);
+    border-left-color: rgb(42, 42, 42);
+    border-radius: 0;
+    background-color: rgb(74, 74, 74);
+    align-items: center;
+    justify-content: center;
+}
+
+.ck-keyframe-toolbar__button--first {
+    border-left-color: rgb(31, 31, 31);
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+}
+
+.ck-keyframe-toolbar__button--last {
+    border-right-width: 1px;
+    border-right-color: rgb(31, 31, 31);
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+.ck-keyframe-toolbar__button:hover {
+    background-color: rgb(86, 86, 86);
+}
+
+.ck-keyframe-toolbar__button:active {
+    background-color: rgb(62, 62, 62);
+}
+
+.ck-keyframe-toolbar__button--selected {
+    background-color: rgb(57, 88, 112);
+}
+
+.ck-keyframe-toolbar__button--selected:hover {
+    background-color: rgb(65, 100, 128);
+}
+
+.ck-keyframe-toolbar__button--disabled {
+    opacity: 0.45;
+}
+
+.ck-keyframe-toolbar__gap {
+    width: 5px;
+    min-width: 5px;
+    height: 22px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.ck-keyframe-toolbar__icon {
+    width: 16px;
+    height: 16px;
+    align-self: center;
+}
+
+.ck-keyframe-graph__readout {
+    position: absolute;
+    left: 14px;
+    bottom: 11px;
+    flex-direction: row;
+    align-items: center;
+    font-size: 10px;
+}
+
+.ck-keyframe-graph__readout-separator,
+.ck-keyframe-graph__readout-out,
+.ck-keyframe-graph__readout-in {
+    margin: 0;
+    padding: 0;
+}
+
+.ck-keyframe-graph--disabled {
+    opacity: 0.78;
+}
+
+.ck-keyframe-fields {
+    margin-top: 2px;
+}
+
+.ck-keyframe-field {
+    min-height: 20px;
+    margin-bottom: 2px;
+}
+
+.ck-keyframe-field > .unity-base-field__label {
+    min-width: 28px;
+    width: 28px;
+}
+
+.ck-keyframe-readout {
+    font-size: 10px;
+    color: rgb(150, 150, 150);
+    margin-top: 1px;
+    margin-left: 2px;
+}
+
+.ck-keyframe-window--mixed .ck-keyframe-readout {
+    -unity-font-style: bold;
+}
