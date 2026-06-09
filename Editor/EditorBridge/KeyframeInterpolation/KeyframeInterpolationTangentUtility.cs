@@ -10,7 +10,6 @@ namespace Tripledot.CanvasKit.Editor
         private const float DefaultWeight = KeyframeInterpolationCurveUtility.DefaultWeight;
 
         private delegate bool SegmentApplicator(Keyframe[] keys, int leftIndex, int rightIndex);
-        private delegate bool KeyApplicator(Keyframe[] keys, int keyIndex, CurveSelection.SelectionType type);
 
         internal readonly struct KeyframeInterpolationSegmentSelection
         {
@@ -43,9 +42,7 @@ namespace Tripledot.CanvasKit.Editor
 
         public static int ApplyCurve(AnimationCurve curve, IReadOnlyList<KeyframeInterpolationKeySelection> selectedKeys, AnimationCurve interpolationCurve)
         {
-            var normalized = KeyframeInterpolationCurveUtility.NormalizeEditableCurve(interpolationCurve);
-            return ApplyManualFreeKeys(curve, selectedKeys,
-                (keys, keyIndex, type) => ApplyEditableCurveKey(keys, keyIndex, type, normalized));
+            return ApplyCurve(curve, ResolveSelectedSegments(curve, selectedKeys), interpolationCurve);
         }
 
         internal static int ApplyCurve(AnimationCurve curve, IReadOnlyList<KeyframeInterpolationSegmentSelection> selectedSegments, AnimationCurve interpolationCurve)
@@ -77,14 +74,7 @@ namespace Tripledot.CanvasKit.Editor
 
         public static int ApplyMode(AnimationCurve curve, IReadOnlyList<KeyframeInterpolationKeySelection> selectedKeys, AnimationUtility.TangentMode mode)
         {
-            return mode switch {
-                AnimationUtility.TangentMode.Free => ApplyManualFreeKeys(curve, selectedKeys, ApplyFreeModeKey),
-                AnimationUtility.TangentMode.Auto => ApplyUnityModeKeys(curve, selectedKeys, AnimationUtility.TangentMode.Auto, ClearKeyWeights),
-                AnimationUtility.TangentMode.Linear => ApplyUnityModeKeys(curve, selectedKeys, AnimationUtility.TangentMode.Linear, ClearKeyWeights),
-                AnimationUtility.TangentMode.Constant => ApplyUnityModeKeys(curve, selectedKeys, AnimationUtility.TangentMode.Constant, ApplyConstantKey),
-                AnimationUtility.TangentMode.ClampedAuto => ApplyUnityModeKeys(curve, selectedKeys, AnimationUtility.TangentMode.ClampedAuto, ClearKeyWeights),
-                _ => 0
-            };
+            return ApplyMode(curve, ResolveSelectedSegments(curve, selectedKeys), mode);
         }
 
         internal static int ApplyMode(AnimationCurve curve, IReadOnlyList<KeyframeInterpolationSegmentSelection> selectedSegments, AnimationUtility.TangentMode mode)
@@ -148,34 +138,7 @@ namespace Tripledot.CanvasKit.Editor
 
         internal static bool HasEditableKeySelection(AnimationCurve curve, IReadOnlyList<KeyframeInterpolationKeySelection> selectedKeys)
         {
-            return ResolveSelectedKeyEdits(curve, selectedKeys).Count > 0;
-        }
-
-        internal static bool TryGetKeyInterpolation(AnimationCurve curve, KeyframeInterpolationKeyEditSelection selectedKey, out KeyframeInterpolationSegmentInterpolation interpolation)
-        {
-            interpolation = default;
-            if (curve == null || selectedKey.Index < 0 || selectedKey.Index >= curve.length) {
-                return false;
-            }
-
-            var editsRight = EditsRightTangent(selectedKey.Type);
-            var editsLeft = EditsLeftTangent(selectedKey.Type);
-            if (!editsRight && !editsLeft) {
-                return false;
-            }
-
-            var keyframe = curve[selectedKey.Index];
-            var rightTangentMode = AnimationUtility.GetKeyRightTangentMode(curve, selectedKey.Index);
-            var leftTangentMode = AnimationUtility.GetKeyLeftTangentMode(curve, selectedKey.Index);
-            if (IsConstantKey(keyframe, rightTangentMode, leftTangentMode, editsRight, editsLeft)) {
-                interpolation = new KeyframeInterpolationSegmentInterpolation(AnimationUtility.TangentMode.Constant, KeyframeInterpolationCurveUtility.CreateModePreviewCurve(AnimationUtility.TangentMode.Constant), false);
-                return true;
-            }
-
-            var normalizedCurve = CreateCurveFromKey(curve, selectedKey.Index, editsRight, editsLeft);
-            var commonKeyMode = GetCommonKeyMode(rightTangentMode, leftTangentMode, editsRight, editsLeft);
-            interpolation = new KeyframeInterpolationSegmentInterpolation(commonKeyMode, normalizedCurve, true);
-            return true;
+            return ResolveSelectedSegments(curve, selectedKeys).Count > 0;
         }
 
         internal static bool HasDuplicateKeyTimes(AnimationCurve curve)
@@ -301,76 +264,6 @@ namespace Tripledot.CanvasKit.Editor
             return appliedSegments;
         }
 
-        private static int ApplyManualFreeKeys(AnimationCurve curve, 
-            IReadOnlyList<KeyframeInterpolationKeySelection> selectedKeys, KeyApplicator applyKey)
-        {
-            if (curve == null || selectedKeys == null || selectedKeys.Count == 0) {
-                return 0;
-            }
-
-            var edits = ResolveSelectedKeyEdits(curve, selectedKeys);
-            if (edits.Count == 0) {
-                return 0;
-            }
-
-            var changedIndexes = new HashSet<int>();
-            var rightTangentIndexes = new HashSet<int>();
-            var leftTangentIndexes = new HashSet<int>();
-            var keys = curve.keys;
-            
-            var appliedKeys = CollectKeySides(keys, edits, changedIndexes, rightTangentIndexes, leftTangentIndexes);
-            if (appliedKeys == 0) {
-                return 0;
-            }
-
-            SetTangentModes(curve, rightTangentIndexes, leftTangentIndexes, AnimationUtility.TangentMode.Free, true);
-            
-            keys = curve.keys;
-            for (var i = 0; i < edits.Count; i++) {
-                var edit = edits[i];
-                applyKey(keys, edit.Index, edit.Type);
-            }
-
-            MoveChangedKeys(curve, keys, changedIndexes);
-            SetTangentModes(curve, rightTangentIndexes, leftTangentIndexes, AnimationUtility.TangentMode.Free, true);
-            
-            return appliedKeys;
-        }
-
-        private static int ApplyUnityModeKeys(AnimationCurve curve,
-            IReadOnlyList<KeyframeInterpolationKeySelection> selectedKeys, AnimationUtility.TangentMode tangentMode, KeyApplicator applyKey)
-        {
-            if (curve == null || selectedKeys == null || selectedKeys.Count == 0) {
-                return 0;
-            }
-
-            var edits = ResolveSelectedKeyEdits(curve, selectedKeys);
-            if (edits.Count == 0) {
-                return 0;
-            }
-
-            var changedIndexes = new HashSet<int>();
-            var rightTangentIndexes = new HashSet<int>();
-            var leftTangentIndexes = new HashSet<int>();
-            var keys = curve.keys;
-            
-            var appliedKeys = CollectKeySides(keys, edits, changedIndexes, rightTangentIndexes, leftTangentIndexes);
-            if (appliedKeys == 0) {
-                return 0;
-            }
-
-            for (var i = 0; i < edits.Count; i++) {
-                var edit = edits[i];
-                applyKey(keys, edit.Index, edit.Type);
-            }
-
-            MoveChangedKeys(curve, keys, changedIndexes);
-            SetTangentModes(curve, rightTangentIndexes, leftTangentIndexes, tangentMode, false);
-            UpdateChangedTangents(curve, changedIndexes);
-            
-            return appliedKeys;
-        }
-
         private static int CollectSegments(Keyframe[] keyframes,
             IReadOnlyList<KeyframeInterpolationSegmentSelection> selectedSegments,
             List<KeyframeInterpolationSegmentSelection> segments,
@@ -396,40 +289,6 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             return appliedSegments;
-        }
-
-        private static int CollectKeySides(Keyframe[] keyframes,
-            IReadOnlyList<KeyframeInterpolationKeyEditSelection> selectedKeys,
-            HashSet<int> changedIndexes,
-            HashSet<int> rightTangentIndexes,
-            HashSet<int> leftTangentIndexes)
-        {
-            var appliedKeys = 0;
-            for (var i = 0; i < selectedKeys.Count; i++) {
-                var selectedKey = selectedKeys[i];
-                if (keyframes == null || selectedKey.Index < 0 || selectedKey.Index >= keyframes.Length) {
-                    continue;
-                }
-
-                var changesRight = EditsRightTangent(selectedKey.Type);
-                var changesLeft = EditsLeftTangent(selectedKey.Type);
-                if (!changesRight && !changesLeft) {
-                    continue;
-                }
-
-                changedIndexes.Add(selectedKey.Index);
-                if (changesRight) {
-                    rightTangentIndexes.Add(selectedKey.Index);
-                }
-
-                if (changesLeft) {
-                    leftTangentIndexes.Add(selectedKey.Index);
-                }
-
-                appliedKeys++;
-            }
-
-            return appliedKeys;
         }
 
         private static List<KeyframeInterpolationKeySelection> CreateKeySelections(IReadOnlyList<int> selectedKeyIndexes)
@@ -567,33 +426,6 @@ namespace Tripledot.CanvasKit.Editor
             return true;
         }
 
-        private static bool ApplyFreeModeKey(Keyframe[] keyframes, int keyIndex, CurveSelection.SelectionType type)
-        {
-            if (keyIndex < 0 || keyIndex >= keyframes.Length) {
-                return false;
-            }
-
-            var key = keyframes[keyIndex];
-            if (EditsRightTangent(type)) {
-                if (float.IsInfinity(key.outTangent) || float.IsNaN(key.outTangent)) {
-                    key.outTangent = GetOutFallbackTangent(keyframes, keyIndex);
-                }
-
-                key.outWeight = GetOutWeight(key);
-            }
-
-            if (EditsLeftTangent(type)) {
-                if (float.IsInfinity(key.inTangent) || float.IsNaN(key.inTangent)) {
-                    key.inTangent = GetInFallbackTangent(keyframes, keyIndex);
-                }
-
-                key.inWeight = GetInWeight(key);
-            }
-
-            keyframes[keyIndex] = key;
-            return true;
-        }
-
         private static bool ApplyConstantSegment(Keyframe[] keyframes, int leftIndex, int rightIndex)
         {
             if (!CanApplyToSegment(keyframes, leftIndex, rightIndex)) {
@@ -617,31 +449,6 @@ namespace Tripledot.CanvasKit.Editor
             return true;
         }
 
-        private static bool ApplyConstantKey(Keyframe[] keyframes, int keyIndex, CurveSelection.SelectionType type)
-        {
-            if (keyframes == null || keyIndex < 0 || keyIndex >= keyframes.Length) {
-                return false;
-            }
-
-            var key = keyframes[keyIndex];
-            
-            if (EditsRightTangent(type)) {
-                key.outTangent = float.PositiveInfinity;
-                key.outWeight = DefaultWeight;
-                key.weightedMode &= ~WeightedMode.Out;
-            }
-
-            if (EditsLeftTangent(type)) {
-                key.inTangent = float.PositiveInfinity;
-                key.inWeight = DefaultWeight;
-                key.weightedMode &= ~WeightedMode.In;
-            }
-
-            keyframes[keyIndex] = key;
-            
-            return true;
-        }
-
         private static bool ClearSegmentWeights(Keyframe[] keyframes, int leftIndex, int rightIndex)
         {
             if (!CanApplyToSegment(keyframes, leftIndex, rightIndex)) {
@@ -659,28 +466,6 @@ namespace Tripledot.CanvasKit.Editor
 
             keyframes[leftIndex] = left;
             keyframes[rightIndex] = right;
-            
-            return true;
-        }
-
-        private static bool ClearKeyWeights(Keyframe[] keyframes, int keyIndex, CurveSelection.SelectionType type)
-        {
-            if (keyIndex < 0 || keyIndex >= keyframes.Length) {
-                return false;
-            }
-
-            var key = keyframes[keyIndex];
-            if (EditsRightTangent(type)) {
-                key.outWeight = DefaultWeight;
-                key.weightedMode &= ~WeightedMode.Out;
-            }
-
-            if (EditsLeftTangent(type)) {
-                key.inWeight = DefaultWeight;
-                key.weightedMode &= ~WeightedMode.In;
-            }
-
-            keyframes[keyIndex] = key;
             
             return true;
         }
@@ -719,86 +504,6 @@ namespace Tripledot.CanvasKit.Editor
             keyframes[rightIndex] = right;
             
             return true;
-        }
-
-        private static bool ApplyEditableCurveKey(Keyframe[] keyframes, int keyIndex, CurveSelection.SelectionType type, AnimationCurve interpolationCurve)
-        {
-            if (keyIndex < 0 || keyIndex >= keyframes.Length || interpolationCurve == null || interpolationCurve.length < 2) {
-                return false;
-            }
-
-            var key = keyframes[keyIndex];
-            var start = interpolationCurve[0];
-            var end = interpolationCurve[interpolationCurve.length - 1];
-
-            if (EditsRightTangent(type)) {
-                ApplyOutTangent(ref key, start, GetOutValueScale(keyframes, keyIndex));
-            }
-
-            if (EditsLeftTangent(type)) {
-                ApplyInTangent(ref key, end, GetInValueScale(keyframes, keyIndex));
-            }
-
-            keyframes[keyIndex] = key;
-            
-            return true;
-        }
-
-        private static AnimationCurve CreateCurveFromKey(AnimationCurve curve, int keyIndex, bool useRightTangent, bool useLeftTangent)
-        {
-            var keys = curve.keys;
-            var key = keys[keyIndex];
-            
-            var start = new Keyframe(
-                time: 0f,
-                value: 0f,
-                inTangent: 0f,
-                outTangent: useRightTangent ? NormalizeTangent(key.outTangent, GetOutValueScale(keys, keyIndex)) : 0f,
-                inWeight: DefaultWeight,
-                outWeight: useRightTangent ? GetOutWeight(key) : DefaultWeight) {
-                weightedMode = useRightTangent && HasOutWeight(key: key) ? WeightedMode.Out : WeightedMode.None
-            };
-            
-            var end = new Keyframe(
-                time: 1f,
-                value: 1f,
-                inTangent: useLeftTangent ? NormalizeTangent(key.inTangent, GetInValueScale(keys, keyIndex)) : 0f,
-                outTangent: 0f,
-                inWeight: useLeftTangent ? GetInWeight(key) : DefaultWeight,
-                outWeight: DefaultWeight) {
-                weightedMode = useLeftTangent && HasInWeight(key: key) ? WeightedMode.In : WeightedMode.None
-            };
-
-            return KeyframeInterpolationCurveUtility.NormalizeEditableCurve(new AnimationCurve(start, end));
-        }
-
-        private static AnimationUtility.TangentMode GetCommonKeyMode(
-            AnimationUtility.TangentMode rightTangentMode,
-            AnimationUtility.TangentMode leftTangentMode,
-            bool useRightTangent,
-            bool useLeftTangent)
-        {
-            if (useRightTangent && useLeftTangent) {
-                return rightTangentMode == leftTangentMode ? rightTangentMode : AnimationUtility.TangentMode.Free;
-            }
-
-            if (useRightTangent) {
-                return rightTangentMode;
-            }
-
-            return useLeftTangent ? leftTangentMode : AnimationUtility.TangentMode.Free;
-        }
-
-        private static bool IsConstantKey(
-            Keyframe keyframe,
-            AnimationUtility.TangentMode rightTangentMode,
-            AnimationUtility.TangentMode leftTangentMode,
-            bool useRightTangent,
-            bool useLeftTangent)
-        {
-            var rightIsConstant = !useRightTangent || float.IsInfinity(keyframe.outTangent) || rightTangentMode == AnimationUtility.TangentMode.Constant;
-            var leftIsConstant = !useLeftTangent || float.IsInfinity(keyframe.inTangent) || leftTangentMode == AnimationUtility.TangentMode.Constant;
-            return rightIsConstant && leftIsConstant;
         }
 
         private static bool IsConstantSegment(
@@ -867,69 +572,6 @@ namespace Tripledot.CanvasKit.Editor
         {
             var duration = right.time - left.time;
             return Mathf.Abs(duration) <= TimeEpsilon ? 0f : (right.value - left.value) / duration;
-        }
-
-        private static float GetOutFallbackTangent(Keyframe[] keys, int keyIndex)
-        {
-            return keyIndex >= 0 && keyIndex < keys.Length - 1
-                ? GetLinearTangent(keys[keyIndex], keys[keyIndex + 1])
-                : 0f;
-        }
-
-        private static float GetInFallbackTangent(Keyframe[] keys, int keyIndex)
-        {
-            return keyIndex > 0 && keyIndex < keys.Length
-                ? GetLinearTangent(keys[keyIndex - 1], keys[keyIndex])
-                : 0f;
-        }
-
-        private static float GetOutValueScale(Keyframe[] keys, int keyIndex)
-        {
-            if (keyIndex < 0 || keyIndex >= keys.Length - 1) {
-                return 1f;
-            }
-
-            var duration = keys[keyIndex + 1].time - keys[keyIndex].time;
-            return Mathf.Abs(duration) <= TimeEpsilon ? 0f
-                : (keys[keyIndex + 1].value - keys[keyIndex].value) / duration;
-        }
-
-        private static float GetInValueScale(Keyframe[] keys, int keyIndex)
-        {
-            if (keyIndex <= 0 || keyIndex >= keys.Length) {
-                return 1f;
-            }
-
-            var duration = keys[keyIndex].time - keys[keyIndex - 1].time;
-            return Mathf.Abs(duration) <= TimeEpsilon ? 0f
-                : (keys[keyIndex].value - keys[keyIndex - 1].value) / duration;
-        }
-
-        private static float NormalizeTangent(float tangent, float valueScale)
-        {
-            return Mathf.Abs(valueScale) <= TimeEpsilon ? 0f : tangent / valueScale;
-        }
-
-        private static void ApplyOutTangent(ref Keyframe key, Keyframe source, float valueScale)
-        {
-            key.outTangent = Mathf.Abs(valueScale) <= TimeEpsilon ? 0f : valueScale * source.outTangent;
-            key.outWeight = HasOutWeight(source) ? source.outWeight : DefaultWeight;
-            if (HasOutWeight(source)) {
-                key.weightedMode |= WeightedMode.Out;
-            } else {
-                key.weightedMode &= ~WeightedMode.Out;
-            }
-        }
-
-        private static void ApplyInTangent(ref Keyframe key, Keyframe source, float valueScale)
-        {
-            key.inTangent = Mathf.Abs(valueScale) <= TimeEpsilon ? 0f : valueScale * source.inTangent;
-            key.inWeight = HasInWeight(source) ? source.inWeight : DefaultWeight;
-            if (HasInWeight(source)) {
-                key.weightedMode |= WeightedMode.In;
-            } else {
-                key.weightedMode &= ~WeightedMode.In;
-            }
         }
 
         private static bool EditsRightTangent(CurveSelection.SelectionType type)

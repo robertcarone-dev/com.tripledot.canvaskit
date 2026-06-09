@@ -9,7 +9,9 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 {
     internal sealed class KeyframeInterpolationEditSession
     {
-        private delegate int CurveMutation(AnimationCurve curve, IReadOnlyList<KeyframeInterpolationKeySelection> selectedKeys);
+        private delegate int CurveMutation(
+            AnimationCurve curve,
+            IReadOnlyList<KeyframeInterpolationTangentUtility.KeyframeInterpolationSegmentSelection> selectedSegments);
 
         private readonly AnimationWindow window;
         private readonly string undoLabel;
@@ -32,19 +34,19 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         public bool ApplyCurve(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, AnimationCurve interpolationCurve)
         {
             return ApplyToSelections(selections,
-                (curve, selectedKeys) => KeyframeInterpolationTangentUtility.ApplyCurve(curve, selectedKeys, interpolationCurve));
+                (curve, selectedSegments) => KeyframeInterpolationTangentUtility.ApplyCurve(curve, selectedSegments, interpolationCurve));
         }
 
         public bool ApplyPreset(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, KeyframeInterpolationPreset preset)
         {
             return ApplyToSelections(selections,
-                (curve, selectedKeys) => KeyframeInterpolationTangentUtility.ApplyPreset(curve, selectedKeys, preset));
+                (curve, selectedSegments) => KeyframeInterpolationTangentUtility.ApplyPreset(curve, selectedSegments, preset));
         }
 
         public bool ApplyMode(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, AnimationUtility.TangentMode mode)
         {
             return ApplyToSelections(selections,
-                (curve, selectedKeys) => KeyframeInterpolationTangentUtility.ApplyMode(curve, selectedKeys, mode));
+                (curve, selectedSegments) => KeyframeInterpolationTangentUtility.ApplyMode(curve, selectedSegments, mode));
         }
 
         public bool Commit(IReadOnlyList<KeyframeInterpolationCurveSelection> selections)
@@ -91,11 +93,12 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                     continue;
                 }
 
-                if (!KeyframeInterpolationTangentUtility.HasEditableKeySelection(curve, selection.Keys)) {
+                var selectedSegments = KeyframeInterpolationTangentUtility.ResolveSelectedSegments(curve, selection.Keys);
+                if (selectedSegments.Count == 0) {
                     continue;
                 }
 
-                if (mutateCurve(curve, selection.Keys) <= 0) {
+                if (mutateCurve(curve, selectedSegments) <= 0) {
                     continue;
                 }
 

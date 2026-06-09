@@ -47,15 +47,19 @@ namespace Tripledot.CanvasKit.Editor
                     continue;
                 }
 
-                var selectedKeys = KeyframeInterpolationTangentUtility.ResolveSelectedKeyEdits(curve, selection.Keys);
-                if (selectedKeys.Count == 0) {
+                var selectedSegments = KeyframeInterpolationTangentUtility.ResolveSelectedSegments(curve, selection.Keys);
+                if (selectedSegments.Count == 0) {
                     continue;
                 }
 
-                for (var keyIndex = 0; keyIndex < selectedKeys.Count; keyIndex++) {
-                    var selectedKey = selectedKeys[keyIndex];
+                for (var segmentIndex = 0; segmentIndex < selectedSegments.Count; segmentIndex++) {
+                    var selectedSegment = selectedSegments[segmentIndex];
                     editablePairCount++;
-                    if (!KeyframeInterpolationTangentUtility.TryGetKeyInterpolation(curve, selectedKey, out var segmentInterpolation)) {
+                    if (!KeyframeInterpolationTangentUtility.TryGetSegmentInterpolation(
+                            curve,
+                            selectedSegment.LeftIndex,
+                            selectedSegment.RightIndex,
+                            out var segmentInterpolation)) {
                         hasCommonMode = false;
                         hasCommonCurve = false;
                         continue;
