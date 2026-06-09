@@ -30,15 +30,6 @@ namespace Tripledot.CanvasKit
         public const int MinSegmentsPerCell = 1;
         public const int MaxSegmentsPerCell = 4;
 
-        [Obsolete("Use MinControlPointsPerAxis.")]
-        public const int MinSurfaceSubdivisions = MinControlPointsPerAxis - 1;
-        [Obsolete("Use MaxControlPointsPerAxis.")]
-        public const int MaxSurfaceSubdivisions = MaxControlPointsPerAxis - 1;
-        [Obsolete("Use MinSegmentsPerCell.")]
-        public const int MinSurfaceResolution = MinSegmentsPerCell;
-        [Obsolete("Use MaxSegmentsPerCell.")]
-        public const int MaxSurfaceResolution = MaxSegmentsPerCell;
-
         private const int DefaultControlPointsPerAxis = 3;
         private const int DefaultSegmentsPerCell = 3;
         private const int PackedLatticePointCount = (MaxControlPointsPerAxis * MaxControlPointsPerAxis + 1) / 2;
@@ -124,40 +115,17 @@ namespace Tripledot.CanvasKit
             set {
                 ValidateSegmentsPerCell(value);
                 EnsureLattice();
-                if (segmentsPerCell == value) {
-                    return;
+                if (segmentsPerCell != value) {
+                    segmentsPerCell = value;
+                    image.SetVerticesDirty();
+                    CaptureMeshSignature();
                 }
-
-                segmentsPerCell = value;
-                image.SetVerticesDirty();
-                CaptureMeshSignature();
             }
-        }
-
-        [Obsolete("Use ControlColumns.")]
-        public int HorizontalSubdivisions
-        {
-            get => ControlColumns - 1;
-            set => ControlColumns = value + 1;
-        }
-
-        [Obsolete("Use ControlRows.")]
-        public int VerticalSubdivisions
-        {
-            get => ControlRows - 1;
-            set => ControlRows = value + 1;
         }
 
         public int ControlPointColumns => ControlColumns;
 
         public int ControlPointRows => ControlRows;
-
-        [Obsolete("Use SegmentsPerCell.")]
-        public int SurfaceResolution
-        {
-            get => SegmentsPerCell;
-            set => SegmentsPerCell = value;
-        }
 
         public ImageLatticeRaycastMode RaycastMode
         {
@@ -209,13 +177,11 @@ namespace Tripledot.CanvasKit
                 return;
             }
 
-            if (image.type != Image.Type.Simple) {
-                return;
+            if (image.type == Image.Type.Simple) {
+                EnsureLattice();
+                EnsureCanvasShaderChannels();
+                BuildMesh(vertexHelper, image);
             }
-
-            EnsureLattice();
-            EnsureCanvasShaderChannels();
-            BuildMesh(vertexHelper, image);
         }
 
         public Material GetModifiedMaterial(Material baseMaterial)
@@ -238,6 +204,7 @@ namespace Tripledot.CanvasKit
             EnsureLattice();
             EnsureRuntimeMaterial(baseMaterial, useSourceShader);
             ApplyLatticeMaterial(runtimeMaterial, image);
+            
             return runtimeMaterial;
         }
 
@@ -334,9 +301,7 @@ namespace Tripledot.CanvasKit
                     }
 
                     if (destination.Length > PackedLatticePointCount) {
-                        UnsafeUtility.MemClear(
-                            destinationPtr + PackedLatticePointCount,
-                            (destination.Length - PackedLatticePointCount) * sizeof(float) * 4);
+                        UnsafeUtility.MemClear(destinationPtr + PackedLatticePointCount, (destination.Length - PackedLatticePointCount) * sizeof(float) * 4);
                     }
                 }
             }
@@ -610,7 +575,9 @@ namespace Tripledot.CanvasKit
 
         private void EnsureCanvasShaderChannels()
         {
-            CanvasUtility.EnsureChannels(image.canvas, RequiredCanvasChannels);
+            if (image) {
+                CanvasUtility.EnsureChannels(image.canvas, RequiredCanvasChannels);
+            }
         }
 
         private void BuildMesh(VertexHelper vertexHelper, Image graphicImage)
