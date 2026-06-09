@@ -13,14 +13,14 @@ Canvas Kit is distributed as a Unity Package Manager Git package. Install a rele
 ```json
 {
   "dependencies": {
-    "com.tripledot.canvaskit": "https://github.com/robertcarone-dev/com.tripledot.canvaskit.git#v0.4.4-preview"
+    "com.tripledot.canvaskit": "https://github.com/robertcarone-dev/com.tripledot.canvaskit.git#v0.4.5-preview"
   }
 }
 ```
 
 The package manifest is at the repository root, so the URL does not need a `?path=` query. Pinning a tag keeps project installs deterministic; update the tag when moving to a newer release.
 
-Release tags use the package version with a leading `v`, for example `v0.4.4-preview` for package version `0.4.4-preview`.
+Release tags use the package version with a leading `v`, for example `v0.4.5-preview` for package version `0.4.5-preview`.
 
 # Table of Contents
 
