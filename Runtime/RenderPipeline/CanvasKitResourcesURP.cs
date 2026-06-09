@@ -19,10 +19,26 @@ namespace Tripledot.CanvasKit
         [SerializeField]
         [ResourcePath("Shaders/TextMeshPro/TextLayerCore.shader")]
         private Shader textMeshProCoreShader;
+        [SerializeField]
+        [ResourcePath("Shaders/ImageLattice.shader")]
+        private Shader imageLatticeShader;
+        [SerializeField]
+        [ResourcePath("Materials/ImageLatticeDefault.mat")]
+        private Material imageLatticeDefaultMaterial;
 
         public Shader TextMeshProCoreShader {
             get => textMeshProCoreShader;
             set => this.SetValueAndNotify(ref textMeshProCoreShader, value);
+        }
+
+        public Shader ImageLatticeShader {
+            get => imageLatticeShader;
+            set => this.SetValueAndNotify(ref imageLatticeShader, value);
+        }
+
+        public Material ImageLatticeDefaultMaterial {
+            get => imageLatticeDefaultMaterial;
+            set => this.SetValueAndNotify(ref imageLatticeDefaultMaterial, value);
         }
     }
 }

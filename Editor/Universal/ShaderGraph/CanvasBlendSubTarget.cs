@@ -15,11 +15,11 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
         private static readonly GUID SourceCodeGuid = new GUID("b6b2ee10318b443b9cda81758d49228d");
         private const string CanvasBlendPass = "Packages/com.tripledot.canvaskit/Editor/Universal/ShaderGraph/Includes/CanvasKitBlendPass.hlsl";
 
-        private static readonly KeywordDescriptor kMaterialOverrideDefine = CreateDefine("_TRIPLEDOT_CANVASKIT_BLEND_MATERIAL_OVERRIDE");
-        private static readonly KeywordDescriptor kAlphaDefine = CreateDefine("_TRIPLEDOT_CANVASKIT_BLEND_ALPHA");
-        private static readonly KeywordDescriptor kPremultiplyDefine = CreateDefine("_TRIPLEDOT_CANVASKIT_BLEND_PREMULTIPLY");
-        private static readonly KeywordDescriptor kAdditiveDefine = CreateDefine("_TRIPLEDOT_CANVASKIT_BLEND_ADDITIVE");
-        private static readonly KeywordDescriptor kMultiplyDefine = CreateDefine("_TRIPLEDOT_CANVASKIT_BLEND_MULTIPLY");
+        private static readonly KeywordDescriptor kMaterialOverrideDefine = CreateDefine("_CANVASKIT_BLEND_MATERIAL_OVERRIDE");
+        private static readonly KeywordDescriptor kAlphaDefine = CreateDefine("_CANVASKIT_BLEND_ALPHA");
+        private static readonly KeywordDescriptor kPremultiplyDefine = CreateDefine("_CANVASKIT_BLEND_PREMULTIPLY");
+        private static readonly KeywordDescriptor kAdditiveDefine = CreateDefine("_CANVASKIT_BLEND_ADDITIVE");
+        private static readonly KeywordDescriptor kMultiplyDefine = CreateDefine("_CANVASKIT_BLEND_MULTIPLY");
 
         private CanvasBlendData blendData;
 

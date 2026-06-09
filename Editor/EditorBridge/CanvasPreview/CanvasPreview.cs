@@ -6,14 +6,14 @@ using UnityObject = UnityEngine.Object;
 
 namespace Tripledot.CanvasKit.Editor
 {
-    internal static class CanvasInspectorPreview
+    internal static class CanvasPreview
     {
         private static readonly GUIContent PreviewTitle = new GUIContent("Canvas Preview");
         private static readonly string[] SizeLabels = CreateSizeLabels();
         private static readonly Dictionary<string, PreviewState> StateCache = new Dictionary<string, PreviewState>();
         private static readonly StaticPreviewCache ProjectPreviewCache = new StaticPreviewCache(32);
 
-        static CanvasInspectorPreview()
+        static CanvasPreview()
         {
             EditorApplication.projectChanged += ClearPreviewCache;
         }

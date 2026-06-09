@@ -5,8 +5,10 @@ namespace Tripledot.CanvasKit
     internal static class CanvasShaderIds
     {
         public static readonly int ClipRect = Shader.PropertyToID("_ClipRect");
-        public static readonly int MaskSoftnessX = Shader.PropertyToID("_MaskSoftnessX");
-        public static readonly int MaskSoftnessY = Shader.PropertyToID("_MaskSoftnessY");
+        public static readonly int UIMaskSoftnessX = Shader.PropertyToID("_UIMaskSoftnessX");
+        public static readonly int UIMaskSoftnessY = Shader.PropertyToID("_UIMaskSoftnessY");
+        public static readonly int LegacyMaskSoftnessX = Shader.PropertyToID("_MaskSoftnessX");
+        public static readonly int LegacyMaskSoftnessY = Shader.PropertyToID("_MaskSoftnessY");
         public static readonly int StencilComp = Shader.PropertyToID("_StencilComp");
         public static readonly int Stencil = Shader.PropertyToID("_Stencil");
         public static readonly int StencilOp = Shader.PropertyToID("_StencilOp");

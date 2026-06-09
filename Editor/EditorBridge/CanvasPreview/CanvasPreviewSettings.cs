@@ -103,7 +103,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.legacyKeywordRulesMigrated = true;
             
             Revision++;
-            CanvasInspectorPreview.ClearPreviewCache();
+            CanvasPreview.ClearPreviewCache();
 
             if (save) {
                 settings.Save(true);
@@ -118,7 +118,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.scalerReferencePixelsPerUnit = SanitizeReferencePixelsPerUnit(referencePixelsPerUnit);
             
             Revision++;
-            CanvasInspectorPreview.ClearPreviewCache();
+            CanvasPreview.ClearPreviewCache();
 
             if (save) {
                 settings.Save(true);
@@ -131,7 +131,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.selectedReferenceSizeIndex = NormalizeReferenceSizeIndex(selectedSizeIndex);
             
             Revision++;
-            CanvasInspectorPreview.ClearPreviewCache();
+            CanvasPreview.ClearPreviewCache();
 
             if (save) {
                 settings.Save(true);

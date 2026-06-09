@@ -292,8 +292,8 @@ namespace Tripledot.CanvasKit.Editor
 
             static Styles()
             {
-                EditGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/EditGradientIcon.png");
-                ResetGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/ResetIcon.png");
+                EditGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/TextMeshPro/EditGradientIcon.png");
+                ResetGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/TextMeshPro/ResetIcon.png");
                 
                 MappingButtonStyle = new GUIStyle(EditorStyles.miniButton) {
                     alignment = TextAnchor.MiddleCenter,

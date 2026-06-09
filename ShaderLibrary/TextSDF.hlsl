@@ -1,5 +1,5 @@
-#ifndef TRIPLEDOT_CANVASKIT_TEXT_SDF_INCLUDED
-#define TRIPLEDOT_CANVASKIT_TEXT_SDF_INCLUDED
+#ifndef CANVASKIT_TEXT_SDF_INCLUDED
+#define CANVASKIT_TEXT_SDF_INCLUDED
 
 // ----------------------------------------------------------------------------
 // SDF Parameters
@@ -169,4 +169,4 @@ half GetTextOutsideRamp(float signedDistance, float spreadPixels, float weightPi
     return 1.0 - smoothstep(spread, spread + feather, signedDistance);
 }
 
-#endif // TRIPLEDOT_CANVASKIT_TEXT_SDF_INCLUDED
+#endif // CANVASKIT_TEXT_SDF_INCLUDED

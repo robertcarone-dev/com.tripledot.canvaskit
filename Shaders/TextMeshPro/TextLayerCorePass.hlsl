@@ -1,11 +1,8 @@
-#ifndef TRIPLEDOT_CANVASKIT_TEXT_LAYER_CORE_PASS_INCLUDED
-#define TRIPLEDOT_CANVASKIT_TEXT_LAYER_CORE_PASS_INCLUDED
+#ifndef CANVASKIT_TEXT_LAYER_CORE_PASS_INCLUDED
+#define CANVASKIT_TEXT_LAYER_CORE_PASS_INCLUDED
 
 #include "Packages/com.tripledot.canvaskit/ShaderLibrary/Canvas.hlsl"
 #include "Packages/com.tripledot.canvaskit/ShaderLibrary/TextSDF.hlsl"
-
-float _UIMaskSoftnessX;
-float _UIMaskSoftnessY;
 
 struct Attributes
 {
@@ -50,8 +47,7 @@ Varyings BuildTextLayerVaryings(Attributes input, float faceDilate)
     output.localPosition = input.positionOS.xy;
     output.paintUV = input.texCoord2.xy;
     output.paintBoundsSize = float2(input.texCoord0.z, input.texCoord2.z);
-    output.mask = GetCanvasMask(input.positionOS.xy, positionCS, _ClipRect,
-        _MaskSoftnessX, _MaskSoftnessY, _UIMaskSoftnessX, _UIMaskSoftnessY, _ScreenParams, UNITY_MATRIX_P);
+    output.mask = GetCanvasMask(input.positionOS.xy, positionCS, _ClipRect, _UIMaskSoftnessX, _UIMaskSoftnessY, _ScreenParams, UNITY_MATRIX_P);
 
     TextSDFParams sdfParams = GetTextSDFParams(input.positionOS, input.normalOS, input.texCoord0, faceDilate,
         _ScaleX, _ScaleY, _GradientScale, _Sharpness, _PerspectiveFilter, _WeightNormal, _WeightBold, _ScaleRatioA);
@@ -291,4 +287,4 @@ half4 Fragment(Varyings input) : SV_Target
     return GetTextLayerBlendOutput(result);
 }
 
-#endif // TRIPLEDOT_CANVASKIT_TEXT_LAYER_CORE_PASS_INCLUDED
+#endif // CANVASKIT_TEXT_LAYER_CORE_PASS_INCLUDED

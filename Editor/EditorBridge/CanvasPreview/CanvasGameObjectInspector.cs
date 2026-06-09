@@ -6,7 +6,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 {
     [CustomEditor(typeof(GameObject))]
     [CanEditMultipleObjects]
-    internal class GameObjectCanvasInspector : GameObjectInspector
+    internal class CanvasGameObjectInspector : GameObjectInspector
     {
         private readonly CanvasPreviewCache canvasPreviewCache = new CanvasPreviewCache();
         private Object[] cachedTargets;
@@ -23,44 +23,43 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
         public override bool HasPreviewGUI()
         {
-            return CanvasInspectorPreview.HasPreviewGUI(target, RefreshCachedTargets(), false) || base.HasPreviewGUI();
+            return CanvasPreview.HasPreviewGUI(target, RefreshCachedTargets(), false) || base.HasPreviewGUI();
         }
 
         public override GUIContent GetPreviewTitle()
         {
-            return CanvasInspectorPreview.TryGetPreviewTarget(target, RefreshCachedTargets(), out _)
-                ? CanvasInspectorPreview.GetPreviewTitle(target, GetCachedTargets(), GUIContent.none)
+            return CanvasPreview.TryGetPreviewTarget(target, RefreshCachedTargets(), out _)
+                ? CanvasPreview.GetPreviewTitle(target, GetCachedTargets(), GUIContent.none)
                 : base.GetPreviewTitle();
         }
 
         public override string GetInfoString()
         {
-            return CanvasInspectorPreview.TryGetPreviewTarget(target, RefreshCachedTargets(), out _)
-                ? CanvasInspectorPreview.GetInfoString(target, GetCachedTargets(), GetSelectedSizeIndex(), string.Empty)
+            return CanvasPreview.TryGetPreviewTarget(target, RefreshCachedTargets(), out _)
+                ? CanvasPreview.GetInfoString(target, GetCachedTargets(), GetSelectedSizeIndex(), string.Empty)
                 : base.GetInfoString();
         }
 
         public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height)
         {
-            var preview = CanvasInspectorPreview.RenderStaticPreview(target, assetPath, subAssets, width, height);
+            var preview = CanvasPreview.RenderStaticPreview(target, assetPath, subAssets, width, height);
             return preview != null ? preview : base.RenderStaticPreview(assetPath, subAssets, width, height);
         }
 
         public override void OnPreviewSettings()
         {
             var currentTargets = RefreshCachedTargets();
-            if (CanvasInspectorPreview.CanPreview(currentTargets)) {
+            if (CanvasPreview.CanPreview(currentTargets)) {
                 EnsureSelectedSizeIndexInitialized();
-                CanvasInspectorPreview.OnPreviewSettings(target, currentTargets, ref selectedSizeIndex, canvasPreviewCache.ReleasePreviewTexture);
-                return;
+                CanvasPreview.OnPreviewSettings(target, currentTargets, ref selectedSizeIndex, canvasPreviewCache.ReleasePreviewTexture);
+            } else {
+                base.OnPreviewSettings();
             }
-
-            base.OnPreviewSettings();
         }
 
         public override void OnPreviewGUI(Rect r, GUIStyle background)
         {
-            if (CanvasInspectorPreview.OnPreviewGUI(target, GetCachedTargets(), r, background, canvasPreviewCache, GetSelectedSizeIndex())) {
+            if (CanvasPreview.OnPreviewGUI(target, GetCachedTargets(), r, background, canvasPreviewCache, GetSelectedSizeIndex())) {
                 return;
             }
 
@@ -125,7 +124,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
             if (singleTargetArray == null || cachedSingleTarget != target) {
                 cachedSingleTarget = target;
-                singleTargetArray = new Object[] { target };
+                singleTargetArray = new[] { target };
             }
 
             return singleTargetArray;
@@ -137,7 +136,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 return false;
             }
 
-            for (int i = 0; i < current.Length; i++) {
+            for (var i = 0; i < current.Length; i++) {
                 if (cached[i] != current[i]) {
                     return false;
                 }

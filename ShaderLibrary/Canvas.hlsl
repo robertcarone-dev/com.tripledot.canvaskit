@@ -1,5 +1,5 @@
-#ifndef TRIPLEDOT_CANVASKIT_INCLUDED
-#define TRIPLEDOT_CANVASKIT_INCLUDED
+#ifndef CANVASKIT_CANVAS_INCLUDED
+#define CANVASKIT_CANVAS_INCLUDED
 
 // ----------------------------------------------------------------------------
 // Transforms
@@ -244,13 +244,12 @@ half4 CompositeCanvasPaint(half4 current, half coverage, int paintMode,
 // ----------------------------------------------------------------------------
 
 float4 GetCanvasMask(float2 positionOS, float4 positionCS, float4 clipRect,
-    float maskSoftnessX, float maskSoftnessY, float uiMaskSoftnessX, float uiMaskSoftnessY,
-    float4 screenParams, float4x4 projectionMatrix)
+    float uiMaskSoftnessX, float uiMaskSoftnessY, float4 screenParams, float4x4 projectionMatrix)
 {
     float4 clampedRect = clamp(clipRect, -2e10, 2e10);
     float2 pixelSize = positionCS.w;
     pixelSize /= abs(mul((float2x2)projectionMatrix, screenParams.xy));
-    half2 maskSoftness = half2(max(uiMaskSoftnessX, maskSoftnessX), max(uiMaskSoftnessY, maskSoftnessY));
+    half2 maskSoftness = half2(uiMaskSoftnessX, uiMaskSoftnessY);
     return float4(positionOS * 2.0 - clampedRect.xy - clampedRect.zw, 0.25 / (0.25 * maskSoftness + abs(pixelSize.xy)));
 }
 
@@ -260,4 +259,4 @@ half GetCanvasMaskFactor(float4 mask, float4 clipRect)
     return clipped.x * clipped.y;
 }
 
-#endif // TRIPLEDOT_CANVASKIT_INCLUDED
+#endif // CANVASKIT_INCLUDED

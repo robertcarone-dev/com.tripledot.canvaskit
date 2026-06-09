@@ -238,9 +238,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             for (int i = 0; i <= EllipseSegments; i++) {
                 var t = i / (float)EllipseSegments * Mathf.PI * 2f;
-                var uv = origin
-                    + direction * (Mathf.Cos(t) * scale.x * 0.5f)
-                    + perpendicular * (Mathf.Sin(t) * scale.y * 0.5f);
+                var uv = origin + direction * (Mathf.Cos(t) * scale.x * 0.5f) + perpendicular * (Mathf.Sin(t) * scale.y * 0.5f);
                 EllipsePoints[i] = UvToWorld(rectTransform, paintBounds, uv);
             }
 

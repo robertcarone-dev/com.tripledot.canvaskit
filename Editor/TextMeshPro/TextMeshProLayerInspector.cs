@@ -1060,7 +1060,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private static Texture2D LoadLayerIcon(string filename)
         {
-            return AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/" + filename);
+            return AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/TextMeshPro/" + filename);
         }
 
         private static LayerSwatchDescriptor GetLayerSwatchDescriptor(SerializedLayer layer)

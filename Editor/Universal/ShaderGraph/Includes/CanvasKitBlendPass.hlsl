@@ -116,15 +116,15 @@ PackedVaryings vert(Attributes input)
 
 void ApplyCanvasKitBlendMode(inout half4 color)
 {
-    #if defined(_TRIPLEDOT_CANVASKIT_BLEND_MATERIAL_OVERRIDE)
+    #if defined(_CANVASKIT_BLEND_MATERIAL_OVERRIDE)
         int blendMode = (int)(_Blend + 0.5);
         if (blendMode == 1)
             color.rgb *= color.a;
         else if (blendMode == 3)
             color.rgb = lerp(half3(1.0, 1.0, 1.0), color.rgb, color.a);
-    #elif defined(_TRIPLEDOT_CANVASKIT_BLEND_PREMULTIPLY)
+    #elif defined(_CANVASKIT_BLEND_PREMULTIPLY)
         color.rgb *= color.a;
-    #elif defined(_TRIPLEDOT_CANVASKIT_BLEND_MULTIPLY)
+    #elif defined(_CANVASKIT_BLEND_MULTIPLY)
         color.rgb = lerp(half3(1.0, 1.0, 1.0), color.rgb, color.a);
     #endif
 }

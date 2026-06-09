@@ -69,8 +69,8 @@ Shader "TextMeshPro/Tripledot/Text Core"
         _WeightBold ("Weight Bold", Float) = 0.5
 
         _ClipRect ("Clip Rect", Vector) = (-32767,-32767,32767,32767)
-        _MaskSoftnessX ("Mask Softness X", Float) = 0
-        _MaskSoftnessY ("Mask Softness Y", Float) = 0
+        _UIMaskSoftnessX ("UI Mask Softness X", Float) = 1
+        _UIMaskSoftnessY ("UI Mask Softness Y", Float) = 1
         _StencilComp ("Stencil Comparison", Integer) = 8
         _Stencil ("Stencil ID", Integer) = 0
         _StencilOp ("Stencil Operation", Integer) = 0

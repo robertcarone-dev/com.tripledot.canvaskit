@@ -1,5 +1,5 @@
-#ifndef TRIPLEDOT_CANVASKIT_TEXT_LAYER_CORE_INPUT_INCLUDED
-#define TRIPLEDOT_CANVASKIT_TEXT_LAYER_CORE_INPUT_INCLUDED
+#ifndef CANVASKIT_TEXT_LAYER_CORE_INPUT_INCLUDED
+#define CANVASKIT_TEXT_LAYER_CORE_INPUT_INCLUDED
 
 TEXTURE2D(_MainTex);
 SAMPLER(sampler_MainTex);
@@ -80,8 +80,8 @@ CBUFFER_START(UnityPerMaterial)
     float _WeightNormal;
     float _WeightBold;
     float4 _ClipRect;
-    float _MaskSoftnessX;
-    float _MaskSoftnessY;
+    float _UIMaskSoftnessX;
+    float _UIMaskSoftnessY;
 CBUFFER_END
 
-#endif // TRIPLEDOT_CANVASKIT_TEXT_LAYER_CORE_INPUT_INCLUDED
+#endif // CANVASKIT_TEXT_LAYER_CORE_INPUT_INCLUDED

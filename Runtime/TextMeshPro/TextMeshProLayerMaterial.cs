@@ -28,8 +28,8 @@ namespace Tripledot.CanvasKit
             material.SetFloat(ShaderIds.WeightNormal, context.WeightNormal);
             material.SetFloat(ShaderIds.WeightBold, context.WeightBold);
             material.SetVector(CanvasShaderIds.ClipRect, context.ClipRect);
-            material.SetFloat(CanvasShaderIds.MaskSoftnessX, context.MaskSoftnessX);
-            material.SetFloat(CanvasShaderIds.MaskSoftnessY, context.MaskSoftnessY);
+            material.SetFloat(CanvasShaderIds.UIMaskSoftnessX, context.MaskSoftnessX);
+            material.SetFloat(CanvasShaderIds.UIMaskSoftnessY, context.MaskSoftnessY);
             material.SetInteger(CanvasShaderIds.StencilComp, context.StencilComp);
             material.SetInteger(CanvasShaderIds.Stencil, context.Stencil);
             material.SetInteger(CanvasShaderIds.StencilOp, context.StencilOp);
@@ -244,8 +244,10 @@ namespace Tripledot.CanvasKit
             WeightBold = GetFloat(sourceMaterial, ShaderUtilities.ID_WeightBold, 0.5f);
             AppliedSdfPadding = Mathf.Max(0f, appliedSdfPadding);
             ClipRect = GetVector(renderMaterial, CanvasShaderIds.ClipRect, new Vector4(-32767f, -32767f, 32767f, 32767f));
-            MaskSoftnessX = GetFloat(renderMaterial, CanvasShaderIds.MaskSoftnessX, 0f);
-            MaskSoftnessY = GetFloat(renderMaterial, CanvasShaderIds.MaskSoftnessY, 0f);
+            MaskSoftnessX = GetFloat(renderMaterial, CanvasShaderIds.UIMaskSoftnessX,
+                GetFloat(renderMaterial, CanvasShaderIds.LegacyMaskSoftnessX, 0f));
+            MaskSoftnessY = GetFloat(renderMaterial, CanvasShaderIds.UIMaskSoftnessY,
+                GetFloat(renderMaterial, CanvasShaderIds.LegacyMaskSoftnessY, 0f));
             StencilComp = GetInteger(renderMaterial, CanvasShaderIds.StencilComp, 8);
             Stencil = GetInteger(renderMaterial, CanvasShaderIds.Stencil, 0);
             StencilOp = GetInteger(renderMaterial, CanvasShaderIds.StencilOp, 0);
