@@ -21,12 +21,18 @@ namespace Tripledot.CanvasKit.Editor
         public readonly AnimationUtility.TangentMode Mode;
         public readonly AnimationCurve Curve;
         public readonly bool HasCurve;
+        public readonly bool IsCurveIndeterminate;
 
-        public KeyframeInterpolationSegmentInterpolation(AnimationUtility.TangentMode mode, AnimationCurve curve, bool hasCurve)
+        public KeyframeInterpolationSegmentInterpolation(
+            AnimationUtility.TangentMode mode,
+            AnimationCurve curve,
+            bool hasCurve,
+            bool isCurveIndeterminate = false)
         {
             Mode = mode;
             Curve = curve;
             HasCurve = hasCurve;
+            IsCurveIndeterminate = isCurveIndeterminate;
         }
     }
 
@@ -35,8 +41,10 @@ namespace Tripledot.CanvasKit.Editor
         private const float CompareEpsilon = 0.0001f;
         private const float RelativeTangentCompareEpsilon = 0.001f;
         private const float TangentEpsilon = 0.0001f;
+        private const float TimeEpsilon = 0.00001f;
         private const float MinUnityWeight = 0.0001f;
         private const float MaxUnityWeight = 1f - MinUnityWeight;
+        private const WeightedMode ValidWeightedModeMask = WeightedMode.In | WeightedMode.Out;
 
         public const float DefaultWeight = 1f / 3f;
 
@@ -163,6 +171,44 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             return null;
+        }
+
+        public static bool TryGetSanitizedCurveForSave(AnimationCurve source, out AnimationCurve sanitized)
+        {
+            sanitized = null;
+            if (source == null || source.length == 0) {
+                return false;
+            }
+
+            var sourceKeys = source.keys;
+            var sanitizedKeys = new Keyframe[sourceKeys.Length];
+            var previousTime = 0f;
+
+            for (var i = 0; i < sourceKeys.Length; i++) {
+                if (!TrySanitizeKeyForSave(source, i, sourceKeys[i], out var key)) {
+                    return false;
+                }
+
+                if (i > 0 && key.time - previousTime <= TimeEpsilon) {
+                    return false;
+                }
+
+                sanitizedKeys[i] = key;
+                previousTime = key.time;
+            }
+
+            sanitized = new AnimationCurve(sanitizedKeys) {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
+            CopyTangentModes(source, sanitized);
+
+            return HasValidSaveData(sanitized);
+        }
+
+        public static float SanitizeWeightForSave(float value)
+        {
+            return SanitizeWeight(value);
         }
 
         public static bool Approximately(AnimationCurve a, AnimationCurve b)
@@ -373,6 +419,95 @@ namespace Tripledot.CanvasKit.Editor
             return float.IsNaN(value) || float.IsInfinity(value)
                 ? DefaultWeight
                 : Mathf.Clamp(value, MinUnityWeight, MaxUnityWeight);
+        }
+
+        private static bool TrySanitizeKeyForSave(AnimationCurve source, int index, Keyframe key, out Keyframe sanitized)
+        {
+            sanitized = key;
+            if (!IsFinite(key.time) || !IsFinite(key.value)) {
+                return false;
+            }
+
+            var leftMode = AnimationUtility.GetKeyLeftTangentMode(source, index);
+            var rightMode = AnimationUtility.GetKeyRightTangentMode(source, index);
+
+            sanitized.inTangent = SanitizeTangentForSave(key.inTangent, leftMode);
+            sanitized.outTangent = SanitizeTangentForSave(key.outTangent, rightMode);
+            sanitized.inWeight = SanitizeWeight(key.inWeight);
+            sanitized.outWeight = SanitizeWeight(key.outWeight);
+            sanitized.weightedMode &= ValidWeightedModeMask;
+
+            if (leftMode == AnimationUtility.TangentMode.Constant) {
+                sanitized.inTangent = float.PositiveInfinity;
+                sanitized.inWeight = DefaultWeight;
+                sanitized.weightedMode &= ~WeightedMode.In;
+            }
+
+            if (rightMode == AnimationUtility.TangentMode.Constant) {
+                sanitized.outTangent = float.PositiveInfinity;
+                sanitized.outWeight = DefaultWeight;
+                sanitized.weightedMode &= ~WeightedMode.Out;
+            }
+
+            return true;
+        }
+
+        private static bool HasValidSaveData(AnimationCurve curve)
+        {
+            var keys = curve.keys;
+            var previousTime = 0f;
+
+            for (var i = 0; i < keys.Length; i++) {
+                var key = keys[i];
+                if (!IsFinite(key.time) || !IsFinite(key.value)) {
+                    return false;
+                }
+
+                if (i > 0 && key.time - previousTime <= TimeEpsilon) {
+                    return false;
+                }
+
+                if (!HasValidWeightedMode(key)
+                    || !HasValidWeight(key.inWeight)
+                    || !HasValidWeight(key.outWeight)
+                    || !HasValidTangentForSave(key.inTangent, AnimationUtility.GetKeyLeftTangentMode(curve, i))
+                    || !HasValidTangentForSave(key.outTangent, AnimationUtility.GetKeyRightTangentMode(curve, i))) {
+                    return false;
+                }
+
+                previousTime = key.time;
+            }
+
+            return true;
+        }
+
+        private static float SanitizeTangentForSave(float value, AnimationUtility.TangentMode mode)
+        {
+            return mode == AnimationUtility.TangentMode.Constant ? float.PositiveInfinity : SanitizeTangent(value);
+        }
+
+        private static bool HasValidTangentForSave(float value, AnimationUtility.TangentMode mode)
+        {
+            if (mode == AnimationUtility.TangentMode.Constant) {
+                return float.IsInfinity(value) && value > 0f;
+            }
+
+            return IsFinite(value);
+        }
+
+        private static bool HasValidWeightedMode(Keyframe key)
+        {
+            return ((int)key.weightedMode & ~(int)ValidWeightedModeMask) == 0;
+        }
+
+        private static bool HasValidWeight(float value)
+        {
+            return IsFinite(value) && value >= MinUnityWeight && value <= MaxUnityWeight;
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
         private static float GetOutWeight(Keyframe key)

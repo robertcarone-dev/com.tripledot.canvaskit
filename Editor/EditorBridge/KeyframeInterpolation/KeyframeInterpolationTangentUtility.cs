@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -181,6 +182,12 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             var valueScale = (rightKeyframe.value - leftKeyframe.value) / duration;
+            if (Mathf.Abs(valueScale) <= TimeEpsilon) {
+                var mode = rightTangentMode == leftTangentMode ? rightTangentMode : AnimationUtility.TangentMode.Free;
+                interpolation = new KeyframeInterpolationSegmentInterpolation(mode, null, false, true);
+                return true;
+            }
+
             var normalizedCurve = KeyframeInterpolationCurveUtility.CreateCurveFromSegment(leftKeyframe, rightKeyframe, valueScale);
             if (rightTangentMode == leftTangentMode) {
                 interpolation = new KeyframeInterpolationSegmentInterpolation(rightTangentMode, normalizedCurve, true);
@@ -198,34 +205,38 @@ namespace Tripledot.CanvasKit.Editor
                 return 0;
             }
 
+            var keys = curve.keys;
             var segments = new List<KeyframeInterpolationSegmentSelection>();
             var changedIndexes = new HashSet<int>();
             var rightTangentIndexes = new HashSet<int>();
             var leftTangentIndexes = new HashSet<int>();
-            var keys = curve.keys;
             
-            var appliedSegments = CollectSegments(
+            if (!CollectSegments(
                 keys,
                 selectedSegments,
                 segments,
                 changedIndexes,
                 rightTangentIndexes,
-                leftTangentIndexes);
-
-            if (appliedSegments == 0) {
+                leftTangentIndexes)) {
                 return 0;
             }
 
+            var scratchKeys = (Keyframe[])keys.Clone();
+            if (!ApplySegments(scratchKeys, segments, applySegment)) {
+                return 0;
+            }
+
+            var originalCurve = KeyframeInterpolationCurveUtility.Clone(curve);
             SetTangentModes(curve, rightTangentIndexes, leftTangentIndexes, AnimationUtility.TangentMode.Free, true);
             keys = curve.keys;
-            for (var i = 0; i < segments.Count; i++) {
-                var segment = segments[i];
-                applySegment(keys, segment.LeftIndex, segment.RightIndex);
+            if (!ApplySegments(keys, segments, applySegment)) {
+                RestoreCurve(curve, originalCurve);
+                return 0;
             }
 
             MoveChangedKeys(curve, keys, changedIndexes);
             SetTangentModes(curve, rightTangentIndexes, leftTangentIndexes, AnimationUtility.TangentMode.Free, true);
-            return appliedSegments;
+            return segments.Count;
         }
 
         private static int ApplyUnityModeSegments(AnimationCurve curve,
@@ -241,43 +252,45 @@ namespace Tripledot.CanvasKit.Editor
             var rightTangentIndexes = new HashSet<int>();
             var leftTangentIndexes = new HashSet<int>();
             
-            var appliedSegments = CollectSegments(
+            if (!CollectSegments(
                 keys,
                 selectedSegments,
                 segments,
                 changedIndexes,
                 rightTangentIndexes,
-                leftTangentIndexes);
-
-            if (appliedSegments == 0) {
+                leftTangentIndexes)) {
                 return 0;
             }
 
-            for (var i = 0; i < segments.Count; i++) {
-                applySegment(keys, segments[i].LeftIndex, segments[i].RightIndex);
+            var scratchKeys = (Keyframe[])keys.Clone();
+            if (!ApplySegments(scratchKeys, segments, applySegment)) {
+                return 0;
+            }
+
+            if (!ApplySegments(keys, segments, applySegment)) {
+                return 0;
             }
 
             MoveChangedKeys(curve, keys, changedIndexes);
             SetTangentModes(curve, rightTangentIndexes, leftTangentIndexes, tangentMode, false);
             UpdateChangedTangents(curve, changedIndexes);
             
-            return appliedSegments;
+            return segments.Count;
         }
 
-        private static int CollectSegments(Keyframe[] keyframes,
+        private static bool CollectSegments(Keyframe[] keyframes,
             IReadOnlyList<KeyframeInterpolationSegmentSelection> selectedSegments,
             List<KeyframeInterpolationSegmentSelection> segments,
             HashSet<int> changedIndexes,
             HashSet<int> rightTangentIndexes,
             HashSet<int> leftTangentIndexes)
         {
-            var appliedSegments = 0;
             for (var i = 0; i < selectedSegments.Count; i++) {
                 var segment = selectedSegments[i];
                 var leftIndex = segment.LeftIndex;
                 var rightIndex = segment.RightIndex;
                 if (!CanApplyToSegment(keyframes, leftIndex, rightIndex)) {
-                    continue;
+                    return false;
                 }
 
                 segments.Add(segment);
@@ -285,10 +298,36 @@ namespace Tripledot.CanvasKit.Editor
                 changedIndexes.Add(rightIndex);
                 rightTangentIndexes.Add(leftIndex);
                 leftTangentIndexes.Add(rightIndex);
-                appliedSegments++;
             }
 
-            return appliedSegments;
+            return segments.Count > 0;
+        }
+
+        private static bool ApplySegments(
+            Keyframe[] keyframes,
+            IReadOnlyList<KeyframeInterpolationSegmentSelection> segments,
+            SegmentApplicator applySegment)
+        {
+            for (var i = 0; i < segments.Count; i++) {
+                var segment = segments[i];
+                if (!applySegment(keyframes, segment.LeftIndex, segment.RightIndex)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static void RestoreCurve(AnimationCurve curve, AnimationCurve originalCurve)
+        {
+            if (curve == null || originalCurve == null) {
+                return;
+            }
+
+            curve.keys = originalCurve.keys;
+            curve.preWrapMode = originalCurve.preWrapMode;
+            curve.postWrapMode = originalCurve.postWrapMode;
+            KeyframeInterpolationCurveUtility.CopyTangentModes(originalCurve, curve);
         }
 
         private static List<KeyframeInterpolationKeySelection> CreateKeySelections(IReadOnlyList<int> selectedKeyIndexes)
@@ -417,8 +456,8 @@ namespace Tripledot.CanvasKit.Editor
                 right.inTangent = fallbackTangent;
             }
 
-            left.outWeight = GetOutWeight(left);
-            right.inWeight = GetInWeight(right);
+            left.outWeight = KeyframeInterpolationCurveUtility.SanitizeWeightForSave(GetOutWeight(left));
+            right.inWeight = KeyframeInterpolationCurveUtility.SanitizeWeightForSave(GetInWeight(right));
             
             keyframes[leftIndex] = left;
             keyframes[rightIndex] = right;
@@ -480,10 +519,16 @@ namespace Tripledot.CanvasKit.Editor
             var right = keyframes[rightIndex];
             var start = interpolationCurve[0];
             var end = interpolationCurve[interpolationCurve.length - 1];
-            var valueScale = (right.value - left.value) / (right.time - left.time);
 
-            left.outTangent = Mathf.Abs(valueScale) <= TimeEpsilon ? 0f : valueScale * start.outTangent;
-            left.outWeight = HasOutWeight(start) ? start.outWeight : DefaultWeight;
+            if (!TryCalculateScaledTangent(left, right, start.outTangent, out var outTangent)
+                || !TryCalculateScaledTangent(left, right, end.inTangent, out var inTangent)) {
+                return false;
+            }
+
+            left.outTangent = outTangent;
+            left.outWeight = HasOutWeight(start)
+                ? KeyframeInterpolationCurveUtility.SanitizeWeightForSave(start.outWeight)
+                : DefaultWeight;
             
             if (HasOutWeight(start)) {
                 left.weightedMode |= WeightedMode.Out;
@@ -491,8 +536,10 @@ namespace Tripledot.CanvasKit.Editor
                 left.weightedMode &= ~WeightedMode.Out;
             }
 
-            right.inTangent = Mathf.Abs(valueScale) <= TimeEpsilon ? 0f : valueScale * end.inTangent;
-            right.inWeight = HasInWeight(end) ? end.inWeight : DefaultWeight;
+            right.inTangent = inTangent;
+            right.inWeight = HasInWeight(end)
+                ? KeyframeInterpolationCurveUtility.SanitizeWeightForSave(end.inWeight)
+                : DefaultWeight;
             
             if (HasInWeight(end)) {
                 right.weightedMode |= WeightedMode.In;
@@ -572,6 +619,28 @@ namespace Tripledot.CanvasKit.Editor
         {
             var duration = right.time - left.time;
             return Mathf.Abs(duration) <= TimeEpsilon ? 0f : (right.value - left.value) / duration;
+        }
+
+        private static bool TryCalculateScaledTangent(Keyframe left, Keyframe right, float normalizedTangent, out float tangent)
+        {
+            tangent = 0f;
+            var duration = (double)right.time - left.time;
+            if (Math.Abs(duration) <= TimeEpsilon) {
+                return false;
+            }
+
+            var valueScale = ((double)right.value - left.value) / duration;
+            if (Math.Abs(valueScale) <= TimeEpsilon) {
+                return true;
+            }
+
+            var scaledTangent = valueScale * normalizedTangent;
+            if (double.IsNaN(scaledTangent) || double.IsInfinity(scaledTangent) || scaledTangent > float.MaxValue || scaledTangent < -float.MaxValue) {
+                return false;
+            }
+
+            tangent = (float)scaledTangent;
+            return !float.IsNaN(tangent) && !float.IsInfinity(tangent);
         }
 
         private static bool EditsRightTangent(CurveSelection.SelectionType type)

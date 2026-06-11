@@ -109,6 +109,7 @@ namespace Tripledot.CanvasKit.Editor
         private bool forcePendingHandleFieldSave;
         private bool handleFieldFocusCheckQueued;
         private bool undoRedoRefreshQueued;
+        private int lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
         private AnimationCurve pendingHandleFieldCurve;
         private ApplyContext pendingHandleFieldContext;
 
@@ -397,7 +398,7 @@ namespace Tripledot.CanvasKit.Editor
             var lockActiveEditCurve = selectionView.UsesActiveEditSelection && currentCurve != null;
             var selectionChanged = UpdateSelectionTracking(selectionView.Selections);
 
-            UpdateCurrentInterpolation(analysis, selectionChanged, lockActiveEditCurve);
+            UpdateCurrentInterpolation(analysis, selectionChanged, lockActiveEditCurve, selectionView.Selections);
             ApplyViewState(CreateViewState(animationWindow, selectionView.Selections, analysis, canEditSelection, lockActiveEditCurve));
         }
 
@@ -405,6 +406,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             selections.Clear();
             lastAppliedSelections.Clear();
+            lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
             cachedSelectionAnimationWindow = null;
 
             ResetSelectionTracking();
@@ -428,6 +430,10 @@ namespace Tripledot.CanvasKit.Editor
             var selectionChanged = selectionSignature != lastSelectionSignature;
             if (selectionChanged) {
                 lastSelectionSignature = selectionSignature;
+                if (lastAppliedCurveDisplaySelectionSignature != selectionSignature) {
+                    lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
+                }
+
                 if (!isDraggingHandle && !restoreSelectionAfterHandleDrag) {
                     lastAppliedSelections.Clear();
                 }
@@ -436,8 +442,19 @@ namespace Tripledot.CanvasKit.Editor
             return selectionChanged;
         }
 
-        private void UpdateCurrentInterpolation(KeyframeInterpolationSelectionAnalysis analysis, bool selectionChanged, bool lockActiveEditCurve)
+        private void UpdateCurrentInterpolation(
+            KeyframeInterpolationSelectionAnalysis analysis,
+            bool selectionChanged,
+            bool lockActiveEditCurve,
+            IReadOnlyList<KeyframeInterpolationCurveSelection> displayedSelections)
         {
+            var usesLastAppliedManualCurve = !lockActiveEditCurve && HasLastAppliedManualCurveForSelection(displayedSelections);
+            if (usesLastAppliedManualCurve) {
+                currentMode = AnimationUtility.TangentMode.Free;
+                currentCurve = KeyframeInterpolationCurveUtility.NormalizeEditableCurve(currentCurve);
+                return;
+            }
+
             var selectionModeChanged = !lockActiveEditCurve && analysis.HasCommonMode && selectionChanged;
             if (selectionModeChanged) {
                 currentMode = analysis.CommonMode;
@@ -450,7 +467,24 @@ namespace Tripledot.CanvasKit.Editor
 
             if (selectionHasCommonCurve && selectionCurveChanged) {
                 currentCurve = KeyframeInterpolationCurveUtility.Clone(analysis.CommonCurve);
+            } else if (!lockActiveEditCurve && analysis.HasOnlyIndeterminateCurve && selectionCurveChanged) {
+                currentCurve = KeyframeInterpolationCurveUtility.CreateDefaultCurve();
             }
+        }
+
+        private bool HasLastAppliedManualCurveForSelection(IReadOnlyList<KeyframeInterpolationCurveSelection> displayedSelections)
+        {
+            if (currentCurve == null || lastAppliedCurveDisplaySelectionSignature == InvalidSelectionSignature) {
+                return false;
+            }
+
+            var selectionSignature = GetSelectionSignature(displayedSelections);
+            if (selectionSignature == lastAppliedCurveDisplaySelectionSignature) {
+                return true;
+            }
+
+            lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
+            return false;
         }
 
         private ViewState CreateViewState(
@@ -460,13 +494,19 @@ namespace Tripledot.CanvasKit.Editor
             bool canEditSelection,
             bool lockActiveEditCurve)
         {
-            var commonMode = GetDisplayMode(analysis, lockActiveEditCurve);
+            var usesLastAppliedManualCurve = !lockActiveEditCurve && HasLastAppliedManualCurveForSelection(displayedSelections);
+            var commonMode = GetDisplayMode(analysis, lockActiveEditCurve, usesLastAppliedManualCurve);
             var hasMixedCurveValues = canEditSelection
                 && !lockActiveEditCurve
+                && !usesLastAppliedManualCurve
                 && !analysis.HasCommonCurve
+                && !analysis.HasOnlyIndeterminateCurve
                 && (!analysis.HasCommonMode || commonMode == AnimationUtility.TangentMode.Free);
             
-            var hasCommonManualCurve = lockActiveEditCurve || analysis.HasCommonCurve;
+            var hasCommonManualCurve = lockActiveEditCurve
+                || usesLastAppliedManualCurve
+                || analysis.HasCommonCurve
+                || analysis.HasOnlyIndeterminateCurve;
             var canEditHandles = canEditSelection
                 && !hasMixedCurveValues
                 && commonMode == AnimationUtility.TangentMode.Free
@@ -475,14 +515,21 @@ namespace Tripledot.CanvasKit.Editor
                 && !hasMixedCurveValues
                 && commonMode != AnimationUtility.TangentMode.Free;
             var selectedModeIndex = -1;
-            if (canEditSelection && (analysis.HasCommonMode || analysis.HasCommonCurve || lockActiveEditCurve)) {
+            if (canEditSelection
+                && (analysis.HasCommonMode
+                    || analysis.HasCommonCurve
+                    || analysis.HasOnlyIndeterminateCurve
+                    || usesLastAppliedManualCurve
+                    || lockActiveEditCurve)) {
                 selectedModeIndex = GetModeToolbarIndex(commonMode);
             }
 
             AnimationCurve curveForDrawing = null;
             if (canEditSelection) {
-                curveForDrawing = lockActiveEditCurve || analysis.HasCommonCurve
+                curveForDrawing = lockActiveEditCurve || usesLastAppliedManualCurve || analysis.HasCommonCurve
                     ? currentCurve
+                    : analysis.HasOnlyIndeterminateCurve
+                        ? currentCurve ?? KeyframeInterpolationCurveUtility.CreateDefaultCurve()
                     : KeyframeInterpolationCurveUtility.CreateModePreviewCurve(commonMode);
             }
 
@@ -506,14 +553,17 @@ namespace Tripledot.CanvasKit.Editor
 
         private AnimationUtility.TangentMode GetDisplayMode(
             KeyframeInterpolationSelectionAnalysis analysis,
-            bool lockActiveEditCurve)
+            bool lockActiveEditCurve,
+            bool usesLastAppliedManualCurve)
         {
             var commonMode = currentMode;
-            if (lockActiveEditCurve) {
+            if (lockActiveEditCurve || usesLastAppliedManualCurve) {
                 commonMode = AnimationUtility.TangentMode.Free;
             } else if (analysis.HasCommonMode) {
                 commonMode = analysis.CommonMode;
             } else if (analysis.HasCommonCurve) {
+                commonMode = AnimationUtility.TangentMode.Free;
+            } else if (analysis.HasOnlyIndeterminateCurve) {
                 commonMode = AnimationUtility.TangentMode.Free;
             }
 
@@ -713,7 +763,11 @@ namespace Tripledot.CanvasKit.Editor
             var analysis = KeyframeInterpolationSelectionAnalysis.Analyze(applySelections);
             var canEditSelectionValue = analysis.EditablePairCount > 0;
             var lockActiveEditCurve = isDraggingHandle && ReferenceEquals(applySelections, activeEditSelections) && currentCurve != null;
-            var hasCommonManualCurve = lockActiveEditCurve || analysis.HasCommonCurve;
+            var usesLastAppliedManualCurve = !lockActiveEditCurve && HasLastAppliedManualCurveForSelection(applySelections);
+            var hasCommonManualCurve = lockActiveEditCurve
+                || usesLastAppliedManualCurve
+                || analysis.HasCommonCurve
+                || analysis.HasOnlyIndeterminateCurve;
             var canEditCurveValue = canEditSelectionValue && hasCommonManualCurve;
 
             context = new ApplyContext(
@@ -1023,6 +1077,7 @@ namespace Tripledot.CanvasKit.Editor
             ClearHandleDrag();
             EndActiveEditSession();
             lastAppliedSelections.Clear();
+            lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
             restoreSelectionAfterHandleDrag = false;
             InvalidateCachedSelectionForReadback();
             ResetSelectionTracking();
@@ -1101,6 +1156,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private void ApplyQueuedMode(ApplyContext context, AnimationUtility.TangentMode mode)
         {
+            lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
             currentMode = mode;
             if (currentMode != AnimationUtility.TangentMode.Free) {
                 currentCurve = KeyframeInterpolationCurveUtility.CreateModePreviewCurve(currentMode);
@@ -1132,6 +1188,7 @@ namespace Tripledot.CanvasKit.Editor
             if (applied && queueReadback) {
                 QueuePostSaveReadback();
             } else if (!applied) {
+                lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
                 RefreshWindowState();
             }
         }
@@ -1141,14 +1198,14 @@ namespace Tripledot.CanvasKit.Editor
             var editSession = activeEditSession ?? KeyframeInterpolationAnimationBridge.BeginEditSession(animationWindow, UndoLabel, false);
             var ownsSession = activeEditSession == null;
             var applied = editSession.ApplyCurve(applySelections, currentCurve);
-            return CompleteAppliedInterpolation(animationWindow, applySelections, editSession, !isDraggingHandle, ownsSession, applied);
+            return CompleteAppliedInterpolation(animationWindow, applySelections, editSession, !isDraggingHandle, ownsSession, applied, true);
         }
 
         private bool ApplyMode(AnimationWindow animationWindow, IReadOnlyList<KeyframeInterpolationCurveSelection> applySelections, AnimationUtility.TangentMode mode)
         {
             var editSession = KeyframeInterpolationAnimationBridge.BeginEditSession(animationWindow, UndoLabel, false);
             var applied = editSession.ApplyMode(applySelections, mode);
-            return CompleteAppliedInterpolation(animationWindow, applySelections, editSession, true, true, applied);
+            return CompleteAppliedInterpolation(animationWindow, applySelections, editSession, true, true, applied, false);
         }
 
         private bool ApplyPreset(AnimationWindow animationWindow, IReadOnlyList<KeyframeInterpolationCurveSelection> applySelections, KeyframeInterpolationPreset preset)
@@ -1156,7 +1213,7 @@ namespace Tripledot.CanvasKit.Editor
             var editSession = activeEditSession ?? KeyframeInterpolationAnimationBridge.BeginEditSession(animationWindow, UndoLabel, false);
             var ownsSession = activeEditSession == null;
             var applied = editSession.ApplyPreset(applySelections, preset);
-            return CompleteAppliedInterpolation(animationWindow, applySelections, editSession, !isDraggingHandle, ownsSession, applied);
+            return CompleteAppliedInterpolation(animationWindow, applySelections, editSession, !isDraggingHandle, ownsSession, applied, true);
         }
 
         private bool CompleteAppliedInterpolation(
@@ -1165,9 +1222,11 @@ namespace Tripledot.CanvasKit.Editor
             KeyframeInterpolationEditSession editSession,
             bool restoreSelection,
             bool endSession,
-            bool applied)
+            bool applied,
+            bool cacheAppliedManualCurve)
         {
             if (!applied) {
+                lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
                 if (endSession) {
                     editSession.End();
                 }
@@ -1176,6 +1235,12 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             CacheAppliedSelections(appliedSelections);
+            if (cacheAppliedManualCurve) {
+                CacheAppliedCurveDisplaySelection(appliedSelections);
+            } else {
+                lastAppliedCurveDisplaySelectionSignature = InvalidSelectionSignature;
+            }
+
             InvalidateCachedSelectionForReadback();
 
             if (endSession) {
@@ -1284,6 +1349,13 @@ namespace Tripledot.CanvasKit.Editor
             for (var i = 0; i < appliedSelections.Count; i++) {
                 lastAppliedSelections.Add(appliedSelections[i]);
             }
+        }
+
+        private void CacheAppliedCurveDisplaySelection(IReadOnlyList<KeyframeInterpolationCurveSelection> appliedSelections)
+        {
+            lastAppliedCurveDisplaySelectionSignature = currentCurve != null
+                ? GetSelectionSignature(appliedSelections)
+                : InvalidSelectionSignature;
         }
 
         private void QueuePostSaveReadback()
@@ -1477,7 +1549,7 @@ namespace Tripledot.CanvasKit.Editor
                 for (var i = 0; i < curveSelections.Count; i++) {
                     var selection = curveSelections[i];
                     hash = hash * 31 + (selection.ClipAsset != null ? selection.ClipAsset.GetInstanceID() : 0);
-                    hash = hash * 31 + selection.Binding.GetHashCode();
+                    hash = hash * 31 + GetBindingHashCode(selection.Binding);
                     hash = hash * 31 + selection.Keys.Count;
 
                     for (var keyIndex = 0; keyIndex < selection.Keys.Count; keyIndex++) {
@@ -1488,6 +1560,17 @@ namespace Tripledot.CanvasKit.Editor
                     }
                 }
 
+                return hash;
+            }
+        }
+
+        private static int GetBindingHashCode(EditorCurveBinding binding)
+        {
+            unchecked {
+                var hash = 17;
+                hash = hash * 31 + (binding.path != null ? binding.path.GetHashCode() : 0);
+                hash = hash * 31 + (binding.propertyName != null ? binding.propertyName.GetHashCode() : 0);
+                hash = hash * 31 + (binding.type != null ? binding.type.GetHashCode() : 0);
                 return hash;
             }
         }
@@ -1505,7 +1588,7 @@ namespace Tripledot.CanvasKit.Editor
         private static bool TryGetCommonTimeCursor(AnimationWindow animationWindow, IReadOnlyList<KeyframeInterpolationCurveSelection> curveSelections, out float normalizedTime)
         {
             normalizedTime = 0f;
-            if (curveSelections.Count == 0) {
+            if (animationWindow?.state == null || curveSelections.Count == 0) {
                 return false;
             }
 

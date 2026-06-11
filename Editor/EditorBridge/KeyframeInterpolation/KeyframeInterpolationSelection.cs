@@ -83,6 +83,11 @@ namespace Tripledot.CanvasKit.Editor
             return true;
         }
 
+        public bool CanApplyEditedCurve(AnimationCurve curve)
+        {
+            return target.CanApplyEditedCurve(curve);
+        }
+
         public void AddSaveTarget(List<AnimationWindowCurve> windowCurves, List<CurveWrapper> curveWrappers)
         {
             target.AddSaveTarget(windowCurves, curveWrappers);
@@ -140,6 +145,12 @@ namespace Tripledot.CanvasKit.Editor
         public IAnimationWindowClip ClipObject { get; }
 
         public abstract AnimationCurve LoadCurrentCurve();
+
+        public virtual bool CanApplyEditedCurve(AnimationCurve curve)
+        {
+            return KeyframeInterpolationCurveUtility.TryGetSanitizedCurveForSave(curve, out _);
+        }
+
         public abstract bool ApplyEditedCurve(AnimationCurve curve);
         public abstract void AddSaveTarget(List<AnimationWindowCurve> windowCurves, List<CurveWrapper> curveWrappers);
         public abstract bool ReferencesAnimationWindowCurve(AnimationWindowCurve windowCurve);
@@ -201,8 +212,12 @@ namespace Tripledot.CanvasKit.Editor
 
         public override bool ApplyEditedCurve(AnimationCurve curve)
         {
+            if (!KeyframeInterpolationCurveUtility.TryGetSanitizedCurveForSave(curve, out var sanitizedCurve)) {
+                return false;
+            }
+
             windowCurve.Clear();
-            windowCurve.FromAnimationCurve(curve);
+            windowCurve.FromAnimationCurve(sanitizedCurve);
             return true;
         }
 
@@ -259,14 +274,23 @@ namespace Tripledot.CanvasKit.Editor
             return curveWrapper.curve;
         }
 
+        public override bool CanApplyEditedCurve(AnimationCurve curve)
+        {
+            return curveWrapper.curve != null && base.CanApplyEditedCurve(curve);
+        }
+
         public override bool ApplyEditedCurve(AnimationCurve curve)
         {
             if (curveWrapper.curve == null) {
                 return false;
             }
 
-            if (!ReferenceEquals(curve, curveWrapper.curve)) {
-                CopyCurve(curve, curveWrapper.curve);
+            if (!KeyframeInterpolationCurveUtility.TryGetSanitizedCurveForSave(curve, out var sanitizedCurve)) {
+                return false;
+            }
+
+            if (!ReferenceEquals(sanitizedCurve, curveWrapper.curve)) {
+                CopyCurve(sanitizedCurve, curveWrapper.curve);
             }
 
             curveWrapper.changed = true;

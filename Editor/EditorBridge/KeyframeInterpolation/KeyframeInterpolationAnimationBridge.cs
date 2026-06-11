@@ -9,10 +9,6 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 {
     internal sealed class KeyframeInterpolationEditSession
     {
-        private delegate int CurveMutation(
-            AnimationCurve curve,
-            IReadOnlyList<KeyframeInterpolationTangentUtility.KeyframeInterpolationSegmentSelection> selectedSegments);
-
         private readonly AnimationWindow window;
         private readonly string undoLabel;
         private readonly bool continuous;
@@ -60,53 +56,27 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             return false;
         }
 
-        private bool ApplyToSelections(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, CurveMutation mutateCurve)
+        private bool ApplyToSelections(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, KeyframeInterpolationCurveEditStager.CurveMutation mutateCurve)
         {
             if (ended || selections.Count == 0) {
                 return false;
             }
 
-            var changedSelections = new List<KeyframeInterpolationCurveSelection>();
-
             KeyframeInterpolationAnimationBridge.SynchronizeSelectionForEditing(window, undoLabel);
 
-            for (var i = 0; i < selections.Count; i++) {
-                var selection = selections[i];
-                if (selection.IsObjectReferenceCurve) {
-                    continue;
+            var stagedEdits = new List<KeyframeInterpolationCurveEditStager.StagedCurveEdit>();
+            if (!KeyframeInterpolationCurveEditStager.TryStage(selections, mutateCurve, stagedEdits)) {
+                return false;
+            }
+
+            var changedSelections = new List<KeyframeInterpolationCurveSelection>();
+            for (var i = 0; i < stagedEdits.Count; i++) {
+                var stagedEdit = stagedEdits[i];
+                if (!stagedEdit.Selection.ApplyEditedCurve(stagedEdit.Curve)) {
+                    return false;
                 }
 
-                if (selection.IsDiscreteCurve) {
-                    continue;
-                }
-
-                if (!selection.AnimationIsEditable) {
-                    continue;
-                }
-
-                var curve = selection.LoadCurrentCurve();
-                if (curve == null || curve.length < 2) {
-                    continue;
-                }
-
-                if (KeyframeInterpolationTangentUtility.HasDuplicateKeyTimes(curve)) {
-                    continue;
-                }
-
-                var selectedSegments = KeyframeInterpolationTangentUtility.ResolveSelectedSegments(curve, selection.Keys);
-                if (selectedSegments.Count == 0) {
-                    continue;
-                }
-
-                if (mutateCurve(curve, selectedSegments) <= 0) {
-                    continue;
-                }
-
-                if (!selection.ApplyEditedCurve(curve)) {
-                    continue;
-                }
-
-                changedSelections.Add(selection);
+                changedSelections.Add(stagedEdit.Selection);
             }
 
             if (changedSelections.Count == 0) {
@@ -124,6 +94,66 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                     Undo.CollapseUndoOperations(undoGroup);
                 }
             }
+        }
+    }
+
+    internal static class KeyframeInterpolationCurveEditStager
+    {
+        internal delegate int CurveMutation(
+            AnimationCurve curve,
+            IReadOnlyList<KeyframeInterpolationTangentUtility.KeyframeInterpolationSegmentSelection> selectedSegments);
+
+        internal readonly struct StagedCurveEdit
+        {
+            public readonly KeyframeInterpolationCurveSelection Selection;
+            public readonly AnimationCurve Curve;
+
+            public StagedCurveEdit(KeyframeInterpolationCurveSelection selection, AnimationCurve curve)
+            {
+                Selection = selection;
+                Curve = curve;
+            }
+        }
+
+        public static bool TryStage(
+            IReadOnlyList<KeyframeInterpolationCurveSelection> selections,
+            CurveMutation mutateCurve,
+            List<StagedCurveEdit> stagedEdits)
+        {
+            stagedEdits.Clear();
+            if (selections == null || selections.Count == 0 || mutateCurve == null) {
+                return false;
+            }
+
+            for (var i = 0; i < selections.Count; i++) {
+                var selection = selections[i];
+                if (selection.IsObjectReferenceCurve || selection.IsDiscreteCurve || !selection.AnimationIsEditable) {
+                    continue;
+                }
+
+                var sourceCurve = selection.LoadCurrentCurve();
+                if (sourceCurve == null || sourceCurve.length < 2) {
+                    continue;
+                }
+
+                var curve = KeyframeInterpolationCurveUtility.Clone(sourceCurve);
+                var selectedSegments = KeyframeInterpolationTangentUtility.ResolveSelectedSegments(curve, selection.Keys);
+                if (selectedSegments.Count == 0) {
+                    continue;
+                }
+
+                if (KeyframeInterpolationTangentUtility.HasDuplicateKeyTimes(sourceCurve)
+                    || mutateCurve(curve, selectedSegments) <= 0
+                    || !KeyframeInterpolationCurveUtility.TryGetSanitizedCurveForSave(curve, out var sanitizedCurve)
+                    || !selection.CanApplyEditedCurve(sanitizedCurve)) {
+                    stagedEdits.Clear();
+                    return false;
+                }
+
+                stagedEdits.Add(new StagedCurveEdit(selection, sanitizedCurve));
+            }
+
+            return stagedEdits.Count > 0;
         }
     }
 

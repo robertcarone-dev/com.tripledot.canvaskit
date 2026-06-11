@@ -11,19 +11,22 @@ namespace Tripledot.CanvasKit.Editor
         public readonly AnimationUtility.TangentMode CommonMode;
         public readonly bool HasCommonCurve;
         public readonly AnimationCurve CommonCurve;
+        public readonly bool HasOnlyIndeterminateCurve;
 
         public KeyframeInterpolationSelectionAnalysis(
             int editablePairCount,
             bool hasCommonMode,
             AnimationUtility.TangentMode commonMode,
             bool hasCommonCurve,
-            AnimationCurve commonCurve)
+            AnimationCurve commonCurve,
+            bool hasOnlyIndeterminateCurve)
         {
             EditablePairCount = editablePairCount;
             HasCommonMode = hasCommonMode;
             CommonMode = commonMode;
             HasCommonCurve = hasCommonCurve;
             CommonCurve = commonCurve;
+            HasOnlyIndeterminateCurve = hasOnlyIndeterminateCurve;
         }
 
         public static KeyframeInterpolationSelectionAnalysis Analyze(IReadOnlyList<KeyframeInterpolationCurveSelection> selections)
@@ -34,6 +37,8 @@ namespace Tripledot.CanvasKit.Editor
             var commonMode = AnimationUtility.TangentMode.Free;
             var hasAnyCurve = false;
             var hasCommonCurve = false;
+            var hasIndeterminateCurve = false;
+            var hasUnsupportedCurve = false;
             AnimationCurve commonCurve = null;
 
             for (var i = 0; i < selections.Count; i++) {
@@ -60,6 +65,7 @@ namespace Tripledot.CanvasKit.Editor
                             selectedSegment.LeftIndex,
                             selectedSegment.RightIndex,
                             out var segmentInterpolation)) {
+                        hasUnsupportedCurve = true;
                         hasCommonMode = false;
                         hasCommonCurve = false;
                         continue;
@@ -73,7 +79,13 @@ namespace Tripledot.CanvasKit.Editor
                         hasCommonMode = false;
                     }
 
+                    if (segmentInterpolation.IsCurveIndeterminate) {
+                        hasIndeterminateCurve = true;
+                        continue;
+                    }
+
                     if (!segmentInterpolation.HasCurve || segmentInterpolation.Curve == null) {
+                        hasUnsupportedCurve = true;
                         hasCommonCurve = false;
                         continue;
                     }
@@ -93,7 +105,13 @@ namespace Tripledot.CanvasKit.Editor
                 hasCommonMode: hasAnyMode && hasCommonMode,
                 commonMode: commonMode,
                 hasCommonCurve: hasAnyCurve && hasCommonCurve,
-                commonCurve: commonCurve);
+                commonCurve: commonCurve,
+                hasOnlyIndeterminateCurve: hasIndeterminateCurve
+                                           && !hasAnyCurve
+                                           && !hasUnsupportedCurve
+                                           && hasAnyMode
+                                           && hasCommonMode
+                                           && commonMode == AnimationUtility.TangentMode.Free);
         }
     }
 }
