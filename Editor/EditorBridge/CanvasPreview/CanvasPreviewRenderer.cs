@@ -20,6 +20,7 @@ namespace Tripledot.CanvasKit.Editor
         private static readonly List<CanvasScaler> ScalerBuffer = new List<CanvasScaler>(4);
         private static readonly List<Graphic> GraphicBuffer = new List<Graphic>(32);
         private static readonly List<Transform> TransformBuffer = new List<Transform>(64);
+        private static readonly List<GameObject> PrefabInstanceRootBuffer = new List<GameObject>(8);
         private static readonly Vector3[] CornerBuffer = new Vector3[4];
 
         internal static PreviewResult RenderPreviewTexture(
@@ -51,6 +52,7 @@ namespace Tripledot.CanvasKit.Editor
                         return PreviewResult.Empty;
                     }
 
+                    UnpackPreviewPrefabInstances(prefabRoot);
                     prefabRoot.name = prefabAsset.name + " Preview";
                     prefabRoot.hideFlags = HideFlags.HideAndDontSave;
                 }
@@ -157,6 +159,46 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             return null;
+        }
+
+        private static void UnpackPreviewPrefabInstances(GameObject prefabRoot)
+        {
+            if (prefabRoot == null) {
+                return;
+            }
+
+            prefabRoot.GetComponentsInChildren(true, TransformBuffer);
+            try {
+                for (int i = 0; i < TransformBuffer.Count; i++) {
+                    var transform = TransformBuffer[i];
+                    if (transform == null) {
+                        continue;
+                    }
+
+                    var instanceRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(transform.gameObject);
+                    if (instanceRoot == null) {
+                        continue;
+                    }
+
+                    if (instanceRoot != prefabRoot && !instanceRoot.transform.IsChildOf(prefabRoot.transform)) {
+                        continue;
+                    }
+
+                    if (!PrefabInstanceRootBuffer.Contains(instanceRoot)) {
+                        PrefabInstanceRootBuffer.Add(instanceRoot);
+                    }
+                }
+
+                for (int i = 0; i < PrefabInstanceRootBuffer.Count; i++) {
+                    var instanceRoot = PrefabInstanceRootBuffer[i];
+                    if (instanceRoot != null) {
+                        PrefabUtility.UnpackPrefabInstance(instanceRoot, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                    }
+                }
+            } finally {
+                TransformBuffer.Clear();
+                PrefabInstanceRootBuffer.Clear();
+            }
         }
 
         private static GameObject CreateReferenceCanvas(Vector2 referenceSize)
