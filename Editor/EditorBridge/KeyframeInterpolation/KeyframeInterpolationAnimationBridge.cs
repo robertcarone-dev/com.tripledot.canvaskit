@@ -465,6 +465,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                     }
 
                     var restoredSelection = new CurveSelection(curveWrapper.id, resolvedKeyIndex, selectedKey.Type);
+                    restoredSelection.type = GetRestorableSelectionType(curveWrapper.curve, resolvedKeyIndex, restoredSelection.type);
                     if (!restoredSelections.Contains(restoredSelection)) {
                         restoredSelections.Add(restoredSelection);
                     }
@@ -673,12 +674,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         {
             for (var i = 0; i < selection.Keys.Count; i++) {
                 var key = selection.Keys[i];
-                if (key.Index == keyIndex && Mathf.Approximately(key.Time, time)) {
-                    var mergedType = MergeSelectionTypes(key.Type, type);
-                    if (mergedType != key.Type) {
-                        selection.Keys[i] = new KeyframeInterpolationKeySelection(keyIndex, time, mergedType);
-                    }
-
+                if (key.Index == keyIndex && Mathf.Approximately(key.Time, time) && key.Type == type) {
                     return;
                 }
             }
@@ -686,13 +682,21 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             selection.Keys.Add(new KeyframeInterpolationKeySelection(keyIndex, time, type));
         }
 
-        private static CurveSelection.SelectionType MergeSelectionTypes(CurveSelection.SelectionType current, CurveSelection.SelectionType next)
+        private static CurveSelection.SelectionType GetRestorableSelectionType(AnimationCurve curve, int keyIndex, CurveSelection.SelectionType type)
         {
-            if (current == next || next == CurveSelection.SelectionType.Key) {
-                return current;
+            if (curve == null || keyIndex < 0 || keyIndex >= curve.length) {
+                return type;
             }
 
-            return current == CurveSelection.SelectionType.Key ? next : CurveSelection.SelectionType.Key;
+            if (type == CurveSelection.SelectionType.InTangent && keyIndex == 0) {
+                return CurveSelection.SelectionType.Key;
+            }
+
+            if (type == CurveSelection.SelectionType.OutTangent && keyIndex == curve.length - 1) {
+                return CurveSelection.SelectionType.Key;
+            }
+
+            return type;
         }
     }
 }

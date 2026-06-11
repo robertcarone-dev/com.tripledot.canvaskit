@@ -93,11 +93,14 @@ namespace Tripledot.CanvasKit.Editor
         internal static List<KeyframeInterpolationSegmentSelection> ResolveSelectedSegments(AnimationCurve curve, IReadOnlyList<KeyframeInterpolationKeySelection> selectedKeys)
         {
             var segments = new List<KeyframeInterpolationSegmentSelection>();
-            var selectedKeyEdits = ResolveSelectedKeyEdits(curve, selectedKeys);
-            
-            for (var i = 0; i < selectedKeyEdits.Count; i++) {
-                var selectedKey = selectedKeyEdits[i];
-                AddSelectedKeySegments(curve, segments, selectedKey.Index, selectedKey.Type);
+            if (curve == null || selectedKeys == null) {
+                return segments;
+            }
+
+            for (var i = 0; i < selectedKeys.Count; i++) {
+                var selectedKey = selectedKeys[i];
+                var resolvedIndex = ResolveSelectedKeyIndex(curve, selectedKey);
+                AddSelectedKeySegments(curve, segments, resolvedIndex, selectedKey.Type);
             }
 
             return segments;
@@ -110,30 +113,19 @@ namespace Tripledot.CanvasKit.Editor
                 return edits;
             }
 
-            var indexes = new List<int>();
-            var typesByIndex = new Dictionary<int, CurveSelection.SelectionType>();
-            
             for (var i = 0; i < selectedKeys.Count; i++) {
                 var selectedKey = selectedKeys[i];
                 var resolvedIndex = ResolveSelectedKeyIndex(curve, selectedKey);
-                if (resolvedIndex < 0 || !HasEditableKeySide(curve, resolvedIndex, selectedKey.Type)) {
+                if (!HasEditableSegmentForSelection(curve, resolvedIndex, selectedKey.Type)) {
                     continue;
                 }
 
-                if (indexes.Contains(resolvedIndex)) {
-                    typesByIndex[resolvedIndex] = MergeSelectionTypes(typesByIndex[resolvedIndex], selectedKey.Type);
-                } else {
-                    indexes.Add(resolvedIndex);
-                    typesByIndex[resolvedIndex] = selectedKey.Type;
-                }
+                AddUniqueKeyEdit(edits, resolvedIndex, selectedKey.Type);
             }
 
-            indexes.Sort();
-            
-            for (var i = 0; i < indexes.Count; i++) {
-                edits.Add(new KeyframeInterpolationKeyEditSelection(indexes[i], typesByIndex[indexes[i]]));
-            }
-
+            edits.Sort((left, right) => left.Index != right.Index
+                ? left.Index.CompareTo(right.Index)
+                : left.Type.CompareTo(right.Type));
             return edits;
         }
 
@@ -344,30 +336,28 @@ namespace Tripledot.CanvasKit.Editor
             return selections;
         }
 
-        private static void AddSelectedKeySegments(AnimationCurve curve,
-            List<KeyframeInterpolationSegmentSelection> segments,
-            int keyIndex,
-            CurveSelection.SelectionType type)
+        private static void AddSelectedKeySegments(AnimationCurve curve, List<KeyframeInterpolationSegmentSelection> segments, int keyIndex, CurveSelection.SelectionType type)
         {
+            if (curve == null || keyIndex < 0 || keyIndex >= curve.length) {
+                return;
+            }
+
             if (type == CurveSelection.SelectionType.InTangent) {
-                AddUniqueSegment(curve, segments, keyIndex - 1, keyIndex);
-                return;
-            }
-
-            if (type == CurveSelection.SelectionType.OutTangent) {
-                AddUniqueSegment(curve, segments, keyIndex, keyIndex + 1);
-                return;
-            }
-
-            if (keyIndex < curve.length - 1) {
-                AddUniqueSegment(curve, segments, keyIndex, keyIndex + 1);
+                if (keyIndex > 0) {
+                    AddUniqueSegment(curve, segments, keyIndex - 1, keyIndex);
+                } else {
+                    AddUniqueSegment(curve, segments, keyIndex, keyIndex + 1);
+                }
+            } else {
+                if (keyIndex < curve.length - 1) {
+                    AddUniqueSegment(curve, segments, keyIndex, keyIndex + 1);
+                } else {
+                    AddUniqueSegment(curve, segments, keyIndex - 1, keyIndex);
+                }
             }
         }
 
-        private static void AddUniqueSegment(AnimationCurve curve,
-            List<KeyframeInterpolationSegmentSelection> segments,
-            int leftIndex,
-            int rightIndex)
+        private static void AddUniqueSegment(AnimationCurve curve, List<KeyframeInterpolationSegmentSelection> segments, int leftIndex, int rightIndex)
         {
             if (rightIndex != leftIndex + 1 || leftIndex < 0 || rightIndex >= curve.length) {
                 return;
@@ -411,15 +401,6 @@ namespace Tripledot.CanvasKit.Editor
             return -1;
         }
 
-        private static CurveSelection.SelectionType MergeSelectionTypes(CurveSelection.SelectionType current, CurveSelection.SelectionType next)
-        {
-            if (current == next || next == CurveSelection.SelectionType.Key) {
-                return current;
-            }
-
-            return current == CurveSelection.SelectionType.Key ? next : CurveSelection.SelectionType.Key;
-        }
-
         private static bool CanApplyToSegment(Keyframe[] keyframes, int leftIndex, int rightIndex)
         {
             if (leftIndex < 0 || rightIndex >= keyframes.Length || leftIndex >= rightIndex) {
@@ -430,12 +411,31 @@ namespace Tripledot.CanvasKit.Editor
             return Mathf.Abs(duration) > TimeEpsilon;
         }
 
-        private static bool HasEditableKeySide(AnimationCurve curve, int keyIndex, CurveSelection.SelectionType type)
+        private static void AddUniqueKeyEdit(
+            List<KeyframeInterpolationKeyEditSelection> edits,
+            int keyIndex,
+            CurveSelection.SelectionType type)
         {
-            return curve != null
-                && keyIndex >= 0
-                && keyIndex < curve.length
-                && (EditsRightTangent(type) || EditsLeftTangent(type));
+            for (var i = 0; i < edits.Count; i++) {
+                if (edits[i].Index == keyIndex && edits[i].Type == type) {
+                    return;
+                }
+            }
+
+            edits.Add(new KeyframeInterpolationKeyEditSelection(keyIndex, type));
+        }
+
+        private static bool HasEditableSegmentForSelection(AnimationCurve curve, int keyIndex, CurveSelection.SelectionType type)
+        {
+            if (curve == null || keyIndex < 0 || keyIndex >= curve.length || curve.length < 2) {
+                return false;
+            }
+
+            return type switch {
+                CurveSelection.SelectionType.InTangent => keyIndex > 0 || keyIndex < curve.length - 1,
+                CurveSelection.SelectionType.OutTangent => keyIndex < curve.length - 1 || keyIndex > 0,
+                _ => keyIndex < curve.length - 1 || keyIndex > 0
+            };
         }
 
         private static bool ApplyFreeModeSegment(Keyframe[] keyframes, int leftIndex, int rightIndex)
@@ -641,16 +641,6 @@ namespace Tripledot.CanvasKit.Editor
 
             tangent = (float)scaledTangent;
             return !float.IsNaN(tangent) && !float.IsInfinity(tangent);
-        }
-
-        private static bool EditsRightTangent(CurveSelection.SelectionType type)
-        {
-            return type != CurveSelection.SelectionType.InTangent;
-        }
-
-        private static bool EditsLeftTangent(CurveSelection.SelectionType type)
-        {
-            return type != CurveSelection.SelectionType.OutTangent;
         }
 
         private static float GetOutWeight(Keyframe key)
