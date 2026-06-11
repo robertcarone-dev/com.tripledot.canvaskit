@@ -5,6 +5,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.4.7-preview] - 2026-06-11
+
+### Fixed
+- Fixed Canvas preview rendering for prefab variants and nested prefab instances that could trigger Unity's prefab-instance reparenting error.
+- Fixed `KeyframeInterpolation` curve saves to sanitize keyframe tangents, weights, and weighted modes before writing animation curves.
+- Fixed `KeyframeInterpolation` preset and manual curve application to avoid partial saves when any selected curve cannot be safely updated.
+- Fixed `KeyframeInterpolation` showing `Mixed` after applying a preset to flat or otherwise indeterminate selected segments.
+- Fixed `KeyframeInterpolation` first-key endpoint handling so multi-key out-handle edits update the first key's out tangent and avoid restoring invalid endpoint tangent selections.
+
+
 ## [0.4.6-preview] - 2026-06-10
 
 ### Fixed
