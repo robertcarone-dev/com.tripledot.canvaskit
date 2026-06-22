@@ -23,11 +23,7 @@ namespace Tripledot.CanvasKit.Editor
         public readonly bool HasCurve;
         public readonly bool IsCurveIndeterminate;
 
-        public KeyframeInterpolationSegmentInterpolation(
-            AnimationUtility.TangentMode mode,
-            AnimationCurve curve,
-            bool hasCurve,
-            bool isCurveIndeterminate = false)
+        public KeyframeInterpolationSegmentInterpolation(AnimationUtility.TangentMode mode, AnimationCurve curve, bool hasCurve, bool isCurveIndeterminate = false)
         {
             Mode = mode;
             Curve = curve;
@@ -160,17 +156,13 @@ namespace Tripledot.CanvasKit.Editor
 
         public static AnimationCurve Clone(AnimationCurve curve)
         {
-            if (curve != null) {
-                var clone = new AnimationCurve(curve.keys) {
-                    preWrapMode = curve.preWrapMode,
-                    postWrapMode = curve.postWrapMode
-                };
+            var clone = new AnimationCurve(curve.keys) {
+                preWrapMode = curve.preWrapMode,
+                postWrapMode = curve.postWrapMode
+            };
 
-                CopyTangentModes(curve, clone);
-                return clone;
-            }
-
-            return null;
+            CopyTangentModes(curve, clone);
+            return clone;
         }
 
         public static bool TryGetSanitizedCurveForSave(AnimationCurve source, out AnimationCurve sanitized)
@@ -283,6 +275,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var height = Mathf.Max(1f, max - min);
             var padding = height * 0.18f;
+
             return new Rect(0f, min - padding, 1f, height + padding * 2f);
         }
 
@@ -523,6 +516,7 @@ namespace Tripledot.CanvasKit.Editor
         private static WeightedMode GetSegmentWeightedMode(Keyframe left, Keyframe right)
         {
             var weightedMode = WeightedMode.None;
+
             if (HasOutWeight(left)) {
                 weightedMode |= WeightedMode.Out;
             }

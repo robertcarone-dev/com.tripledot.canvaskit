@@ -710,6 +710,14 @@ namespace Tripledot.CanvasKit.Editor
         private int ReadSelectedCurvesPreservingFocusCache(AnimationWindow animationWindow)
         {
             if (CanUseCachedSelectionForFocusedWindow(animationWindow)) {
+                if (!KeyframeInterpolationAnimationBridge.TryResolveCurrentSelections(animationWindow, selections, selectionReadBuffer)) {
+                    selections.Clear();
+                    cachedSelectionAnimationWindow = null;
+                    cachedSelectionShowsCurveEditor = false;
+                    return 0;
+                }
+
+                CopySelections(selections, selectionReadBuffer);
                 return GetSelectedKeyCount(selections);
             }
 
@@ -1462,7 +1470,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             destination.Clear();
             for (var i = 0; i < source.Count; i++) {
-                destination.Add(source[i]);
+                destination.Add(source[i].Copy());
             }
         }
 

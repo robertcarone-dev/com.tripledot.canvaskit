@@ -59,7 +59,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             try {
-                var payload = JsonUtility.FromJson<CurvePayload>(clipboard.Substring(ClipboardPrefix.Length));
+                var payload = JsonUtility.FromJson<CurvePayload>(clipboard[ClipboardPrefix.Length..]);
                 if (payload == null || payload.version != Version) {
                     return false;
                 }

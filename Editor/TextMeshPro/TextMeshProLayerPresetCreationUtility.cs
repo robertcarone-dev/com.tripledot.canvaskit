@@ -96,7 +96,7 @@ namespace Tripledot.CanvasKit.Editor
                 return null;
             }
 
-            for (int i = 0; i < selections.Length; i++) {
+            for (var i = 0; i < selections.Length; i++) {
                 if (selections[i] is TMP_FontAsset fontAsset) {
                     return fontAsset;
                 }
@@ -111,7 +111,7 @@ namespace Tripledot.CanvasKit.Editor
                 return null;
             }
 
-            for (int i = 0; i < selections.Length; i++) {
+            for (var i = 0; i < selections.Length; i++) {
                 if (selections[i] is Material material && material.HasProperty("_FaceColor")) {
                     return material;
                 }

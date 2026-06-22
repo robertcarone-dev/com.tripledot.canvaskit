@@ -44,7 +44,7 @@ namespace Tripledot.CanvasKit.Editor
             var layers = ConvertMaterial(material);
             stack.Preset = null;
             stack.LocalLayers.Clear();
-            for (int i = 0; i < layers.Count; i++) {
+            for (var i = 0; i < layers.Count; i++) {
                 stack.LocalLayers.Add(layers[i]);
             }
 
@@ -78,7 +78,7 @@ namespace Tripledot.CanvasKit.Editor
             var mainTexture = GetTexture(material, ShaderUtilities.ID_MainTex);
             var guids = AssetDatabase.FindAssets("t:TMP_FontAsset");
             
-            for (int i = 0; i < guids.Length; i++) {
+            for (var i = 0; i < guids.Length; i++) {
                 var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetDatabase.GUIDToAssetPath(guids[i]));
                 if (font == null) {
                     continue;

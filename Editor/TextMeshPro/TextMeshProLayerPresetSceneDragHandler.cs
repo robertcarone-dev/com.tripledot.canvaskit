@@ -124,7 +124,7 @@ namespace Tripledot.CanvasKit.Editor
                 return false;
             }
 
-            for (int i = 0; i < references.Length; i++) {
+            for (var i = 0; i < references.Length; i++) {
                 if (references[i] is TextMeshProLayerPreset layerPreset) {
                     preset = layerPreset;
                     return true;

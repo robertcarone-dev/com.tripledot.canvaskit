@@ -5,6 +5,12 @@ using UnityEngine;
 
 namespace Tripledot.CanvasKit.Editor
 {
+    internal enum KeyframeInterpolationSelectionSource
+    {
+        AnimationWindowCurve,
+        CurveWrapper
+    }
+
     internal readonly struct KeyframeInterpolationKeySelection
     {
         public readonly int Index;
@@ -24,6 +30,7 @@ namespace Tripledot.CanvasKit.Editor
         public readonly List<KeyframeInterpolationKeySelection> Keys = new List<KeyframeInterpolationKeySelection>();
         private readonly KeyframeInterpolationCurveTarget target;
         private bool hasPendingSave;
+        private AnimationCurve pendingSaveCurve;
 
         private KeyframeInterpolationCurveSelection(KeyframeInterpolationCurveTarget target)
         {
@@ -66,6 +73,7 @@ namespace Tripledot.CanvasKit.Editor
         public bool IsObjectReferenceCurve => target.IsObjectReferenceCurve;
         public bool IsDiscreteCurve => target.IsDiscreteCurve;
         public IAnimationWindowClip ClipObject => target.ClipObject;
+        public KeyframeInterpolationSelectionSource Source => target.Source;
         public bool HasPendingSave => hasPendingSave;
 
         public AnimationCurve LoadCurrentCurve()
@@ -75,10 +83,11 @@ namespace Tripledot.CanvasKit.Editor
 
         public bool ApplyEditedCurve(AnimationCurve curve)
         {
-            if (!target.ApplyEditedCurve(curve)) {
+            if (!target.ApplyEditedCurve(curve, out var curveForSave)) {
                 return false;
             }
 
+            pendingSaveCurve = KeyframeInterpolationCurveUtility.Clone(curveForSave);
             hasPendingSave = true;
             return true;
         }
@@ -88,9 +97,12 @@ namespace Tripledot.CanvasKit.Editor
             return target.CanApplyEditedCurve(curve);
         }
 
-        public void AddSaveTarget(List<AnimationWindowCurve> windowCurves, List<CurveWrapper> curveWrappers)
+        public bool TryGetPendingSaveCurve(out AnimationCurve curve)
         {
-            target.AddSaveTarget(windowCurves, curveWrappers);
+            curve = hasPendingSave && pendingSaveCurve != null
+                ? KeyframeInterpolationCurveUtility.Clone(pendingSaveCurve)
+                : null;
+            return curve != null;
         }
 
         public bool ReferencesAnimationWindowCurve(AnimationWindowCurve windowCurve)
@@ -116,6 +128,21 @@ namespace Tripledot.CanvasKit.Editor
         public void ClearPendingSave()
         {
             hasPendingSave = false;
+            pendingSaveCurve = null;
+        }
+
+        public KeyframeInterpolationCurveSelection Copy()
+        {
+            var copy = new KeyframeInterpolationCurveSelection(target.Copy());
+            for (var i = 0; i < Keys.Count; i++) {
+                copy.Keys.Add(Keys[i]);
+            }
+
+            copy.hasPendingSave = hasPendingSave;
+            copy.pendingSaveCurve = pendingSaveCurve != null
+                ? KeyframeInterpolationCurveUtility.Clone(pendingSaveCurve)
+                : null;
+            return copy;
         }
     }
 
@@ -127,7 +154,8 @@ namespace Tripledot.CanvasKit.Editor
             bool animationIsEditable,
             bool isObjectReferenceCurve,
             bool isDiscreteCurve,
-            IAnimationWindowClip clipObject)
+            IAnimationWindowClip clipObject,
+            KeyframeInterpolationSelectionSource source)
         {
             ClipAsset = clipAsset;
             Binding = binding;
@@ -135,6 +163,7 @@ namespace Tripledot.CanvasKit.Editor
             IsObjectReferenceCurve = isObjectReferenceCurve;
             IsDiscreteCurve = isDiscreteCurve;
             ClipObject = clipObject;
+            Source = source;
         }
 
         public AnimationClip ClipAsset { get; }
@@ -143,6 +172,7 @@ namespace Tripledot.CanvasKit.Editor
         public bool IsObjectReferenceCurve { get; }
         public bool IsDiscreteCurve { get; }
         public IAnimationWindowClip ClipObject { get; }
+        public KeyframeInterpolationSelectionSource Source { get; }
 
         public abstract AnimationCurve LoadCurrentCurve();
 
@@ -151,8 +181,8 @@ namespace Tripledot.CanvasKit.Editor
             return KeyframeInterpolationCurveUtility.TryGetSanitizedCurveForSave(curve, out _);
         }
 
-        public abstract bool ApplyEditedCurve(AnimationCurve curve);
-        public abstract void AddSaveTarget(List<AnimationWindowCurve> windowCurves, List<CurveWrapper> curveWrappers);
+        public abstract bool ApplyEditedCurve(AnimationCurve curve, out AnimationCurve curveForSave);
+        public abstract KeyframeInterpolationCurveTarget Copy();
         public abstract bool ReferencesAnimationWindowCurve(AnimationWindowCurve windowCurve);
         public abstract bool ReferencesCurveWrapper(CurveWrapper curveWrapper);
         public abstract bool MatchesAnimationWindowCurve(AnimationWindowCurve windowCurve, IAnimationWindowClip clipObject);
@@ -176,16 +206,6 @@ namespace Tripledot.CanvasKit.Editor
             KeyframeInterpolationCurveUtility.CopyTangentModes(source, destination);
         }
 
-        protected static void AddUniqueReference<T>(List<T> values, T value) where T : class
-        {
-            for (var i = 0; i < values.Count; i++) {
-                if (ReferenceEquals(values[i], value)) {
-                    return;
-                }
-            }
-
-            values.Add(value);
-        }
     }
 
     internal sealed class AnimationWindowCurveTarget : KeyframeInterpolationCurveTarget
@@ -200,7 +220,14 @@ namespace Tripledot.CanvasKit.Editor
             bool isDiscreteCurve,
             IAnimationWindowClip clipObject,
             AnimationWindowCurve windowCurve)
-            : base(clipAsset, binding, animationIsEditable, isObjectReferenceCurve, isDiscreteCurve, clipObject)
+            : base(
+                clipAsset,
+                binding,
+                animationIsEditable,
+                isObjectReferenceCurve,
+                isDiscreteCurve,
+                clipObject,
+                KeyframeInterpolationSelectionSource.AnimationWindowCurve)
         {
             this.windowCurve = windowCurve;
         }
@@ -210,20 +237,29 @@ namespace Tripledot.CanvasKit.Editor
             return windowCurve.ToAnimationCurve();
         }
 
-        public override bool ApplyEditedCurve(AnimationCurve curve)
+        public override bool ApplyEditedCurve(AnimationCurve curve, out AnimationCurve curveForSave)
         {
+            curveForSave = null;
             if (!KeyframeInterpolationCurveUtility.TryGetSanitizedCurveForSave(curve, out var sanitizedCurve)) {
                 return false;
             }
 
             windowCurve.Clear();
             windowCurve.FromAnimationCurve(sanitizedCurve);
+            curveForSave = sanitizedCurve;
             return true;
         }
 
-        public override void AddSaveTarget(List<AnimationWindowCurve> windowCurves, List<CurveWrapper> curveWrappers)
+        public override KeyframeInterpolationCurveTarget Copy()
         {
-            AddUniqueReference(windowCurves, windowCurve);
+            return new AnimationWindowCurveTarget(
+                ClipAsset,
+                Binding,
+                AnimationIsEditable,
+                IsObjectReferenceCurve,
+                IsDiscreteCurve,
+                ClipObject,
+                windowCurve);
         }
 
         public override bool ReferencesAnimationWindowCurve(AnimationWindowCurve candidate)
@@ -264,7 +300,14 @@ namespace Tripledot.CanvasKit.Editor
             bool isDiscreteCurve,
             IAnimationWindowClip clipObject,
             CurveWrapper curveWrapper)
-            : base(clipAsset, binding, animationIsEditable, isObjectReferenceCurve, isDiscreteCurve, clipObject)
+            : base(
+                clipAsset,
+                binding,
+                animationIsEditable,
+                isObjectReferenceCurve,
+                isDiscreteCurve,
+                clipObject,
+                KeyframeInterpolationSelectionSource.CurveWrapper)
         {
             this.curveWrapper = curveWrapper;
         }
@@ -279,8 +322,9 @@ namespace Tripledot.CanvasKit.Editor
             return curveWrapper.curve != null && base.CanApplyEditedCurve(curve);
         }
 
-        public override bool ApplyEditedCurve(AnimationCurve curve)
+        public override bool ApplyEditedCurve(AnimationCurve curve, out AnimationCurve curveForSave)
         {
+            curveForSave = null;
             if (curveWrapper.curve == null) {
                 return false;
             }
@@ -294,12 +338,20 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             curveWrapper.changed = true;
+            curveForSave = sanitizedCurve;
             return true;
         }
 
-        public override void AddSaveTarget(List<AnimationWindowCurve> windowCurves, List<CurveWrapper> curveWrappers)
+        public override KeyframeInterpolationCurveTarget Copy()
         {
-            AddUniqueReference(curveWrappers, curveWrapper);
+            return new CurveWrapperTarget(
+                ClipAsset,
+                Binding,
+                AnimationIsEditable,
+                IsObjectReferenceCurve,
+                IsDiscreteCurve,
+                ClipObject,
+                curveWrapper);
         }
 
         public override bool ReferencesAnimationWindowCurve(AnimationWindowCurve windowCurve)

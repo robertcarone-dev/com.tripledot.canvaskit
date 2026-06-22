@@ -92,21 +92,21 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             linkedPresetObject.Update();
+
             EnsureOverrideArraySize(serializedObject, presetLayerOverrides, linkedPresetLayers.arraySize);
             DrawLayerListAndBlocks(linkedPresetLayers, LayerSource.LinkedPreset);
+
             ApplyLinkedPresetProperties(assignedPreset);
         }
 
-        private void DrawLayerListAndBlocks(
-            SerializedProperty layerProperty, LayerSource source)
+        private void DrawLayerListAndBlocks(SerializedProperty layerProperty, LayerSource source)
         {
             var layerList = CreateLayerList(layerProperty, source);
             layerList.DoLayoutList();
             DrawLayerInspectorBlocks(layerProperty, source);
         }
 
-        private ReorderableList CreateLayerList(
-            SerializedProperty layerProperty, LayerSource source)
+        private ReorderableList CreateLayerList(SerializedProperty layerProperty, LayerSource source)
         {
             var editable = source != LayerSource.LinkedPreset;
 
@@ -130,8 +130,6 @@ namespace Tripledot.CanvasKit.Editor
             switch (source)
             {
                 case LayerSource.LinkedPreset:
-                    QueuePresetDirty();
-                    return;
                 case LayerSource.Preset:
                     QueuePresetDirty();
                     return;
@@ -204,7 +202,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             preset.BeginSuppressingOnValidateNotifications();
-            bool appliedPresetProperties = linkedPresetObject.ApplyModifiedProperties();
+            var appliedPresetProperties = linkedPresetObject.ApplyModifiedProperties();
             preset.EndSuppressingOnValidateNotifications();
             if (appliedPresetProperties) {
                 EditorUtility.SetDirty(preset);
@@ -322,7 +320,7 @@ namespace Tripledot.CanvasKit.Editor
                     return;
                 }
 
-                for (int i = 0; i < layers.arraySize; i++) {
+                for (var i = 0; i < layers.arraySize; i++) {
                     var layer = GetLayer(layers, source, i);
                     if (layer == null) {
                         continue;
@@ -403,7 +401,7 @@ namespace Tripledot.CanvasKit.Editor
                 return;
             }
 
-            for (int i = 0; i < dirtyLayerIndices.Count; i++) {
+            for (var i = 0; i < dirtyLayerIndices.Count; i++) {
                 if (dirtyLayerIndices[i] == layerIndex) {
                     return;
                 }
@@ -414,7 +412,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private void FlushLayerDirties(LayerSource source)
         {
-            for (int i = 0; i < dirtyLayerIndices.Count; i++) {
+            for (var i = 0; i < dirtyLayerIndices.Count; i++) {
                 OnLayerDirty(source, dirtyLayerIndices[i]);
             }
         }
@@ -620,7 +618,7 @@ namespace Tripledot.CanvasKit.Editor
             SerializedProperty layers, Func<TextMeshProLayerData> createLayer, string label, LayerSource source)
         {
             Undo.RecordObjects(layers.serializedObject.targetObjects, "Add TextMeshPro Layer");
-            for (int i = 0; i < layers.serializedObject.targetObjects.Length; i++) {
+            for (var i = 0; i < layers.serializedObject.targetObjects.Length; i++) {
                 var layer = CreateLabeledLayer(createLayer, label);
                 switch (layers.serializedObject.targetObjects[i]) {
                     case TextMeshProLayerStack stack when layers.propertyPath == "localLayers":

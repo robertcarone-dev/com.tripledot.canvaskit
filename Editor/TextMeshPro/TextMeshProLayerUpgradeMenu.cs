@@ -21,7 +21,7 @@ namespace Tripledot.CanvasKit.Editor
         private static void UpgradeSelected()
         {
             var texts = Selection.GetFiltered<TextMeshProUGUI>(SelectionMode.Editable | SelectionMode.Deep);
-            for (int i = 0; i < texts.Length; i++) {
+            for (var i = 0; i < texts.Length; i++) {
                 UpgradeText(texts[i]);
             }
         }

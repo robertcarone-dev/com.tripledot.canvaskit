@@ -14,9 +14,10 @@ namespace Tripledot.CanvasKit.Editor
             In
         }
 
-        public Func<Rect, bool> BeginDragRequested { get; set; }
         public event Action<AnimationCurve> CurveChanged;
         public event Action DragEnded;
+
+        public Func<Rect, bool> BeginDragRequested { get; set; }
 
         private AnimationCurve curve;
         private readonly VisualElement handleReadout;
@@ -49,9 +50,7 @@ namespace Tripledot.CanvasKit.Editor
             style.flexShrink = 1f;
             generateVisualContent += OnGenerateVisualContent;
 
-            handleReadout = new VisualElement {
-                pickingMode = PickingMode.Ignore
-            };
+            handleReadout = new VisualElement { pickingMode = PickingMode.Ignore };
             handleReadout.AddToClassList("ck-keyframe-graph__readout");
 
             outXReadoutLabel = CreateReadoutLabel("ck-keyframe-graph__readout-out");
@@ -123,6 +122,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var outDistance = Vector2.Distance(pointerPosition, outPosition);
             var inDistance = Vector2.Distance(pointerPosition, inPosition);
+
             if (canEditHandles && outDistance <= KeyframeInterpolationGraphUtility.HandleHitSize) {
                 if (BeginDrag(DragHandle.Out, evt, displayRange, editableCurve)) {
                     evt.StopImmediatePropagation();
@@ -153,10 +153,13 @@ namespace Tripledot.CanvasKit.Editor
             draggingCurveRange = displayRange;
             activePointerId = evt.pointerId;
             lastPointerPosition = AsVector2(evt.localPosition);
+
             Focus();
             this.CapturePointer(activePointerId);
+
             UpdateHandleReadout();
             MarkDirtyRepaint();
+
             return true;
         }
 
