@@ -680,7 +680,8 @@ namespace Tripledot.CanvasKit.Editor
             var label = ImageLatticeToolState.SoftSelectionMode == ImageLatticeSoftSelectionMode.Off
                 ? $"Radius {ImageLatticeToolState.SoftSelectionRadius:0.##} (Off)"
                 : $"Radius {ImageLatticeToolState.SoftSelectionRadius:0.##}";
-            var rect = new Rect(Event.current.mousePosition.x + 14f, Event.current.mousePosition.y + 14f, ImageLatticeToolState.SoftSelectionMode == ImageLatticeSoftSelectionMode.Off ? 120f : 88f, 22f);
+            var rect = new Rect(Event.current.mousePosition.x + 14f, Event.current.mousePosition.y + 14f, ImageLatticeToolState.SoftSelectionMode == ImageLatticeSoftSelectionMode.Off ? 120f : 88f,
+                22f);
             EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.72f));
             GUI.Label(rect, label, EditorStyles.whiteLabel);
             Handles.EndGUI();

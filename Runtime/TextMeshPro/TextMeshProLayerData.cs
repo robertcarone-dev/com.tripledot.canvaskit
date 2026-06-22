@@ -18,7 +18,7 @@ namespace Tripledot.CanvasKit
         private float opacity = 1f;
         [SerializeField]
         [NotKeyable]
-        public Vector3 offset = Vector3.zero;
+        private Vector3 offset = Vector3.zero;
         [SerializeField]
         private TextMeshProFace face = TextMeshProFace.Default;
         [SerializeField]
@@ -26,44 +26,42 @@ namespace Tripledot.CanvasKit
         [SerializeField]
         private TextMeshProShadow shadow = DisabledShadow();
 
-        public bool Enabled
-        {
+        public bool Enabled {
             get => enabled;
             set => enabled = value;
         }
 
-        public string Label
-        {
+        public string Label {
             get => label;
             set => label = value ?? string.Empty;
         }
 
-        public CanvasBlendMode BlendMode
-        {
+        public CanvasBlendMode BlendMode {
             get => blendMode;
             set => blendMode = value;
         }
 
-        public float Opacity
-        {
+        public float Opacity {
             get => Mathf.Clamp01(opacity);
             set => opacity = Mathf.Clamp01(value);
         }
 
-        public TextMeshProFace Face
-        {
+        public Vector3 Offset {
+            get => offset;
+            set => offset = value;
+        }
+
+        public TextMeshProFace Face {
             get => face;
             set => face = value;
         }
 
-        public TextMeshProStroke Stroke
-        {
+        public TextMeshProStroke Stroke {
             get => stroke;
             set => stroke = value;
         }
 
-        public TextMeshProShadow Shadow
-        {
+        public TextMeshProShadow Shadow {
             get => shadow;
             set => shadow = value;
         }
@@ -135,8 +133,6 @@ namespace Tripledot.CanvasKit
             shadow = source.shadow;
         }
 
-        #region Internal
-
         internal Vector2 GeometryOffset => offset;
 
         internal Vector4 GetVisualPadding(float sdfPaddingLimit, Vector2 localUnitsPerAtlasPixel)
@@ -161,18 +157,14 @@ namespace Tripledot.CanvasKit
 
             return face.GetSdfRange() + Mathf.Max(stroke.GetSdfRange(), shadow.GetSdfRange());
         }
-        
-        #endregion
-
-        #region Material
 
         internal void ApplyMaterial(Material material, TextMeshProLayerMaterialContext context, TextMeshProLayerMaterialGradientState gradientState)
         {
             material.SetInteger(ShaderIds.FaceEnabled, face.Enabled ? 1 : 0);
-            var faceUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled, gradientState.Face);
+            var faceUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled, gradientState.Face);
             var faceSdfRange = face.GetSdfRange();
             material.SetFloat(ShaderIds.FaceDilate, TextMeshProUtility.PixelsToFaceDilate(faceSdfRange, context.GradientScale));
+            
             var faceLightingEnabled = face.Enabled && face.Lighting.Enabled;
             var faceBevelWidth = Mathf.Clamp01(face.Lighting.BevelWidth);
             material.SetInteger(ShaderIds.FaceLightingEnabled, faceLightingEnabled ? 1 : 0);
@@ -183,29 +175,21 @@ namespace Tripledot.CanvasKit
             material.SetColor(ShaderIds.FaceShadowColor, face.Lighting.ShadowColor);
             CanvasUtility.SetKeyword(material, ShaderKeywords.FaceLighting, faceLightingEnabled && faceBevelWidth > 0f);
 
-            TextMeshProUtility.ClampStrokeEffect(
-                stroke.Width, stroke.Feather, stroke.Position, context.AppliedSdfPadding, faceSdfRange,
-                out var strokeWidth, out var strokeFeather);
+            TextMeshProUtility.ClampStrokeEffect(stroke.Width, stroke.Feather, stroke.Position, context.AppliedSdfPadding, faceSdfRange, out var strokeWidth, out var strokeFeather);
             material.SetInteger(ShaderIds.StrokeEnabled, stroke.Enabled ? 1 : 0);
             material.SetFloat(ShaderIds.StrokeWeight, strokeWidth);
             material.SetFloat(ShaderIds.StrokeSoftness, strokeFeather);
             material.SetInteger(ShaderIds.StrokePosition, (int)stroke.Position);
             material.SetVector(ShaderIds.StrokeOffset, new Vector4(stroke.Offset.x, stroke.Offset.y, 0f, 0f));
-            var strokeUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled, gradientState.Stroke);
+            var strokeUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled, gradientState.Stroke);
 
-            TextMeshProUtility.ClampShadowEffect(
-                shadow.Spread, shadow.Blur, context.AppliedSdfPadding, faceSdfRange,
-                out var shadowSpread, out var shadowBlur);
+            TextMeshProUtility.ClampShadowEffect(shadow.Spread, shadow.Blur, context.AppliedSdfPadding, faceSdfRange, out var shadowSpread, out var shadowBlur);
             material.SetInteger(ShaderIds.ShadowEnabled, shadow.Enabled ? 1 : 0);
             material.SetFloat(ShaderIds.ShadowWeight, shadowBlur);
             material.SetFloat(ShaderIds.ShadowSpread, shadowSpread);
             material.SetVector(ShaderIds.ShadowOffset, new Vector4(shadow.Offset.x, shadow.Offset.y, 0f, 0f));
-            var shadowUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(
-                material, shadow.Paint, ShaderIds.ShadowPaint, ShaderKeywords.ShadowTexture, shadow.Enabled, gradientState.Shadow);
-
-            CanvasUtility.SetKeyword(material, ShaderKeywords.GradientAtlas, 
-                faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
+            var shadowUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(material, shadow.Paint, ShaderIds.ShadowPaint, ShaderKeywords.ShadowTexture, shadow.Enabled, gradientState.Shadow);
+            CanvasUtility.SetKeyword(material, ShaderKeywords.GradientAtlas, faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
             
             TextMeshProLayerMaterial.ApplySharedTextProperties(material, context, blendMode, Opacity);
         }
@@ -215,10 +199,6 @@ namespace Tripledot.CanvasKit
             var radians = angle * Mathf.Deg2Rad;
             return new Vector4(Mathf.Cos(radians), Mathf.Sin(radians), 0f, 0f);
         }
-
-        #endregion
-
-        #region Utility
 
         private static TextMeshProFace DisabledFace()
         {
@@ -240,10 +220,6 @@ namespace Tripledot.CanvasKit
             value.Enabled = false;
             return value;
         }
-
-        #endregion
-
-        #region Shader Properties
 
         private static class ShaderKeywords
         {
@@ -312,7 +288,5 @@ namespace Tripledot.CanvasKit
                 Shader.PropertyToID("_ShadowPaintTransform0"),
                 Shader.PropertyToID("_ShadowPaintTransform1"));
         }
-
-        #endregion
     }
 }

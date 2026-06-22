@@ -45,10 +45,10 @@ namespace Tripledot.CanvasKit.Editor
 
             Drag.Begin(image, "Move Lattice Selection", points, pivot, pivotWorld, GetHandleRotation(image), Vector3.one);
             var delta = WorldDeltaToLatticeUv(image, localRect, Drag.StartPositionWorld, nextPosition);
-            
+
             ImageLatticeSelectionUtility.MovePoints(
                 source: Drag.SourcePoints,
-                destination: Drag.DestinationPoints, 
+                destination: Drag.DestinationPoints,
                 controlPointColumns: image.ControlPointColumns,
                 controlPointRows: image.ControlPointRows,
                 selected: ImageLatticeToolState.Selection,
@@ -58,18 +58,18 @@ namespace Tripledot.CanvasKit.Editor
                 softSelectionMode: ImageLatticeToolState.SoftSelectionMode,
                 softSelectionRadius: ImageLatticeToolState.SoftSelectionRadius,
                 selectedCells: ImageLatticeToolState.CellSelection);
-            
+
             Drag.CurrentPositionWorld = nextPosition;
             ApplyTransformedPoints(image, Drag.DestinationPoints);
         }
 
         private void DrawResizeHandle(
-            ImageLattice image, 
+            ImageLattice image,
             Rect localRect,
             Vector2[] points,
             Rect bounds,
             Vector2 handleUv,
-            bool minX, 
+            bool minX,
             bool maxX,
             bool minY,
             bool maxY)
@@ -96,26 +96,34 @@ namespace Tripledot.CanvasKit.Editor
 
             var nextUv = ImageLatticeSceneView.WorldToLatticeUv(image, localRect, nextWorld);
             var targetBounds = Drag.StartBounds;
-            
-            if (minX) { targetBounds.xMin = Mathf.Min(nextUv.x, Drag.StartBounds.xMax - 0.0001f); }
-            if (maxX) { targetBounds.xMax = Mathf.Max(nextUv.x, Drag.StartBounds.xMin + 0.0001f); }
-            if (minY) { targetBounds.yMin = Mathf.Min(nextUv.y, Drag.StartBounds.yMax - 0.0001f); }
-            if (maxY) { targetBounds.yMax = Mathf.Max(nextUv.y, Drag.StartBounds.yMin + 0.0001f); }
+
+            if (minX) {
+                targetBounds.xMin = Mathf.Min(nextUv.x, Drag.StartBounds.xMax - 0.0001f);
+            }
+            if (maxX) {
+                targetBounds.xMax = Mathf.Max(nextUv.x, Drag.StartBounds.xMin + 0.0001f);
+            }
+            if (minY) {
+                targetBounds.yMin = Mathf.Min(nextUv.y, Drag.StartBounds.yMax - 0.0001f);
+            }
+            if (maxY) {
+                targetBounds.yMax = Mathf.Max(nextUv.y, Drag.StartBounds.yMin + 0.0001f);
+            }
 
             ImageLatticeSelectionUtility.ResizePoints(
-                source: Drag.SourcePoints, 
-                destination: Drag.DestinationPoints, 
+                source: Drag.SourcePoints,
+                destination: Drag.DestinationPoints,
                 controlPointColumns: image.ControlPointColumns,
                 controlPointRows: image.ControlPointRows,
                 selected: ImageLatticeToolState.Selection,
                 sourceRect: Drag.StartBounds,
-                targetRect: targetBounds, 
+                targetRect: targetBounds,
                 mirrorMode: ImageLatticeToolState.MirrorMode,
                 editTarget: ImageLatticeToolState.EditTarget,
                 softSelectionMode: ImageLatticeToolState.SoftSelectionMode,
                 softSelectionRadius: ImageLatticeToolState.SoftSelectionRadius,
                 selectedCells: ImageLatticeToolState.CellSelection);
-            
+
             ApplyTransformedPoints(image, Drag.DestinationPoints);
         }
 
@@ -137,21 +145,21 @@ namespace Tripledot.CanvasKit.Editor
 
             Drag.Begin(image, "Rotate Lattice Selection", points, pivot, pivotWorld, handleRotation, Vector3.one);
             var angle = GetSignedHandleAngle(image, Drag.StartRotation, nextRotation);
-            
+
             ImageLatticeSelectionUtility.RotatePoints(
                 source: Drag.SourcePoints,
-                destination: Drag.DestinationPoints, 
+                destination: Drag.DestinationPoints,
                 controlPointColumns: image.ControlPointColumns,
                 controlPointRows: image.ControlPointRows,
-                selected: ImageLatticeToolState.Selection, 
+                selected: ImageLatticeToolState.Selection,
                 pivot: Drag.Pivot,
-                angleDegrees: angle, 
+                angleDegrees: angle,
                 mirrorMode: ImageLatticeToolState.MirrorMode,
                 editTarget: ImageLatticeToolState.EditTarget,
                 softSelectionMode: ImageLatticeToolState.SoftSelectionMode,
                 softSelectionRadius: ImageLatticeToolState.SoftSelectionRadius,
                 selectedCells: ImageLatticeToolState.CellSelection);
-            
+
             Drag.CurrentRotation = nextRotation;
             ApplyTransformedPoints(image, Drag.DestinationPoints);
         }

@@ -16,7 +16,7 @@ namespace Tripledot.CanvasKit.Editor
             public const int RoundedInspectorContentPadding = 8;
             public const float SliderValueGroupWidth = SliderNumericFieldWidth + SliderRowGap + SliderUnitWidth;
             public const float CheckerSize = 4f;
-            
+
             private const int RoundedInspectorTextureSize = 16;
             private const int RoundedInspectorRadius = 5;
             private const int RoundedInspectorBorderSegments = 4;
@@ -41,24 +41,25 @@ namespace Tripledot.CanvasKit.Editor
             private static GUIStyle _roundedInspectorPanelCollapsedHeaderStyleDark;
             private static GUIStyle _roundedInspectorPanelCollapsedHeaderStyleLight;
             private static GUIStyle _roundedInspectorPanelContentStyle;
-        
-            public static Color SwatchBorder => 
-                EditorGUIUtility.isProSkin ? new Color(0.06f, 0.06f, 0.06f, 1f) : new Color(0.42f, 0.42f, 0.42f, 1f);
 
-            public static Color RoundedInspectorPanelBorder =>
-                EditorGUIUtility.isProSkin ? new Color(0.12f, 0.12f, 0.12f, 1f) : new Color(0.52f, 0.53f, 0.55f, 1f);
+            public static Color SwatchBorder => EditorGUIUtility.isProSkin ? new Color(0.06f, 0.06f, 0.06f, 1f) : new Color(0.42f, 0.42f, 0.42f, 1f);
 
-            public static GUIStyle SubsectionStyle => _subsectionStyle ??= new GUIStyle(EditorStyles.boldLabel) {
-                padding = new RectOffset(0, 0, 0, 0)
-            };
+            public static Color RoundedInspectorPanelBorder => EditorGUIUtility.isProSkin ? new Color(0.12f, 0.12f, 0.12f, 1f) : new Color(0.52f, 0.53f, 0.55f, 1f);
 
-            public static GUIStyle SwatchLabelStyle => _swatchLabelStyle ??= new GUIStyle(EditorStyles.label) {
-                alignment = TextAnchor.MiddleLeft
-            };
+            public static GUIStyle SubsectionStyle =>
+                _subsectionStyle ??= new GUIStyle(EditorStyles.boldLabel) {
+                    padding = new RectOffset(0, 0, 0, 0)
+                };
 
-            public static GUIStyle RoundedInspectorPanelStyle => EditorGUIUtility.isProSkin
-                ? _roundedInspectorPanelStyleDark ??= CreateRoundedInspectorPanelStyle(true)
-                : _roundedInspectorPanelStyleLight ??= CreateRoundedInspectorPanelStyle(false);
+            public static GUIStyle SwatchLabelStyle =>
+                _swatchLabelStyle ??= new GUIStyle(EditorStyles.label) {
+                    alignment = TextAnchor.MiddleLeft
+                };
+
+            public static GUIStyle RoundedInspectorPanelStyle =>
+                EditorGUIUtility.isProSkin
+                    ? _roundedInspectorPanelStyleDark ??= CreateRoundedInspectorPanelStyle(true)
+                    : _roundedInspectorPanelStyleLight ??= CreateRoundedInspectorPanelStyle(false);
 
             public static GUIStyle GetRoundedInspectorPanelHeaderStyle(bool expanded)
             {
@@ -73,9 +74,10 @@ namespace Tripledot.CanvasKit.Editor
                     : _roundedInspectorPanelCollapsedHeaderStyleLight ??= CreateRoundedInspectorPanelHeaderStyle(false, false);
             }
 
-            public static GUIStyle RoundedInspectorPanelContentStyle => _roundedInspectorPanelContentStyle ??= new GUIStyle {
-                padding = new RectOffset(RoundedInspectorContentPadding, RoundedInspectorContentPadding, 6, 8)
-            };
+            public static GUIStyle RoundedInspectorPanelContentStyle =>
+                _roundedInspectorPanelContentStyle ??= new GUIStyle {
+                    padding = new RectOffset(RoundedInspectorContentPadding, RoundedInspectorContentPadding, 6, 8)
+                };
 
             private static GUIStyle CreateRoundedInspectorPanelStyle(bool darkSkin)
             {
@@ -255,7 +257,8 @@ namespace Tripledot.CanvasKit.Editor
             SdfLengthSlider(pixelProperty, unitProperty, label, availablePadding, minPixels, maxPixels, true);
         }
 
-        private static void SdfLengthSlider(SerializedProperty pixelProperty, SerializedProperty unitProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels, bool showEffectiveValue)
+        private static void SdfLengthSlider(SerializedProperty pixelProperty, SerializedProperty unitProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels,
+            bool showEffectiveValue)
         {
             var sliderPadding = float.IsPositiveInfinity(availablePadding) ? 0f : availablePadding;
             var fallbackMax = GetSdfSliderMax(sliderPadding, pixelProperty.floatValue);
@@ -278,13 +281,14 @@ namespace Tripledot.CanvasKit.Editor
             var percentBasis = availablePadding > 0f && !float.IsPositiveInfinity(availablePadding)
                 ? availablePadding
                 : Mathf.Max(Styles.DefaultSdfSliderPadding, Mathf.Abs(currentPixels), Mathf.Abs(minPixels), Mathf.Abs(maxPixels));
-            
+
             var fieldValue = GetSdfLengthDisplayValue(presentation.FieldPixels, unit, percentBasis);
             var sliderValue = GetSdfLengthDisplayValue(presentation.EffectivePixels, unit, percentBasis);
             var min = GetSdfLengthDisplayValue(minPixels, unit, percentBasis);
             var max = GetSdfLengthDisplayValue(maxPixels, unit, percentBasis);
 
-            if (DrawSdfLengthSliderValue(label, ref sliderValue, ref fieldValue, min, max, unit, pixelProperty.hasMultipleDifferentValues, unitProperty is { hasMultipleDifferentValues: true }, out var nextUnit, out var valueChange)) {
+            if (DrawSdfLengthSliderValue(label, ref sliderValue, ref fieldValue, min, max, unit, pixelProperty.hasMultipleDifferentValues, unitProperty is { hasMultipleDifferentValues: true },
+                    out var nextUnit, out var valueChange)) {
                 var nextValue = valueChange == SdfLengthValueChange.Slider ? sliderValue : fieldValue;
                 pixelProperty.floatValue = GetConstrainedSdfLengthEditedPixels(nextValue, nextUnit, percentBasis, minPixels, maxPixels);
             }
@@ -538,7 +542,8 @@ namespace Tripledot.CanvasKit.Editor
             Field
         }
 
-        private static bool DrawSdfLengthSliderValue(GUIContent label, ref float sliderValue, ref float fieldValue, float min, float max, TextMeshProSdfLengthUnit unit, bool valueMixed, bool unitMixed, out TextMeshProSdfLengthUnit nextUnit, out SdfLengthValueChange valueChange)
+        private static bool DrawSdfLengthSliderValue(GUIContent label, ref float sliderValue, ref float fieldValue, float min, float max, TextMeshProSdfLengthUnit unit, bool valueMixed,
+            bool unitMixed, out TextMeshProSdfLengthUnit nextUnit, out SdfLengthValueChange valueChange)
         {
             nextUnit = unit;
             valueChange = SdfLengthValueChange.None;

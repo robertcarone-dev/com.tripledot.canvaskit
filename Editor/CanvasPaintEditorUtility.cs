@@ -8,7 +8,7 @@ namespace Tripledot.CanvasKit.Editor
         internal const float MinScale = 0.01f;
 
         private static readonly Vector2 Center2D = new Vector2(0.5f, 0.5f);
-        
+
         internal static bool IsEditableGradientPaint(SerializedCanvasPaint paint, out CanvasPaintType paintType)
         {
             paintType = CanvasPaintType.Solid;
@@ -36,9 +36,9 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             return Approximately(paint.Transform.Center.vector2Value, Center2D)
-                && Approximately(paint.Transform.Offset.vector2Value, Vector2.zero)
-                && Approximately(paint.Transform.Scale.vector2Value, Vector2.one)
-                && Mathf.Approximately(NormalizeDegrees(paint.Transform.Rotation.floatValue), 0f);
+                   && Approximately(paint.Transform.Offset.vector2Value, Vector2.zero)
+                   && Approximately(paint.Transform.Scale.vector2Value, Vector2.one)
+                   && Mathf.Approximately(NormalizeDegrees(paint.Transform.Rotation.floatValue), 0f);
         }
 
         internal static void ResetSpatialTransform(SerializedCanvasPaint paint)
@@ -74,9 +74,9 @@ namespace Tripledot.CanvasKit.Editor
         private static bool HasMixedTransformValues(SerializedCanvasPaint.TransformProperties transform)
         {
             return transform.Center is { hasMultipleDifferentValues: true }
-                || transform.Offset is { hasMultipleDifferentValues: true }
-                || transform.Scale is { hasMultipleDifferentValues: true }
-                || transform.Rotation is { hasMultipleDifferentValues: true };
+                   || transform.Offset is { hasMultipleDifferentValues: true }
+                   || transform.Scale is { hasMultipleDifferentValues: true }
+                   || transform.Rotation is { hasMultipleDifferentValues: true };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -8,10 +8,10 @@ namespace Tripledot.CanvasKit.Editor
         private const int PreviewLayer = 31;
         private const int PreviewPaddingX = 12;
         private const int PreviewPaddingY = 8;
-        
+
         private const int MinFontSize = 16;
         private const int MaxFontSize = 64;
-        
+
         private static readonly Color PreviewBackgroundColor = new Color(0.12f, 0.12f, 0.12f, 1f);
 
         public static bool CanPreview(TextMeshProLayerPreset preset)
@@ -24,10 +24,10 @@ namespace Tripledot.CanvasKit.Editor
             if (!CanPreview(preset) || width <= 0 || height <= 0) {
                 return null;
             }
-            
+
             var renderTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
             var previousActiveRT = RenderTexture.active;
-            
+
             var cameraObject = new GameObject("Preset Preview Camera") { hideFlags = HideFlags.HideAndDontSave };
             var root = new GameObject("Preset Preview") {
                 hideFlags = HideFlags.HideAndDontSave,
@@ -52,13 +52,13 @@ namespace Tripledot.CanvasKit.Editor
                 var canvas = root.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.WorldSpace;
                 canvas.worldCamera = camera;
-                
+
                 var canvasRect = root.GetComponent<RectTransform>();
                 canvasRect.sizeDelta = new Vector2(width, height);
 
                 var text = CreateStackPreview(root.transform, preset, height);
                 text.ForceMeshUpdate();
-                
+
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
 
@@ -102,7 +102,7 @@ namespace Tripledot.CanvasKit.Editor
                 layer = PreviewLayer
             };
             textObject.transform.SetParent(parent, false);
-            
+
             var textRect = textObject.AddComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
@@ -119,7 +119,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var stack = textObject.AddComponent<TextMeshProLayerStack>();
             stack.Preset = preset;
-            
+
             return text;
         }
     }

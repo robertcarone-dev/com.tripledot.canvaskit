@@ -137,7 +137,7 @@ namespace Tripledot.CanvasKit
             _atlasWidth = width;
             _atlasHeight = 0;
             ReleaseTextures();
-            
+
             EnsureHeight(Mathf.Max(1, _nextRow));
         }
 
@@ -165,7 +165,7 @@ namespace Tripledot.CanvasKit
             }
 
             _atlasTexture.Create();
-            
+
             EnsureRowTexture();
             for (int i = 0; i < EntryList.Count; i++) {
                 if (EntryList[i] != null) {
@@ -201,7 +201,7 @@ namespace Tripledot.CanvasKit
 
             _rowTexture.SetPixels32(_rowPixels);
             _rowTexture.Apply(false, false);
-            
+
             Graphics.CopyTexture(_rowTexture, 0, 0, 0, 0, _atlasWidth, 1, _atlasTexture, 0, 0, 0, data.Row);
         }
 

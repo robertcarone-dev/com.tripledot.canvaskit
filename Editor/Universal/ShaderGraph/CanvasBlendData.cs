@@ -11,14 +11,12 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
         [SerializeField]
         private bool allowMaterialBlendOverride;
 
-        public AlphaMode BlendMode
-        {
+        public AlphaMode BlendMode {
             get => blendMode;
             set => blendMode = value;
         }
 
-        public bool AllowMaterialBlendOverride
-        {
+        public bool AllowMaterialBlendOverride {
             get => allowMaterialBlendOverride;
             set => allowMaterialBlendOverride = value;
         }

@@ -49,7 +49,9 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             if (AnyExplicitNonLatticeMaterial()) {
-                EditorGUILayout.HelpBox("The assigned Image material does not use a Canvas Kit lattice shader, so lattice deformation will not render. Use the default material, UI/Tripledot/Image Lattice, or a Canvas Image Lattice Shader Graph.", MessageType.Warning);
+                EditorGUILayout.HelpBox(
+                    "The assigned Image material does not use a Canvas Kit lattice shader, so lattice deformation will not render. Use the default material, UI/Tripledot/Image Lattice, or a Canvas Image Lattice Shader Graph.",
+                    MessageType.Warning);
             }
 
             if (AnySpriteMeshEnabled()) {
@@ -57,14 +59,16 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             if (AnyDeformedRaycastWithAlphaHitTest()) {
-                EditorGUILayout.HelpBox("Deformed Visible Area raycasts and Image alpha hit testing should not be combined. Unity's Image alpha filter samples undeformed UVs before the lattice filter runs.", MessageType.Warning);
+                EditorGUILayout.HelpBox(
+                    "Deformed Visible Area raycasts and Image alpha hit testing should not be combined. Unity's Image alpha filter samples undeformed UVs before the lattice filter runs.",
+                    MessageType.Warning);
             }
         }
 
         private DirtyFlags DrawLatticeControls()
         {
             var dirtyFlags = DirtyFlags.None;
-            
+
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.IntSlider(controlColumns, ImageLattice.MinControlPointsPerAxis, ImageLattice.MaxControlPointsPerAxis, Styles.ControlColumns);
             EditorGUILayout.IntSlider(controlRows, ImageLattice.MinControlPointsPerAxis, ImageLattice.MaxControlPointsPerAxis, Styles.ControlRows);
@@ -216,7 +220,8 @@ namespace Tripledot.CanvasKit.Editor
         {
             public static readonly GUIContent ControlColumns = L10n.TextContent("Control Columns", "Number of editable lattice control-point columns across the image.");
             public static readonly GUIContent ControlRows = L10n.TextContent("Control Rows", "Number of editable lattice control-point rows down the image.");
-            public static readonly GUIContent SegmentsPerCell = L10n.TextContent("Segments Per Cell", "Mesh segments generated between neighboring control points. Higher values render smoother curves with more vertices.");
+            public static readonly GUIContent SegmentsPerCell = L10n.TextContent("Segments Per Cell",
+                "Mesh segments generated between neighboring control points. Higher values render smoother curves with more vertices.");
             public static readonly GUIContent RaycastMode = L10n.TextContent("Raycast Mode", "Choose whether raycasts use Unity's Image behavior or the current deformed lattice shape.");
             public static readonly GUIContent EditLattice = L10n.TextContent("Edit Lattice", "Activate the Image Lattice tool context.");
             public static readonly GUIContent EditingLattice = L10n.TextContent("Editing Lattice", "Image Lattice tool context is active.");

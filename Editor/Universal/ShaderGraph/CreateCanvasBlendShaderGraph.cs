@@ -12,8 +12,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
             var target = (UniversalTarget)Activator.CreateInstance(typeof(UniversalTarget));
             target.TrySetActiveSubTarget(typeof(CanvasBlendSubTarget));
 
-            var blockDescriptors = new[]
-            {
+            var blockDescriptors = new[] {
                 BlockFields.SurfaceDescription.BaseColor,
                 BlockFields.SurfaceDescription.Emission,
                 BlockFields.SurfaceDescription.Alpha,

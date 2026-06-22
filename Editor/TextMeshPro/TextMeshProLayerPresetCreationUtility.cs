@@ -19,11 +19,11 @@ namespace Tripledot.CanvasKit.Editor
             var selectedFont = selectedMaterial != null
                 ? TextMeshProLayerUpgradeUtility.ResolveFontAsset(selectedMaterial) ?? GetSelectedFontAsset(Selection.objects)
                 : GetSelectedFontAsset(Selection.objects);
-            
+
             var action = ScriptableObject.CreateInstance<CreateLayerPresetEndNameEditAction>();
             action.FontAsset = selectedFont;
             action.MaterialPreset = selectedMaterial;
-            
+
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
                 instanceID: action.GetInstanceID(),
                 endAction: action,
@@ -38,7 +38,7 @@ namespace Tripledot.CanvasKit.Editor
             var selectedMaterial = selection as Material;
             var selectedFontPath = selectedFont != null ? AssetDatabase.GetAssetPath(selectedFont) : null;
             var selectedMaterialPath = selectedMaterial != null ? AssetDatabase.GetAssetPath(selectedMaterial) : null;
-            
+
             var sourcePath = !string.IsNullOrEmpty(selectedMaterialPath) ? selectedMaterialPath : selectedFontPath;
             var directory = !string.IsNullOrEmpty(sourcePath) ? Path.GetDirectoryName(sourcePath)?.Replace('\\', '/') : GetSelectedDirectory(selection);
 
@@ -65,7 +65,11 @@ namespace Tripledot.CanvasKit.Editor
         {
             var sourceName = !string.IsNullOrEmpty(sourcePath)
                 ? Path.GetFileNameWithoutExtension(sourcePath)
-                : selectedMaterial != null ? selectedMaterial.name : selectedFont != null ? selectedFont.name : null;
+                : selectedMaterial != null
+                    ? selectedMaterial.name
+                    : selectedFont != null
+                        ? selectedFont.name
+                        : null;
 
             return string.IsNullOrWhiteSpace(sourceName)
                 ? DefaultPresetFileName

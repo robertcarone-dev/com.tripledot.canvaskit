@@ -26,16 +26,16 @@ namespace Tripledot.CanvasKit.Editor
 
         private readonly InspectorMode mode;
         private readonly SerializedObject serializedObject;
-        
+
         private readonly SerializedProperty layers;
         private readonly SerializedProperty presetProperty;
         private readonly SerializedProperty presetLayerOverrides;
-        
+
         private readonly TextMeshProLayerStack stack;
         private readonly TextMeshProLayerPreset preset;
 
         private bool pendingPresetDirty;
-        
+
         private TextMeshProLayerPreset linkedPreset;
         private SerializedObject linkedPresetObject;
         private SerializedProperty linkedPresetLayers;
@@ -127,8 +127,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private void OnLayerListChanged(LayerSource source)
         {
-            switch (source)
-            {
+            switch (source) {
                 case LayerSource.LinkedPreset:
                 case LayerSource.Preset:
                     QueuePresetDirty();
@@ -138,10 +137,8 @@ namespace Tripledot.CanvasKit.Editor
 
         private void OnLayerChanged(LayerSource source, int index)
         {
-            switch (source)
-            {
-                case LayerSource.LinkedPreset:
-                {
+            switch (source) {
+                case LayerSource.LinkedPreset: {
                     if (!IsLinkedPresetInstanceLayer(index)) {
                         QueuePresetDirty();
                     }
@@ -155,8 +152,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private void OnLayerDirty(LayerSource source, int layerIndex)
         {
-            switch (source)
-            {
+            switch (source) {
                 case LayerSource.LinkedPreset when !IsLinkedPresetInstanceLayer(layerIndex):
                     QueuePresetDirty();
                     return;
@@ -255,8 +251,7 @@ namespace Tripledot.CanvasKit.Editor
 
         internal static bool GetPresetInstanceSegmentResult(bool currentInstance, bool sharedSelectedAfterDraw, bool instanceSelectedAfterDraw)
         {
-            return currentInstance switch
-            {
+            return currentInstance switch {
                 true when sharedSelectedAfterDraw => false,
                 false when instanceSelectedAfterDraw => true,
                 _ => currentInstance
@@ -443,7 +438,7 @@ namespace Tripledot.CanvasKit.Editor
             if (layer == null) {
                 return;
             }
-            
+
             var serializedLayer = new SerializedLayer(layer);
             var hasTrailingControl = source == LayerSource.LinkedPreset;
 
@@ -677,9 +672,15 @@ namespace Tripledot.CanvasKit.Editor
         private static int GetLayerFeatureIconCount(LayerFeatureFlags flags)
         {
             var count = 0;
-            if ((flags & LayerFeatureFlags.Face) != 0)   { count++; }
-            if ((flags & LayerFeatureFlags.Stroke) != 0) { count++; }
-            if ((flags & LayerFeatureFlags.Shadow) != 0) { count++; }
+            if ((flags & LayerFeatureFlags.Face) != 0) {
+                count++;
+            }
+            if ((flags & LayerFeatureFlags.Stroke) != 0) {
+                count++;
+            }
+            if ((flags & LayerFeatureFlags.Shadow) != 0) {
+                count++;
+            }
             return count;
         }
 
@@ -811,12 +812,14 @@ namespace Tripledot.CanvasKit.Editor
             return Mathf.Min(Mathf.Max(0f, value), Mathf.Max(0f, availablePadding));
         }
 
-        internal static void GetStrokeSliderBudgets(SerializedProperty width, SerializedProperty feather, SerializedProperty position, float availablePadding, float reservedPadding, out float widthMax, out float featherMax)
+        internal static void GetStrokeSliderBudgets(SerializedProperty width, SerializedProperty feather, SerializedProperty position, float availablePadding, float reservedPadding,
+            out float widthMax, out float featherMax)
         {
             GetStrokeSliderBudgets(GetFloatValueIfSame(width), GetFloatValueIfSame(feather), GetStrokePosition(position), availablePadding, reservedPadding, out widthMax, out featherMax);
         }
 
-        internal static void GetStrokeSliderBudgets(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float widthMax, out float featherMax)
+        internal static void GetStrokeSliderBudgets(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float widthMax,
+            out float featherMax)
         {
             var remainingBudget = GetRemainingSdfBudget(availablePadding, reservedPadding);
             var strokeWidthFactor = TextMeshProUtility.GetStrokeVisualPaddingFactor(position);
@@ -825,7 +828,8 @@ namespace Tripledot.CanvasKit.Editor
             featherMax = GetRemainingSdfBudget(remainingBudget, effectiveWidth * strokeWidthFactor);
         }
 
-        internal static void GetShadowSliderBudgets(SerializedProperty spread, SerializedProperty blur, float availablePadding, float reservedPadding, out float spreadMin, out float spreadMax, out float blurMax)
+        internal static void GetShadowSliderBudgets(SerializedProperty spread, SerializedProperty blur, float availablePadding, float reservedPadding, out float spreadMin, out float spreadMax,
+            out float blurMax)
         {
             GetShadowSliderBudgets(GetFloatValueIfSame(spread), GetFloatValueIfSame(blur), availablePadding, reservedPadding, out spreadMin, out spreadMax, out blurMax);
         }
@@ -919,10 +923,10 @@ namespace Tripledot.CanvasKit.Editor
         private static bool IsUninitializedFaceLighting(SerializedProperty lightingRoot)
         {
             return IsZero(lightingRoot.FindPropertyRelative("BevelWidth"))
-                && IsZero(lightingRoot.FindPropertyRelative("BevelSoftness"))
-                && IsZero(lightingRoot.FindPropertyRelative("LightAngle"))
-                && IsDefaultColor(lightingRoot.FindPropertyRelative("HighlightColor"))
-                && IsDefaultColor(lightingRoot.FindPropertyRelative("ShadowColor"));
+                   && IsZero(lightingRoot.FindPropertyRelative("BevelSoftness"))
+                   && IsZero(lightingRoot.FindPropertyRelative("LightAngle"))
+                   && IsDefaultColor(lightingRoot.FindPropertyRelative("HighlightColor"))
+                   && IsDefaultColor(lightingRoot.FindPropertyRelative("ShadowColor"));
         }
 
         private static bool IsZero(SerializedProperty property)
@@ -1155,10 +1159,8 @@ namespace Tripledot.CanvasKit.Editor
 
             public bool IsDisabled => Enabled is { hasMultipleDifferentValues: false, boolValue: false };
 
-            public string DisplayLabel
-            {
-                get
-                {
+            public string DisplayLabel {
+                get {
                     if (Label != null && !string.IsNullOrWhiteSpace(Label.stringValue)) {
                         return Label.stringValue.Trim();
                     }
@@ -1167,14 +1169,18 @@ namespace Tripledot.CanvasKit.Editor
                 }
             }
 
-            public LayerFeatureFlags FeatureFlags
-            {
-                get
-                {
+            public LayerFeatureFlags FeatureFlags {
+                get {
                     var flags = LayerFeatureFlags.None;
-                    if (Face.Enabled.boolValue) { flags |= LayerFeatureFlags.Face; }
-                    if (Stroke.Enabled.boolValue) { flags |= LayerFeatureFlags.Stroke; }
-                    if (Shadow.Enabled.boolValue) { flags |= LayerFeatureFlags.Shadow; }
+                    if (Face.Enabled.boolValue) {
+                        flags |= LayerFeatureFlags.Face;
+                    }
+                    if (Stroke.Enabled.boolValue) {
+                        flags |= LayerFeatureFlags.Stroke;
+                    }
+                    if (Shadow.Enabled.boolValue) {
+                        flags |= LayerFeatureFlags.Shadow;
+                    }
                     return flags;
                 }
             }
@@ -1375,7 +1381,9 @@ namespace Tripledot.CanvasKit.Editor
             public static readonly GUIContent Outline = L10n.TextContent("Stroke", "Enable and edit the stroke effect for this layer.");
             public static readonly GUIContent Position = L10n.TextContent("Position", "Choose where the stroke is placed relative to the glyph edge.");
             public static readonly GUIContent Shadow = L10n.TextContent("Shadow", "Add or edit a shadow layer.");
-            public static readonly GUIContent ShadowClampWarning = L10n.TextContent("Shadow spread or blur is clamped by the available TMP font atlas padding. Increase the font asset padding or reduce other SDF effects that consume this layer's padding budget.");
+            public static readonly GUIContent ShadowClampWarning =
+                L10n.TextContent(
+                    "Shadow spread or blur is clamped by the available TMP font atlas padding. Increase the font asset padding or reduce other SDF effects that consume this layer's padding budget.");
             public static readonly GUIContent ShadowColor = L10n.TextContent("Shadow", "Tint and alpha used on fill edges facing away from the light.");
             public static readonly GUIContent Shape = L10n.TextContent("Shape", "Controls for SDF shape expansion and edge softness.");
             public static readonly GUIContent Spread = L10n.TextContent("Spread", "Expand or contract the shadow shape within the available SDF padding.");
@@ -1422,11 +1430,11 @@ namespace Tripledot.CanvasKit.Editor
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = EditorGUIUtility.isProSkin ? InstanceMarkerTextColorDark : InstanceMarkerTextColorLight }
                 };
-                
+
                 FillLayerIcon = LoadLayerIcon("TextIcon.png");
                 StrokeLayerIcon = LoadLayerIcon("StrokeIcon.png");
                 ShadowLayerIcon = LoadLayerIcon("ShadowIcon.png");
-                
+
                 Face.image = FillLayerIcon;
                 Outline.image = StrokeLayerIcon;
                 Underlay.image = ShadowLayerIcon;

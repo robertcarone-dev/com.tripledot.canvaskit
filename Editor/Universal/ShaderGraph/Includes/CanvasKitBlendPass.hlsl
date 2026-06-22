@@ -33,75 +33,75 @@ Varyings BuildVaryings(Attributes input)
     #endif
 
     #ifdef ATTRIBUTES_NEED_NORMAL
-        float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+    float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
     #else
-        float3 normalWS = float3(0.0, 0.0, 0.0);
+    float3 normalWS = float3(0.0, 0.0, 0.0);
     #endif
 
     #ifdef ATTRIBUTES_NEED_TANGENT
-        float4 tangentWS = float4(TransformObjectToWorldDir(input.tangentOS.xyz), input.tangentOS.w);
+    float4 tangentWS = float4(TransformObjectToWorldDir(input.tangentOS.xyz), input.tangentOS.w);
     #endif
 
     #if defined(HAVE_VERTEX_MODIFICATION)
-        ApplyVertexModification(input, normalWS, positionWS, _TimeParameters.xyz);
+    ApplyVertexModification(input, normalWS, positionWS, _TimeParameters.xyz);
     #endif
 
     #ifdef VARYINGS_NEED_POSITION_WS
-        output.positionWS = positionWS;
+    output.positionWS = positionWS;
     #endif
 
     #ifdef VARYINGS_NEED_NORMAL_WS
-        output.normalWS = normalWS;
+    output.normalWS = normalWS;
     #endif
 
     #ifdef VARYINGS_NEED_TANGENT_WS
-        output.tangentWS = tangentWS;
+    output.tangentWS = tangentWS;
     #endif
 
     #if defined(VARYINGS_NEED_TEXCOORD0) || defined(VARYINGS_DS_NEED_TEXCOORD0)
-        output.texCoord0 = input.uv0;
+    output.texCoord0 = input.uv0;
     #endif
 
     #if defined(VARYINGS_NEED_TEXCOORD1) || defined(VARYINGS_DS_NEED_TEXCOORD1)
-        #ifdef UNITY_UI_CLIP_RECT
-            float2 pixelSize = output.positionCS.w;
-            pixelSize /= float2(1, 1) * abs(mul((float2x2)UNITY_MATRIX_P, _ScreenParams.xy));
+    #ifdef UNITY_UI_CLIP_RECT
+    float2 pixelSize = output.positionCS.w;
+    pixelSize /= float2(1, 1) * abs(mul((float2x2)UNITY_MATRIX_P, _ScreenParams.xy));
 
-            float4 clampedRect = clamp(_ClipRect, -2e10, 2e10);
-            output.texCoord1 = float4(input.positionOS.xy * 2 - clampedRect.xy - clampedRect.zw, 0.25 / (0.25 * half2(_UIMaskSoftnessX, _UIMaskSoftnessY) + abs(pixelSize.xy)));
-        #endif
+    float4 clampedRect = clamp(_ClipRect, -2e10, 2e10);
+    output.texCoord1 = float4(input.positionOS.xy * 2 - clampedRect.xy - clampedRect.zw, 0.25 / (0.25 * half2(_UIMaskSoftnessX, _UIMaskSoftnessY) + abs(pixelSize.xy)));
+    #endif
     #endif
 
     #if defined(VARYINGS_NEED_TEXCOORD2) || defined(VARYINGS_DS_NEED_TEXCOORD2)
-        output.texCoord2 = input.uv2;
+    output.texCoord2 = input.uv2;
     #endif
 
     #if defined(VARYINGS_NEED_TEXCOORD3) || defined(VARYINGS_DS_NEED_TEXCOORD3)
-        output.texCoord3 = input.uv3;
+    output.texCoord3 = input.uv3;
     #endif
 
     #if defined(VARYINGS_NEED_TEXCOORD4) || defined(VARYINGS_DS_NEED_TEXCOORD4)
-        output.texCoord4 = input.uv4;
+    output.texCoord4 = input.uv4;
     #endif
 
     #if defined(VARYINGS_NEED_TEXCOORD5) || defined(VARYINGS_DS_NEED_TEXCOORD5)
-        output.texCoord5 = input.uv5;
+    output.texCoord5 = input.uv5;
     #endif
 
     #if defined(VARYINGS_NEED_TEXCOORD6) || defined(VARYINGS_DS_NEED_TEXCOORD6)
-        output.texCoord6 = input.uv6;
+    output.texCoord6 = input.uv6;
     #endif
 
     #if defined(VARYINGS_NEED_TEXCOORD7) || defined(VARYINGS_DS_NEED_TEXCOORD7)
-        output.texCoord7 = input.uv7;
+    output.texCoord7 = input.uv7;
     #endif
 
     #if defined(VARYINGS_NEED_COLOR) || defined(VARYINGS_DS_NEED_COLOR)
-        output.color = input.color;
+    output.color = input.color;
     #endif
 
     #ifdef VARYINGS_NEED_SCREENPOSITION
-        output.screenPosition = GetVertexPositionNDC(output.positionCS);
+    output.screenPosition = GetVertexPositionNDC(output.positionCS);
     #endif
 
     return output;
@@ -117,15 +117,15 @@ PackedVaryings vert(Attributes input)
 void ApplyCanvasKitBlendMode(inout half4 color)
 {
     #if defined(_CANVASKIT_BLEND_MATERIAL_OVERRIDE)
-        int blendMode = (int)(_Blend + 0.5);
-        if (blendMode == 1)
-            color.rgb *= color.a;
-        else if (blendMode == 3)
-            color.rgb = lerp(half3(1.0, 1.0, 1.0), color.rgb, color.a);
-    #elif defined(_CANVASKIT_BLEND_PREMULTIPLY)
+    int blendMode = (int)(_Blend + 0.5);
+    if (blendMode == 1)
         color.rgb *= color.a;
-    #elif defined(_CANVASKIT_BLEND_MULTIPLY)
+    else if (blendMode == 3)
         color.rgb = lerp(half3(1.0, 1.0, 1.0), color.rgb, color.a);
+    #elif defined(_CANVASKIT_BLEND_PREMULTIPLY)
+    color.rgb *= color.a;
+    #elif defined(_CANVASKIT_BLEND_MULTIPLY)
+    color.rgb = lerp(half3(1.0, 1.0, 1.0), color.rgb, color.a);
     #endif
 }
 
@@ -145,16 +145,16 @@ half4 frag(PackedVaryings packedInput) : SV_TARGET
     half4 color = half4(surfaceDescription.BaseColor + surfaceDescription.Emission, alpha);
 
     #if !defined(HAVE_VFX_MODIFICATION) && !defined(_DISABLE_COLOR_TINT)
-        color *= unpacked.color;
+    color *= unpacked.color;
     #endif
 
     #ifdef UNITY_UI_CLIP_RECT
-        half2 m = saturate((_ClipRect.zw - _ClipRect.xy - abs(unpacked.texCoord1.xy)) * unpacked.texCoord1.zw);
-        color.a *= m.x * m.y;
+    half2 m = saturate((_ClipRect.zw - _ClipRect.xy - abs(unpacked.texCoord1.xy)) * unpacked.texCoord1.zw);
+    color.a *= m.x * m.y;
     #endif
 
     #if _ALPHATEST_ON
-        clip(alpha - surfaceDescription.AlphaClipThreshold);
+    clip(alpha - surfaceDescription.AlphaClipThreshold);
     #endif
 
     ApplyCanvasKitBlendMode(color);

@@ -69,7 +69,7 @@ namespace Tripledot.CanvasKit.Editor
             handleReadout.Add(inCommaReadoutLabel);
             handleReadout.Add(inYReadoutLabel);
             Add(handleReadout);
-            
+
             RegisterCallback<PointerDownEvent>(OnPointerDown);
             RegisterCallback<PointerMoveEvent>(OnPointerMove);
             RegisterCallback<PointerUpEvent>(OnPointerUp);
@@ -96,10 +96,10 @@ namespace Tripledot.CanvasKit.Editor
             hasMixedCurveValues = nextHasMixedCurveValues;
             hasTimeCursor = nextHasTimeCursor;
             timeCursor = nextTimeCursor;
-            
+
             EnableInClassList("ck-keyframe-graph--disabled", !hasCurveDisplay);
             EnableInClassList("ck-keyframe-graph--mixed", hasMixedCurveValues);
-            
+
             UpdateHandleReadout();
             MarkDirtyRepaint();
         }
@@ -114,7 +114,7 @@ namespace Tripledot.CanvasKit.Editor
             var plotRect = KeyframeInterpolationGraphUtility.GetGraphPlotRect(graphRect);
             var editableCurve = KeyframeInterpolationCurveUtility.NormalizeEditableCurve(curve);
             var displayRange = KeyframeInterpolationCurveUtility.GetCurveRange(editableCurve);
-            
+
             KeyframeInterpolationGraphUtility.GetHandlePoints(editableCurve, out var outHandle, out var inHandle);
             var outPosition = KeyframeInterpolationGraphUtility.CurveToGUI(plotRect, outHandle, displayRange.yMin, displayRange.yMax);
             var inPosition = KeyframeInterpolationGraphUtility.CurveToGUI(plotRect, inHandle, displayRange.yMin, displayRange.yMax);
@@ -178,15 +178,15 @@ namespace Tripledot.CanvasKit.Editor
 
             var graphRect = GetLocalGraphRect();
             var plotRect = KeyframeInterpolationGraphUtility.GetGraphPlotRect(graphRect);
-            
+
             KeyframeInterpolationGraphUtility.GetHandlePoints(curve, out var outHandle, out var inHandle);
             var handle = draggingHandle == DragHandle.Out ? outHandle : inHandle;
             var normalized = KeyframeInterpolationGraphUtility.ApplyHandleDragDelta(handle, delta, plotRect, draggingCurveRange);
             curve = draggingHandle == DragHandle.Out ? KeyframeInterpolationGraphUtility.SetOutHandle(curve, normalized) : KeyframeInterpolationGraphUtility.SetInHandle(curve, normalized);
-            
+
             UpdateHandleReadout();
             MarkDirtyRepaint();
-            
+
             CurveChanged?.Invoke(KeyframeInterpolationCurveUtility.Clone(curve));
             evt.StopImmediatePropagation();
         }
@@ -343,7 +343,8 @@ namespace Tripledot.CanvasKit.Editor
         private static void DrawGraphBackground(Painter2D painter, Rect graphRect, Rect plotRect, float minY, float maxY, bool enabled)
         {
             FillRect(painter, graphRect, KeyframeInterpolationGraphUtility.GetColor(KeyframeInterpolationGraphUtility.GraphBorderColor, enabled));
-            FillRect(painter, new Rect(graphRect.x + 2f, graphRect.y + 2f, graphRect.width - 4f, graphRect.height - 4f), KeyframeInterpolationGraphUtility.GetColor(KeyframeInterpolationGraphUtility.GraphColor, enabled));
+            FillRect(painter, new Rect(graphRect.x + 2f, graphRect.y + 2f, graphRect.width - 4f, graphRect.height - 4f),
+                KeyframeInterpolationGraphUtility.GetColor(KeyframeInterpolationGraphUtility.GraphColor, enabled));
             DrawVerticalAxis(painter, plotRect, 0f, enabled);
             DrawVerticalAxis(painter, plotRect, 1f, enabled);
             DrawHorizontalAxis(painter, plotRect, 0f, minY, maxY, enabled);
@@ -385,18 +386,18 @@ namespace Tripledot.CanvasKit.Editor
 
             var previousTime = 0f;
             var previousPoint = KeyframeInterpolationGraphUtility.CurveToGUI(rect, new Vector2(previousTime, curve.Evaluate(previousTime)), minY, maxY);
-            
+
             for (var i = 1; i < segmentCount; i++) {
                 var time = i / (float)(segmentCount - 1);
                 var point = KeyframeInterpolationGraphUtility.CurveToGUI(rect, new Vector2(time, curve.Evaluate(time)), minY, maxY);
                 var color = Color.Lerp(KeyframeInterpolationGraphUtility.OutHandleColor, KeyframeInterpolationGraphUtility.InHandleColor, (previousTime + time) * 0.5f);
-                
+
                 painter.strokeColor = KeyframeInterpolationGraphUtility.GetColor(color, enabled);
                 painter.BeginPath();
                 painter.MoveTo(previousPoint);
                 painter.LineTo(point);
                 painter.Stroke();
-                
+
                 previousTime = time;
                 previousPoint = point;
             }

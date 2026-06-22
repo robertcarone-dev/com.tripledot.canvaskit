@@ -31,7 +31,7 @@ namespace Tripledot.CanvasKit.Editor
             SecondaryColorUsesHdrPicker = root.FindPropertyRelative("SecondaryColorUsesHdrPicker");
             Transform = new TransformProperties(root.FindPropertyRelative("Transform"));
         }
-        
+
         public void ResetTransform()
         {
             Transform.Center.vector2Value = new Vector2(0.5f, 0.5f);

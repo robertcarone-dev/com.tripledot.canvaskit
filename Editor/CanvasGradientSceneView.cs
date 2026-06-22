@@ -41,10 +41,10 @@ namespace Tripledot.CanvasKit.Editor
         public static bool IsEditingPaint(SerializedProperty paint, Object sceneTarget)
         {
             return paint != null
-                && sceneTarget != null
-                && _activeSerializedTarget == paint.serializedObject.targetObject
-                && _activeSceneTarget == sceneTarget
-                && _activePropertyPath == paint.propertyPath;
+                   && sceneTarget != null
+                   && _activeSerializedTarget == paint.serializedObject.targetObject
+                   && _activeSceneTarget == sceneTarget
+                   && _activePropertyPath == paint.propertyPath;
         }
 
         public static void SetEditingPaint(SerializedProperty paint, Object sceneTarget, int layerIndex = -1)
@@ -72,7 +72,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var serializedObject = GetSerializedObject(serializedTarget, propertyPath);
             serializedObject.UpdateIfRequiredOrScript();
-            
+
             var paintProperty = serializedObject.FindProperty(propertyPath);
             if (paintProperty == null) {
                 ClearEditingPaint();
@@ -107,7 +107,7 @@ namespace Tripledot.CanvasKit.Editor
             var offset = transform.Offset;
             var scale = transform.Scale;
             var rotation = transform.Rotation;
-            
+
             var changed = false;
             if (paintType == CanvasPaintType.LinearGradient) {
                 changed = DrawLinear(rectTransform, paintBounds, center, offset, scale, rotation);

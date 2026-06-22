@@ -11,7 +11,7 @@ namespace Tripledot.CanvasKit
         private TMP_FontAsset fontAsset;
         [SerializeField]
         private List<TextMeshProLayerData> layers = new List<TextMeshProLayerData>();
-        
+
         [NonSerialized]
         private readonly List<int> layerVersions = new List<int>();
         [NonSerialized]
@@ -42,23 +42,23 @@ namespace Tripledot.CanvasKit
             return index >= 0 && index < layers.Count ? layers[index] : null;
         }
 
-        internal void CopyFrom(IList<TextMeshProLayerData> source)
+        internal void CopyFrom(IList<TextMeshProLayerData> sourceLayers)
         {
-            CopyFrom(source, fontAsset);
+            CopyFrom(sourceLayers, fontAsset);
         }
 
-        internal void CopyFrom(IList<TextMeshProLayerData> source, TMP_FontAsset sourceFontAsset)
+        internal void CopyFrom(IList<TextMeshProLayerData> sourceLayers, TMP_FontAsset sourceFontAsset)
         {
             layers.Clear();
             fontAsset = sourceFontAsset;
-            
-            if (source == null) {
+
+            if (sourceLayers == null) {
                 NotifyChanged();
                 return;
             }
 
-            for (int i = 0; i < source.Count; i++) {
-                layers.Add(source[i]?.Clone());
+            foreach (var data in sourceLayers) {
+                layers.Add(data?.Clone());
             }
 
             NotifyChanged();
@@ -102,7 +102,7 @@ namespace Tripledot.CanvasKit
             }
 
             IncrementLayerVersion(flags, layerIndex);
-            
+
             Changed?.Invoke(this);
             ChangedWithDirtyFlags?.Invoke(this, flags, layerIndex);
         }
@@ -110,7 +110,7 @@ namespace Tripledot.CanvasKit
         private void IncrementLayerVersion(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
         {
             EnsureLayerVersionSlots();
-            
+
             if ((flags & TextMeshProLayerStack.DirtyFlags.Layers) == 0 && layerIndex >= 0 && layerIndex < layerVersions.Count) {
                 unchecked {
                     layerVersions[layerIndex]++;
@@ -119,7 +119,7 @@ namespace Tripledot.CanvasKit
                 return;
             }
 
-            for (int i = 0; i < layerVersions.Count; i++) {
+            for (var i = 0; i < layerVersions.Count; i++) {
                 unchecked {
                     layerVersions[i]++;
                 }
@@ -149,12 +149,11 @@ namespace Tripledot.CanvasKit
         }
 
         internal const string DefaultPreviewText = "AaBbYy 123";
-        
+
         [SerializeField]
         private string previewText = string.Empty;
-        
-        internal string PreviewText
-        {
+
+        internal string PreviewText {
             get => previewText;
             set => previewText = value ?? string.Empty;
         }

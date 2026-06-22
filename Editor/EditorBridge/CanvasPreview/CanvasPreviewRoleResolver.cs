@@ -77,7 +77,7 @@ namespace Tripledot.CanvasKit.Editor
         private static bool TryMatchRole(string[] assetTokens, CanvasPreviewRole role, out string matchedKeyword)
         {
             var keywords = CanvasPreviewSettings.GetKeywords(role);
-            for (int i = 0; i < keywords.Length; i++) {
+            for (var i = 0; i < keywords.Length; i++) {
                 var keyword = keywords[i];
                 if (KeywordMatches(assetTokens, Tokenize(keyword))) {
                     matchedKeyword = keyword;
@@ -95,9 +95,9 @@ namespace Tripledot.CanvasKit.Editor
                 return false;
             }
 
-            for (int start = 0; start <= assetTokens.Length - keywordTokens.Length; start++) {
+            for (var start = 0; start <= assetTokens.Length - keywordTokens.Length; start++) {
                 var matches = true;
-                for (int offset = 0; offset < keywordTokens.Length; offset++) {
+                for (var offset = 0; offset < keywordTokens.Length; offset++) {
                     if (assetTokens[start + offset] != keywordTokens[offset]) {
                         matches = false;
                         break;
@@ -122,7 +122,7 @@ namespace Tripledot.CanvasKit.Editor
             var count = 0;
             var previousWasLowerOrDigit = false;
 
-            for (int i = 0; i < value.Length; i++) {
+            for (var i = 0; i < value.Length; i++) {
                 var c = value[i];
                 if (char.IsUpper(c) && previousWasLowerOrDigit) {
                     buffer[count++] = ' ';
@@ -152,8 +152,7 @@ namespace Tripledot.CanvasKit.Editor
         private static bool HasStretchAnchors(RectTransform rectTransform)
         {
             return !Mathf.Approximately(rectTransform.anchorMin.x, rectTransform.anchorMax.x)
-                || !Mathf.Approximately(rectTransform.anchorMin.y, rectTransform.anchorMax.y);
+                   || !Mathf.Approximately(rectTransform.anchorMin.y, rectTransform.anchorMax.y);
         }
-
     }
 }

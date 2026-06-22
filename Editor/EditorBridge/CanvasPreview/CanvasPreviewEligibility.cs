@@ -30,7 +30,7 @@ namespace Tripledot.CanvasKit.Editor
 
             root.GetComponentsInChildren(true, CanvasBuffer);
             try {
-                for (int i = 0; i < CanvasBuffer.Count; i++) {
+                for (var i = 0; i < CanvasBuffer.Count; i++) {
                     var canvas = CanvasBuffer[i];
                     if (canvas == null || !IsHierarchyActive(canvas.transform) || !canvas.TryGetComponent(out RectTransform canvasRect)) {
                         continue;
@@ -51,7 +51,7 @@ namespace Tripledot.CanvasKit.Editor
 
             root.GetComponentsInChildren(true, RectTransformBuffer);
             try {
-                for (int i = 0; i < RectTransformBuffer.Count; i++) {
+                for (var i = 0; i < RectTransformBuffer.Count; i++) {
                     var rect = RectTransformBuffer[i];
                     if (rect != null && HasVisibleGraphic(rect)) {
                         target = new CanvasPreviewTarget(CanvasPreviewTargetKind.RectTransform, root, null, rect);
@@ -79,7 +79,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             root.GetComponentsInChildren(true, GraphicBuffer);
             try {
-                for (int i = 0; i < GraphicBuffer.Count; i++) {
+                for (var i = 0; i < GraphicBuffer.Count; i++) {
                     var graphic = GraphicBuffer[i];
                     if (graphic == null || !graphic.enabled || graphic.color.a <= 0f || !IsHierarchyActive(graphic.transform)) {
                         continue;
@@ -100,8 +100,8 @@ namespace Tripledot.CanvasKit.Editor
         {
             var rect = rectTransform.rect;
             return (rect.width > 0f && rect.height > 0f)
-                || !Mathf.Approximately(rectTransform.anchorMin.x, rectTransform.anchorMax.x)
-                || !Mathf.Approximately(rectTransform.anchorMin.y, rectTransform.anchorMax.y);
+                   || !Mathf.Approximately(rectTransform.anchorMin.x, rectTransform.anchorMax.x)
+                   || !Mathf.Approximately(rectTransform.anchorMin.y, rectTransform.anchorMax.y);
         }
 
         private static bool IsHierarchyActive(Transform transform)

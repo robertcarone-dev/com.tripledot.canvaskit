@@ -11,10 +11,8 @@ namespace Tripledot.CanvasKit.Editor
     [CustomEditor(typeof(ImageLatticeToolContext))]
     internal sealed class ImageLatticeToolContextEditor : UnityEditor.Editor, ICreateToolbar
     {
-        public IEnumerable<string> toolbarElements
-        {
-            get
-            {
+        public IEnumerable<string> toolbarElements {
+            get {
                 yield return ImageLatticeEditTargetDropdown.ToolbarId;
                 yield return ImageLatticeFalloffDropdown.ToolbarId;
                 yield return ImageLatticeMirrorDropdown.ToolbarId;
@@ -22,12 +20,12 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
     }
-    
+
     internal sealed class ImageLatticeShortcutContext : IShortcutContext
     {
         public bool active => ImageLatticeToolState.IsToolActive;
     }
-    
+
     [EditorToolContext("Image Lattice", typeof(ImageLattice))]
     [Icon("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/ImageLattice/ComponentIcon.png")]
     internal sealed class ImageLatticeToolContext : EditorToolContext
@@ -76,17 +74,17 @@ namespace Tripledot.CanvasKit.Editor
 
             ImageLatticeToolState.SetRadiusClutchActive(true);
         }
-        
+
         private ImageLatticeShortcutContext shortcutContext;
-        
+
         public override void OnActivated()
         {
             base.OnActivated();
-            
+
             if (target is ImageLattice image) {
                 ImageLatticeToolState.SetActiveImage(image);
             }
-            
+
             shortcutContext = new ImageLatticeShortcutContext();
             ShortcutManager.RegisterContext(shortcutContext);
 
@@ -101,7 +99,7 @@ namespace Tripledot.CanvasKit.Editor
                 ImageLatticeToolState.ClearSelection();
                 ImageLatticeToolState.EndUndo();
             }
-            
+
             ShortcutManager.UnregisterContext(shortcutContext);
 
             base.OnWillBeDeactivated();

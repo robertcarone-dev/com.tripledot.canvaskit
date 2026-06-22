@@ -27,8 +27,8 @@ namespace Tripledot.CanvasKit
         public bool Equals(TextMeshProLayerMaterialCacheKey other)
         {
             return ReferenceEquals(Preset, other.Preset)
-                && LayerIndex == other.LayerIndex
-                && MaterialContext.Equals(other.MaterialContext);
+                   && LayerIndex == other.LayerIndex
+                   && MaterialContext.Equals(other.MaterialContext);
         }
 
         public override bool Equals(object obj)
@@ -38,8 +38,7 @@ namespace Tripledot.CanvasKit
 
         public override int GetHashCode()
         {
-            unchecked
-            {
+            unchecked {
                 var hashCode = Preset != null ? Preset.GetHashCode() : 0;
                 hashCode = (hashCode * 397) ^ LayerIndex;
                 hashCode = (hashCode * 397) ^ MaterialContext.GetHashCode();
@@ -85,13 +84,11 @@ namespace Tripledot.CanvasKit
             }
 
             entry.ReferenceCount--;
-            if (entry.ReferenceCount > 0) {
-                return;
+            if (entry.ReferenceCount <= 0) {
+                Entries.Remove(entry.Key);
+                entry.GradientState.Release();
+                CoreUtils.Destroy(entry.Material);
             }
-
-            Entries.Remove(entry.Key);
-            entry.GradientState.Release();
-            CoreUtils.Destroy(entry.Material);
         }
 
         public sealed class Entry

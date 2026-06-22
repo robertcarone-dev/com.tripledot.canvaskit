@@ -15,13 +15,14 @@ namespace Tripledot.CanvasKit
         [NotKeyable]
         public TextMeshProSdfLengthUnit DilateUnit;
         public TextMeshProFaceLighting Lighting;
-        
-        public static TextMeshProFace Default => new TextMeshProFace {
-            Enabled = true,
-            Paint = CanvasPaint.Solid(Color.white),
-            Lighting = TextMeshProFaceLighting.Default
-        };
-        
+
+        public static TextMeshProFace Default =>
+            new TextMeshProFace {
+                Enabled = true,
+                Paint = CanvasPaint.Solid(Color.white),
+                Lighting = TextMeshProFaceLighting.Default
+            };
+
         internal float GetSdfRange()
         {
             return Enabled ? Dilate : 0f;
@@ -36,10 +37,10 @@ namespace Tripledot.CanvasKit
         public bool Equals(TextMeshProFace other)
         {
             return Enabled == other.Enabled
-                && Paint.Equals(other.Paint)
-                && Dilate == other.Dilate
-                && DilateUnit == other.DilateUnit
-                && Lighting.Equals(other.Lighting);
+                   && Paint.Equals(other.Paint)
+                   && Dilate == other.Dilate
+                   && DilateUnit == other.DilateUnit
+                   && Lighting.Equals(other.Lighting);
         }
 
         public override bool Equals(object obj)
@@ -49,8 +50,7 @@ namespace Tripledot.CanvasKit
 
         public override int GetHashCode()
         {
-            unchecked
-            {
+            unchecked {
                 var hashCode = Enabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ Paint.GetHashCode();
                 hashCode = (hashCode * 397) ^ Dilate.GetHashCode();
@@ -76,23 +76,24 @@ namespace Tripledot.CanvasKit
         public Color ShadowColor;
         public bool ShadowColorUsesHdrPicker;
 
-        public static TextMeshProFaceLighting Default => new TextMeshProFaceLighting {
-            Enabled = false,
-            BevelWidth = 0.35f,
-            BevelSoftness = 0.35f,
-            LightAngle = 135f,
-            HighlightColor = new Color(1f, 1f, 1f, 0.65f),
-            ShadowColor = new Color(0.45f, 0.24f, 0.05f, 0.35f)
-        };
+        public static TextMeshProFaceLighting Default =>
+            new TextMeshProFaceLighting {
+                Enabled = false,
+                BevelWidth = 0.35f,
+                BevelSoftness = 0.35f,
+                LightAngle = 135f,
+                HighlightColor = new Color(1f, 1f, 1f, 0.65f),
+                ShadowColor = new Color(0.45f, 0.24f, 0.05f, 0.35f)
+            };
 
         public bool Equals(TextMeshProFaceLighting other)
         {
             return Enabled == other.Enabled
-                && BevelWidth == other.BevelWidth
-                && BevelSoftness == other.BevelSoftness
-                && LightAngle == other.LightAngle
-                && HighlightColor.Equals(other.HighlightColor)
-                && ShadowColor.Equals(other.ShadowColor);
+                   && BevelWidth == other.BevelWidth
+                   && BevelSoftness == other.BevelSoftness
+                   && LightAngle == other.LightAngle
+                   && HighlightColor.Equals(other.HighlightColor)
+                   && ShadowColor.Equals(other.ShadowColor);
         }
 
         public override bool Equals(object obj)
@@ -102,8 +103,7 @@ namespace Tripledot.CanvasKit
 
         public override int GetHashCode()
         {
-            unchecked
-            {
+            unchecked {
                 var hashCode = Enabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ BevelWidth.GetHashCode();
                 hashCode = (hashCode * 397) ^ BevelSoftness.GetHashCode();

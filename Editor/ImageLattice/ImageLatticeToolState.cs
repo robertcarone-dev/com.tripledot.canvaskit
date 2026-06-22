@@ -37,7 +37,7 @@ namespace Tripledot.CanvasKit.Editor
             selectedCells.AddRange(cellSelection);
         }
     }
-    
+
     [InitializeOnLoad]
     internal static class ImageLatticeToolState
     {
@@ -86,13 +86,12 @@ namespace Tripledot.CanvasKit.Editor
         public static bool IsRadiusClutchActive => radiusClutchActive;
         public static bool HasSelection => editTarget == ImageLatticeEditTarget.Cells ? SelectedCells.Count > 0 : SelectedPoints.Count > 0;
         public static bool IsToolActive =>
-            ToolManager.activeContextType == typeof(ImageLatticeToolContext) && 
+            ToolManager.activeContextType == typeof(ImageLatticeToolContext) &&
             activeImage != null &&
             (UnityEditor.Selection.activeObject == activeImage ||
              UnityEditor.Selection.activeGameObject == activeImage.gameObject);
 
-        public static ImageLatticeMirrorMode MirrorMode
-        {
+        public static ImageLatticeMirrorMode MirrorMode {
             get => mirrorMode;
             set {
                 if (mirrorMode == value) {
@@ -105,8 +104,7 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        public static ImageLatticeEditTarget EditTarget
-        {
+        public static ImageLatticeEditTarget EditTarget {
             get => editTarget;
             set {
                 if (editTarget == value) {
@@ -121,8 +119,7 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        public static ImageLatticeSoftSelectionMode SoftSelectionMode
-        {
+        public static ImageLatticeSoftSelectionMode SoftSelectionMode {
             get => softSelectionMode;
             set {
                 if (softSelectionMode == value) {
@@ -135,8 +132,7 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        public static float SoftSelectionRadius
-        {
+        public static float SoftSelectionRadius {
             get => softSelectionRadius;
             set {
                 value = Mathf.Clamp(SnapRadius(value), MinSoftSelectionRadius, GetMaxSoftSelectionRadius());

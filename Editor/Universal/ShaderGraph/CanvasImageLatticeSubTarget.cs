@@ -9,9 +9,10 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
         private static readonly GUID SourceCodeGuid = new GUID("c8ae7aa10ab64e5895e84d030c6ec721");
         private const string CanvasImageLatticePass = "Packages/com.tripledot.canvaskit/Editor/Universal/ShaderGraph/Includes/CanvasKitImageLatticePass.hlsl";
 
-        protected override IncludeCollection postgraphIncludes => new IncludeCollection {
-            { CanvasImageLatticePass, IncludeLocation.Postgraph },
-        };
+        protected override IncludeCollection postgraphIncludes =>
+            new IncludeCollection {
+                { CanvasImageLatticePass, IncludeLocation.Postgraph },
+            };
 
         public CanvasImageLatticeSubTarget()
         {

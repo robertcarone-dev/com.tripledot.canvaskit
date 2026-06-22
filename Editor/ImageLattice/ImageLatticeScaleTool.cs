@@ -30,7 +30,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             Drag.Begin(image, "Scale Lattice Selection", points, pivot, pivotWorld, GetHandleRotation(image), Vector3.one);
-            
+
             ImageLatticeSelectionUtility.ScalePoints(
                 source: Drag.SourcePoints,
                 destination: Drag.DestinationPoints,
@@ -44,7 +44,7 @@ namespace Tripledot.CanvasKit.Editor
                 softSelectionMode: ImageLatticeToolState.SoftSelectionMode,
                 softSelectionRadius: ImageLatticeToolState.SoftSelectionRadius,
                 selectedCells: ImageLatticeToolState.CellSelection);
-            
+
             Drag.CurrentScale = nextScale;
             ApplyTransformedPoints(image, Drag.DestinationPoints);
         }

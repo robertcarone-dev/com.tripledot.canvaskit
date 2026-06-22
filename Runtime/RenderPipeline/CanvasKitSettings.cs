@@ -13,9 +13,13 @@ namespace Tripledot.CanvasKit
         public const int MinGradientAtlasWidth = 32;
         public const int MaxGradientAtlasWidth = 2048;
 
-        [SerializeField, HideInInspector]
+        [SerializeField]
+        [HideInInspector]
         private int version;
-        [SerializeField, Range(MinGradientAtlasWidth, MaxGradientAtlasWidth), Tooltip("The width of the gradient atlas texture. Must be a power of two.")]
+        
+        [SerializeField]
+        [Range(MinGradientAtlasWidth, MaxGradientAtlasWidth)]
+        [Tooltip("The width of the gradient atlas texture. Must be a power of two.")]
         private int gradientAtlasWidth = DefaultGradientAtlasWidth;
 
         private static int? _gradientAtlasWidthOverride;
@@ -36,7 +40,7 @@ namespace Tripledot.CanvasKit
                 }
 
                 return GraphicsSettings.TryGetRenderPipelineSettings<CanvasKitSettings>(out var settings)
-                    ? settings.GradientAtlasWidth 
+                    ? settings.GradientAtlasWidth
                     : DefaultGradientAtlasWidth;
             }
         }

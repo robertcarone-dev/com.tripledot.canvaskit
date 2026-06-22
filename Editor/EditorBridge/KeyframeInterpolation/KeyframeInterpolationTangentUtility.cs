@@ -158,7 +158,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var leftKeyframe = curve[leftIndex];
             var rightKeyframe = curve[rightIndex];
-            
+
             var duration = rightKeyframe.time - leftKeyframe.time;
             if (Mathf.Abs(duration) <= TimeEpsilon) {
                 return false;
@@ -166,7 +166,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var rightTangentMode = AnimationUtility.GetKeyRightTangentMode(curve, leftIndex);
             var leftTangentMode = AnimationUtility.GetKeyLeftTangentMode(curve, rightIndex);
-            
+
             if (IsConstantSegment(leftKeyframe, rightKeyframe, rightTangentMode, leftTangentMode)) {
                 var constantPreviewCurve = KeyframeInterpolationCurveUtility.CreateModePreviewCurve(AnimationUtility.TangentMode.Constant);
                 interpolation = new KeyframeInterpolationSegmentInterpolation(AnimationUtility.TangentMode.Constant, constantPreviewCurve, false);
@@ -187,7 +187,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             interpolation = new KeyframeInterpolationSegmentInterpolation(AnimationUtility.TangentMode.Free, normalizedCurve, true);
-            
+
             return true;
         }
 
@@ -202,14 +202,14 @@ namespace Tripledot.CanvasKit.Editor
             var changedIndexes = new HashSet<int>();
             var rightTangentIndexes = new HashSet<int>();
             var leftTangentIndexes = new HashSet<int>();
-            
+
             if (!CollectSegments(
-                keys,
-                selectedSegments,
-                segments,
-                changedIndexes,
-                rightTangentIndexes,
-                leftTangentIndexes)) {
+                    keys,
+                    selectedSegments,
+                    segments,
+                    changedIndexes,
+                    rightTangentIndexes,
+                    leftTangentIndexes)) {
                 return 0;
             }
 
@@ -243,14 +243,14 @@ namespace Tripledot.CanvasKit.Editor
             var changedIndexes = new HashSet<int>();
             var rightTangentIndexes = new HashSet<int>();
             var leftTangentIndexes = new HashSet<int>();
-            
+
             if (!CollectSegments(
-                keys,
-                selectedSegments,
-                segments,
-                changedIndexes,
-                rightTangentIndexes,
-                leftTangentIndexes)) {
+                    keys,
+                    selectedSegments,
+                    segments,
+                    changedIndexes,
+                    rightTangentIndexes,
+                    leftTangentIndexes)) {
                 return 0;
             }
 
@@ -266,7 +266,7 @@ namespace Tripledot.CanvasKit.Editor
             MoveChangedKeys(curve, keys, changedIndexes);
             SetTangentModes(curve, rightTangentIndexes, leftTangentIndexes, tangentMode, false);
             UpdateChangedTangents(curve, changedIndexes);
-            
+
             return segments.Count;
         }
 
@@ -376,7 +376,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var sortedChangedIndexes = new List<int>(changedIndexes);
             sortedChangedIndexes.Sort();
-            
+
             for (var i = 0; i < sortedChangedIndexes.Count; i++) {
                 var keyIndex = sortedChangedIndexes[i];
                 curve.MoveKey(keyIndex, keys[keyIndex]);
@@ -447,7 +447,7 @@ namespace Tripledot.CanvasKit.Editor
             var left = keyframes[leftIndex];
             var right = keyframes[rightIndex];
             var fallbackTangent = GetLinearTangent(left, right);
-            
+
             if (float.IsInfinity(left.outTangent) || float.IsNaN(left.outTangent)) {
                 left.outTangent = fallbackTangent;
             }
@@ -458,10 +458,10 @@ namespace Tripledot.CanvasKit.Editor
 
             left.outWeight = KeyframeInterpolationCurveUtility.SanitizeWeightForSave(GetOutWeight(left));
             right.inWeight = KeyframeInterpolationCurveUtility.SanitizeWeightForSave(GetInWeight(right));
-            
+
             keyframes[leftIndex] = left;
             keyframes[rightIndex] = right;
-            
+
             return true;
         }
 
@@ -473,7 +473,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var left = keyframes[leftIndex];
             var right = keyframes[rightIndex];
-            
+
             left.outTangent = float.PositiveInfinity;
             left.outWeight = DefaultWeight;
             left.weightedMode &= ~WeightedMode.Out;
@@ -484,7 +484,7 @@ namespace Tripledot.CanvasKit.Editor
 
             keyframes[leftIndex] = left;
             keyframes[rightIndex] = right;
-            
+
             return true;
         }
 
@@ -496,7 +496,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var left = keyframes[leftIndex];
             var right = keyframes[rightIndex];
-            
+
             left.outWeight = DefaultWeight;
             left.weightedMode &= ~WeightedMode.Out;
 
@@ -505,7 +505,7 @@ namespace Tripledot.CanvasKit.Editor
 
             keyframes[leftIndex] = left;
             keyframes[rightIndex] = right;
-            
+
             return true;
         }
 
@@ -529,7 +529,7 @@ namespace Tripledot.CanvasKit.Editor
             left.outWeight = HasOutWeight(start)
                 ? KeyframeInterpolationCurveUtility.SanitizeWeightForSave(start.outWeight)
                 : DefaultWeight;
-            
+
             if (HasOutWeight(start)) {
                 left.weightedMode |= WeightedMode.Out;
             } else {
@@ -540,7 +540,7 @@ namespace Tripledot.CanvasKit.Editor
             right.inWeight = HasInWeight(end)
                 ? KeyframeInterpolationCurveUtility.SanitizeWeightForSave(end.inWeight)
                 : DefaultWeight;
-            
+
             if (HasInWeight(end)) {
                 right.weightedMode |= WeightedMode.In;
             } else {
@@ -549,7 +549,7 @@ namespace Tripledot.CanvasKit.Editor
 
             keyframes[leftIndex] = left;
             keyframes[rightIndex] = right;
-            
+
             return true;
         }
 
@@ -560,8 +560,8 @@ namespace Tripledot.CanvasKit.Editor
             AnimationUtility.TangentMode leftTangentMode)
         {
             return float.IsInfinity(leftKeyframe.outTangent)
-                   && float.IsInfinity(rightKeyframe.inTangent) 
-                   || rightTangentMode == AnimationUtility.TangentMode.Constant 
+                   && float.IsInfinity(rightKeyframe.inTangent)
+                   || rightTangentMode == AnimationUtility.TangentMode.Constant
                    && leftTangentMode == AnimationUtility.TangentMode.Constant;
         }
 
@@ -574,7 +574,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var changedIndexes = new HashSet<int>(rightTangentIndexes);
             changedIndexes.UnionWith(leftTangentIndexes);
-            
+
             foreach (var keyIndex in changedIndexes) {
                 if (keyIndex < 0 || keyIndex >= curve.length) {
                     continue;

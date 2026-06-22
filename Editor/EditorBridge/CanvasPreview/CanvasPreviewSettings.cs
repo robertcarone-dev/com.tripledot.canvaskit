@@ -10,7 +10,7 @@ namespace Tripledot.CanvasKit.Editor
     {
         [SerializeField]
         private string[] screenKeywords = { "screen", "page", "view" };
-        [SerializeField] 
+        [SerializeField]
         private string[] popupKeywords = { "popup", "modal", "dialog" };
         [SerializeField]
         private string[] elementKeywords = { "button", "btn", "control", "toggle", "slider", "cell", "item", "content", "icon", "image" };
@@ -22,11 +22,11 @@ namespace Tripledot.CanvasKit.Editor
         private bool legacyKeywordRulesMigrated;
         [SerializeField]
         private CanvasScaler.ScaleMode scalerUiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        [SerializeField] 
+        [SerializeField]
         private Vector2 scalerReferenceResolution = new Vector2(1080f, 1920f);
-        [SerializeField] 
+        [SerializeField]
         private float scalerReferencePixelsPerUnit = 100f;
-        [SerializeField] 
+        [SerializeField]
         private int selectedReferenceSizeIndex = CanvasPreviewSize.DefaultIndex;
 
         internal static int Revision { get; private set; }
@@ -34,12 +34,14 @@ namespace Tripledot.CanvasKit.Editor
 
         internal string[] ScreenKeywords => screenKeywords;
         internal string[] PopupKeywords => popupKeywords;
+
         internal string[] ElementKeywords {
             get {
                 MigrateLegacyKeywordRules();
                 return elementKeywords;
             }
         }
+
         internal CanvasScaler.ScaleMode ScalerUiScaleMode => scalerUiScaleMode;
         internal Vector2 ScalerReferenceResolution => scalerReferenceResolution;
         internal float ScalerReferencePixelsPerUnit => scalerReferencePixelsPerUnit;
@@ -101,7 +103,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.controlKeywords = Array.Empty<string>();
             settings.contentKeywords = Array.Empty<string>();
             settings.legacyKeywordRulesMigrated = true;
-            
+
             Revision++;
             CanvasPreview.ClearPreviewCache();
 
@@ -116,7 +118,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.scalerUiScaleMode = uiScaleMode;
             settings.scalerReferenceResolution = SanitizeReferenceResolution(referenceResolution);
             settings.scalerReferencePixelsPerUnit = SanitizeReferencePixelsPerUnit(referencePixelsPerUnit);
-            
+
             Revision++;
             CanvasPreview.ClearPreviewCache();
 
@@ -129,7 +131,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var settings = instance;
             settings.selectedReferenceSizeIndex = NormalizeReferenceSizeIndex(selectedSizeIndex);
-            
+
             Revision++;
             CanvasPreview.ClearPreviewCache();
 
@@ -172,14 +174,14 @@ namespace Tripledot.CanvasKit.Editor
 
             var sanitized = new string[keywords.Length];
             var count = 0;
-            for (int i = 0; i < keywords.Length; i++) {
+            for (var i = 0; i < keywords.Length; i++) {
                 var keyword = keywords[i]?.Trim().ToLowerInvariant();
                 if (string.IsNullOrEmpty(keyword)) {
                     continue;
                 }
 
                 var duplicate = false;
-                for (int existing = 0; existing < count; existing++) {
+                for (var existing = 0; existing < count; existing++) {
                     if (sanitized[existing] == keyword) {
                         duplicate = true;
                         break;
@@ -239,8 +241,7 @@ namespace Tripledot.CanvasKit.Editor
         [SettingsProvider]
         private static SettingsProvider CreateSettingsProvider()
         {
-            return new SettingsProvider("Project/CanvasKit/Canvas Preview", SettingsScope.Project)
-            {
+            return new SettingsProvider("Project/CanvasKit/Canvas Preview", SettingsScope.Project) {
                 label = "Canvas Preview",
                 guiHandler = _ => DrawSettings()
             };

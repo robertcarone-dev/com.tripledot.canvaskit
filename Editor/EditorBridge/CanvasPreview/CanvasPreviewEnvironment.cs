@@ -69,10 +69,10 @@ namespace Tripledot.CanvasKit.Editor
         public static Scene OpenPreviewScene(out bool usesEnvironmentScene)
         {
             usesEnvironmentScene = false;
-            
+
             var sceneAsset = EditorSettings.prefabUIEnvironment;
             var scenePath = sceneAsset != null ? AssetDatabase.GetAssetPath(sceneAsset) : string.Empty;
-            
+
             if (IsValidSceneAssetPath(scenePath)) {
                 Scene environmentScene = default;
                 try {
@@ -103,7 +103,7 @@ namespace Tripledot.CanvasKit.Editor
                 return null;
             }
 
-            for (int i = 0; i < sceneRoots.Length; i++) {
+            for (var i = 0; i < sceneRoots.Length; i++) {
                 var root = sceneRoots[i];
                 if (root == null || (previewRoot != null && root.transform == previewRoot)) {
                     continue;
@@ -111,7 +111,7 @@ namespace Tripledot.CanvasKit.Editor
 
                 root.GetComponentsInChildren(true, CanvasBuffer);
                 try {
-                    for (int canvasIndex = 0; canvasIndex < CanvasBuffer.Count; canvasIndex++) {
+                    for (var canvasIndex = 0; canvasIndex < CanvasBuffer.Count; canvasIndex++) {
                         var canvas = CanvasBuffer[canvasIndex];
                         if (!IsUsableEnvironmentCanvas(canvas)) {
                             continue;
@@ -139,17 +139,17 @@ namespace Tripledot.CanvasKit.Editor
         private static bool IsValidSceneAssetPath(string scenePath)
         {
             return !string.IsNullOrEmpty(scenePath)
-                && scenePath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase)
-                && AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) != null;
+                   && scenePath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase)
+                   && AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) != null;
         }
 
         private static bool IsUsableEnvironmentCanvas(Canvas canvas)
         {
             return canvas != null
-                && canvas.isActiveAndEnabled
-                && canvas.isRootCanvas
-                && (canvas.renderMode == RenderMode.ScreenSpaceOverlay || canvas.renderMode == RenderMode.ScreenSpaceCamera)
-                && canvas.TryGetComponent(out RectTransform _);
+                   && canvas.isActiveAndEnabled
+                   && canvas.isRootCanvas
+                   && (canvas.renderMode == RenderMode.ScreenSpaceOverlay || canvas.renderMode == RenderMode.ScreenSpaceCamera)
+                   && canvas.TryGetComponent(out RectTransform _);
         }
     }
 }

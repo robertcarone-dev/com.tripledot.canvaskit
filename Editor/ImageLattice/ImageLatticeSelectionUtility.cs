@@ -248,8 +248,12 @@ namespace Tripledot.CanvasKit.Editor
             var x = index % controlPointColumns;
             var y = index / controlPointColumns;
 
-            if (mirrorX) { x = controlPointColumns - 1 - x; }
-            if (mirrorY) { y = controlPointRows - 1 - y; }
+            if (mirrorX) {
+                x = controlPointColumns - 1 - x;
+            }
+            if (mirrorY) {
+                y = controlPointRows - 1 - y;
+            }
 
             return GetPointIndex(x, y, controlPointColumns);
         }
@@ -259,16 +263,24 @@ namespace Tripledot.CanvasKit.Editor
             var x = index % cellColumns;
             var y = index / cellColumns;
 
-            if (mirrorX) { x = cellColumns - 1 - x; }
-            if (mirrorY) { y = cellRows - 1 - y; }
+            if (mirrorX) {
+                x = cellColumns - 1 - x;
+            }
+            if (mirrorY) {
+                y = cellRows - 1 - y;
+            }
 
             return GetCellIndex(x, y, cellColumns);
         }
 
         public static Vector2 ReflectDelta(Vector2 delta, bool mirrorX, bool mirrorY)
         {
-            if (mirrorX) { delta.x = -delta.x; }
-            if (mirrorY) { delta.y = -delta.y; }
+            if (mirrorX) {
+                delta.x = -delta.x;
+            }
+            if (mirrorY) {
+                delta.y = -delta.y;
+            }
             return delta;
         }
 
@@ -276,7 +288,9 @@ namespace Tripledot.CanvasKit.Editor
         {
             var uniform = scaleX && scaleY
                 ? Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y))
-                : scaleX ? scale.x : scale.y;
+                : scaleX
+                    ? scale.x
+                    : scale.y;
             return new Vector2(uniform, uniform);
         }
 
@@ -610,7 +624,7 @@ namespace Tripledot.CanvasKit.Editor
             var normalized = new Vector2(
                 Mathf.Approximately(sourceRect.width, 0f) ? 0.5f : Mathf.InverseLerp(sourceRect.xMin, sourceRect.xMax, point.x),
                 Mathf.Approximately(sourceRect.height, 0f) ? 0.5f : Mathf.InverseLerp(sourceRect.yMin, sourceRect.yMax, point.y));
-            
+
             return new Vector2(
                 Mathf.LerpUnclamped(targetRect.xMin, targetRect.xMax, normalized.x),
                 Mathf.LerpUnclamped(targetRect.yMin, targetRect.yMax, normalized.y));

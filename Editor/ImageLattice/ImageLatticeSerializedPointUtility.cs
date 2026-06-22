@@ -11,7 +11,7 @@ namespace Tripledot.CanvasKit.Editor
     {
         private const string LatticePointStoragePropertyName = "latticePointStorage";
         private const string LatticePointPropertyPrefix = LatticePointStoragePropertyName + ".point";
-        
+
         private static readonly MethodInfo InAnimationRecordingMethod = typeof(AnimationMode).GetMethod("InAnimationRecording", BindingFlags.Public | BindingFlags.Static);
         private static readonly List<PropertyModification> AnimationModifications = new List<PropertyModification>(ImageLattice.MaxControlPointsPerAxis * ImageLattice.MaxControlPointsPerAxis * 2);
 

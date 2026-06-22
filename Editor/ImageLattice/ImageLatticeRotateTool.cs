@@ -26,21 +26,21 @@ namespace Tripledot.CanvasKit.Editor
 
             Drag.Begin(image, "Rotate Lattice Selection", points, pivot, pivotWorld, handleRotation, Vector3.one);
             var angle = GetSignedHandleAngle(image, Drag.StartRotation, nextRotation);
-            
+
             ImageLatticeSelectionUtility.RotatePoints(
-                source: Drag.SourcePoints, 
+                source: Drag.SourcePoints,
                 destination: Drag.DestinationPoints,
                 controlPointColumns: image.ControlPointColumns,
                 controlPointRows: image.ControlPointRows,
-                selected: ImageLatticeToolState.Selection, 
+                selected: ImageLatticeToolState.Selection,
                 pivot: Drag.Pivot,
-                angleDegrees: angle, 
+                angleDegrees: angle,
                 mirrorMode: ImageLatticeToolState.MirrorMode,
                 editTarget: ImageLatticeToolState.EditTarget,
                 softSelectionMode: ImageLatticeToolState.SoftSelectionMode,
                 softSelectionRadius: ImageLatticeToolState.SoftSelectionRadius,
                 selectedCells: ImageLatticeToolState.CellSelection);
-            
+
             Drag.CurrentRotation = nextRotation;
             ApplyTransformedPoints(image, Drag.DestinationPoints);
         }

@@ -9,7 +9,8 @@ namespace Tripledot.CanvasKit
     [SupportedOnRenderPipeline(typeof(UniversalRenderPipelineAsset))]
     public sealed class CanvasKitResourcesURP : IRenderPipelineResources
     {
-        [SerializeField, HideInInspector]
+        [SerializeField]
+        [HideInInspector]
         private int version;
 
         int IRenderPipelineGraphicsSettings.version => version;

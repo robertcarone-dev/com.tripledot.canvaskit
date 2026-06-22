@@ -17,28 +17,29 @@ namespace Tripledot.CanvasKit
         [NotKeyable]
         public bool Enabled;
         public CanvasPaint Paint;
-        
+
         [NotKeyable]
         public TextMeshProStrokePosition Position;
         [NotKeyable]
         public float Width;
-        
+
         [NotKeyable]
         public TextMeshProSdfLengthUnit WidthUnit;
         [NotKeyable]
         public float Feather;
-        
+
         [NotKeyable]
         public TextMeshProSdfLengthUnit FeatherUnit;
         [NotKeyable]
         public Vector2 Offset;
 
-        public static TextMeshProStroke Default => new TextMeshProStroke {
-            Enabled = true,
-            Paint = CanvasPaint.Solid(Color.black),
-            Position = TextMeshProStrokePosition.Outside,
-            Width = 1f
-        };
+        public static TextMeshProStroke Default =>
+            new TextMeshProStroke {
+                Enabled = true,
+                Paint = CanvasPaint.Solid(Color.black),
+                Position = TextMeshProStrokePosition.Outside,
+                Width = 1f
+            };
 
         internal float GetSdfRange()
         {
@@ -54,24 +55,24 @@ namespace Tripledot.CanvasKit
             if (!Enabled) {
                 return Vector4.zero;
             }
-            
+
             var effectRange = baseSdfRange + GetSdfRange();
             var range = Mathf.Min(TextMeshProUtility.SdfPixelsToPaddingPixels(effectRange), sdfPaddingLimit);
             var padding = range > 0f ? TextMeshProUtility.PaddingUniform(range) : Vector4.zero;
-            
+
             return includeDirectionalOffset ? TextMeshProUtility.PaddingWithDirectionalOffset(padding, Offset, localUnitsPerAtlasPixel) : padding;
         }
 
         public bool Equals(TextMeshProStroke other)
         {
             return Enabled == other.Enabled
-                && Paint.Equals(other.Paint)
-                && Position == other.Position
-                && Width == other.Width
-                && WidthUnit == other.WidthUnit
-                && Feather == other.Feather
-                && FeatherUnit == other.FeatherUnit
-                && Offset == other.Offset;
+                   && Paint.Equals(other.Paint)
+                   && Position == other.Position
+                   && Width == other.Width
+                   && WidthUnit == other.WidthUnit
+                   && Feather == other.Feather
+                   && FeatherUnit == other.FeatherUnit
+                   && Offset == other.Offset;
         }
 
         public override bool Equals(object obj)
@@ -81,8 +82,7 @@ namespace Tripledot.CanvasKit
 
         public override int GetHashCode()
         {
-            unchecked
-            {
+            unchecked {
                 var hashCode = Enabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ Paint.GetHashCode();
                 hashCode = (hashCode * 397) ^ (int)Position;

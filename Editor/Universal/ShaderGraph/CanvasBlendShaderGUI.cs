@@ -124,8 +124,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
         {
             EditorGUI.BeginChangeCheck();
             var selected = EditorGUILayout.Popup(Styles.BlendingMode, (int)blendModeProperty.floatValue, Styles.BlendModeNames);
-            if (EditorGUI.EndChangeCheck())
-            {
+            if (EditorGUI.EndChangeCheck()) {
                 blendModeProperty.floatValue = selected;
                 UpdateMaterialBlendMode(material);
             }

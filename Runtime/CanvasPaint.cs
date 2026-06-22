@@ -10,24 +10,24 @@ namespace Tripledot.CanvasKit
         RadialGradient = 2,
         Texture = 3
     }
-    
+
     public enum CanvasGradientMode
     {
         Simple = 0,
         Texture = 1
     }
-    
+
     [Serializable]
     public struct CanvasPaint : IEquatable<CanvasPaint>
     {
         public CanvasPaintType Type;
         public float Opacity;
-        
+
         public Color Color;
         public bool ColorUsesHdrPicker;
         public Color SecondaryColor;
         public bool SecondaryColorUsesHdrPicker;
-        
+
         public Gradient Gradient;
         public CanvasGradientMode GradientMode;
         public Texture2D Texture;
@@ -39,24 +39,24 @@ namespace Tripledot.CanvasKit
         public static CanvasPaint Solid(Color color)
         {
             return new CanvasPaint {
-                Type = CanvasPaintType.Solid, 
-                Color = color, 
-                SecondaryColor = color, 
-                Opacity = 1f, 
-                Transform = CanvasPaintTransform.Default 
+                Type = CanvasPaintType.Solid,
+                Color = color,
+                SecondaryColor = color,
+                Opacity = 1f,
+                Transform = CanvasPaintTransform.Default
             };
         }
 
         public bool Equals(CanvasPaint other)
         {
             return Type == other.Type
-                && GradientMode == other.GradientMode
-                && Color == other.Color
-                && SecondaryColor == other.SecondaryColor
-                && Opacity == other.Opacity
-                && Equals(Gradient, other.Gradient)
-                && Texture == other.Texture
-                && Transform.Equals(other.Transform);
+                   && GradientMode == other.GradientMode
+                   && Color == other.Color
+                   && SecondaryColor == other.SecondaryColor
+                   && Opacity == other.Opacity
+                   && Equals(Gradient, other.Gradient)
+                   && Texture == other.Texture
+                   && Transform.Equals(other.Transform);
         }
 
         public override bool Equals(object obj)
@@ -66,8 +66,7 @@ namespace Tripledot.CanvasKit
 
         public override int GetHashCode()
         {
-            unchecked
-            {
+            unchecked {
                 var hashCode = Type.GetHashCode();
                 hashCode = (hashCode * 397) ^ GradientMode.GetHashCode();
                 hashCode = (hashCode * 397) ^ Color.GetHashCode();

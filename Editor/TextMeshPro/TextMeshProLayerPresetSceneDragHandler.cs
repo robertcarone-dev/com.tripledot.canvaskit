@@ -37,7 +37,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var canvas = parent != null ? parent.GetComponentInParent<Canvas>() : GetOrCreateCanvas();
             parent ??= canvas.transform;
-            
+
             var textObject = ObjectFactory.CreateGameObject(preset.name, typeof(RectTransform), typeof(TextMeshProUGUI), typeof(TextMeshProLayerStack));
             Undo.RegisterCreatedObjectUndo(textObject, "Create TextMeshPro Layer Stack");
             GameObjectUtility.SetParentAndAlign(textObject, parent.gameObject);
@@ -63,7 +63,7 @@ namespace Tripledot.CanvasKit.Editor
 
             Selection.activeGameObject = textObject;
             EditorSceneManager.MarkSceneDirty(textObject.scene);
-            
+
             return textObject;
         }
 
@@ -181,7 +181,7 @@ namespace Tripledot.CanvasKit.Editor
             Undo.RegisterCreatedObjectUndo(canvasObject, "Create Canvas");
             GameObjectUtility.SetParentAndAlign(canvasObject, target);
             canvasObject.layer = LayerMask.NameToLayer(UiLayerName);
-            
+
             var canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
@@ -206,7 +206,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var mouse = sceneMousePosition.Value;
             mouse.y = sceneView.camera.pixelHeight - mouse.y;
-            
+
             return RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, mouse, sceneView.camera, out var localPoint)
                 ? localPoint
                 : Vector2.zero;

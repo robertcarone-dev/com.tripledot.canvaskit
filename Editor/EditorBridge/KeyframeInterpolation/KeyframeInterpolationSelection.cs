@@ -205,7 +205,6 @@ namespace Tripledot.CanvasKit.Editor
             destination.postWrapMode = source.postWrapMode;
             KeyframeInterpolationCurveUtility.CopyTangentModes(source, destination);
         }
-
     }
 
     internal sealed class AnimationWindowCurveTarget : KeyframeInterpolationCurveTarget
@@ -275,16 +274,16 @@ namespace Tripledot.CanvasKit.Editor
         public override bool MatchesAnimationWindowCurve(AnimationWindowCurve candidate, IAnimationWindowClip clipObject)
         {
             return ReferenceEquals(candidate, windowCurve)
-                || candidate != null
-                && MatchesBinding(candidate.binding)
-                && MatchesClipObject(clipObject);
+                   || candidate != null
+                   && MatchesBinding(candidate.binding)
+                   && MatchesClipObject(clipObject);
         }
 
         public override bool MatchesCurveWrapper(CurveWrapper curveWrapper, IAnimationWindowClip clipObject)
         {
             return curveWrapper?.curve != null
-                && MatchesBinding(curveWrapper.binding)
-                && MatchesClipObject(clipObject);
+                   && MatchesBinding(curveWrapper.binding)
+                   && MatchesClipObject(clipObject);
         }
     }
 
@@ -367,16 +366,16 @@ namespace Tripledot.CanvasKit.Editor
         public override bool MatchesAnimationWindowCurve(AnimationWindowCurve windowCurve, IAnimationWindowClip clipObject)
         {
             return windowCurve != null
-                && MatchesBinding(windowCurve.binding)
-                && MatchesClipObject(clipObject);
+                   && MatchesBinding(windowCurve.binding)
+                   && MatchesClipObject(clipObject);
         }
 
         public override bool MatchesCurveWrapper(CurveWrapper candidate, IAnimationWindowClip clipObject)
         {
             return ReferenceEquals(candidate, curveWrapper)
-                || candidate?.curve != null
-                && MatchesBinding(candidate.binding)
-                && MatchesClipObject(clipObject);
+                   || candidate?.curve != null
+                   && MatchesBinding(candidate.binding)
+                   && MatchesClipObject(clipObject);
         }
     }
 }

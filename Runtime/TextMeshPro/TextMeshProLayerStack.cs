@@ -18,7 +18,7 @@ namespace Tripledot.CanvasKit
             AdditionalCanvasShaderChannels.TexCoord1 |
             AdditionalCanvasShaderChannels.TexCoord2;
 
-        #region Types
+#region Types
 
         [Flags]
         internal enum DirtyFlags
@@ -49,9 +49,9 @@ namespace Tripledot.CanvasKit
             All = Mesh | Materials | Texture
         }
 
-        #endregion
+#endregion
 
-        #region Serialized Fields
+#region Serialized Fields
 
         [SerializeField]
         private TextMeshProLayerPreset preset;
@@ -60,9 +60,9 @@ namespace Tripledot.CanvasKit
         [SerializeField]
         private List<TextMeshProLayerOverride> presetLayerOverrides = new List<TextMeshProLayerOverride>();
 
-        #endregion
+#endregion
 
-        #region Fields
+#region Fields
 
         private readonly List<TextMeshProLayerData> layers = new List<TextMeshProLayerData>();
         private readonly List<LayerMaterialScope> layerMaterialScopes = new List<LayerMaterialScope>();
@@ -98,15 +98,14 @@ namespace Tripledot.CanvasKit
         private Transform appliedParent;
         private int appliedSiblingIndex = -1;
         private int appliedAbsoluteDepth = -1;
-        
+
         private static readonly List<TextMeshProLayerStack> CanvasValidationStacks = new List<TextMeshProLayerStack>();
 
-        #endregion
+#endregion
 
-        #region Public API
+#region Public API
 
-        public TextMeshProLayerPreset Preset
-        {
+        public TextMeshProLayerPreset Preset {
             get => preset;
             set {
                 if (preset == value) {
@@ -123,9 +122,9 @@ namespace Tripledot.CanvasKit
             SetLayerStackDirty(DirtyFlags.All);
         }
 
-        #endregion
+#endregion
 
-        #region Internal API
+#region Internal API
 
         internal List<TextMeshProLayerData> LocalLayers => localLayers;
         internal List<TextMeshProLayerOverride> PresetLayerOverrides => presetLayerOverrides;
@@ -139,7 +138,7 @@ namespace Tripledot.CanvasKit
         internal void SetLayerStackDirty(DirtyFlags flags)
         {
             MarkDirty(flags);
-            
+
             if ((flags & DirtyFlags.Layers) != 0) {
                 layerCompositionDirty = true;
             }
@@ -166,14 +165,14 @@ namespace Tripledot.CanvasKit
             SetLayerStackDirty(CompositionDirtyFlags);
         }
 
-        #endregion
+#endregion
 
-        #region Unity Lifecycle
+#region Unity Lifecycle
 
         protected override void OnEnable()
         {
             base.OnEnable();
-            
+
             TryGetComponent(out text);
             RegisterCallbacks();
             TextMeshProLayerPreset.ChangedWithDirtyFlags += OnPresetChanged;
@@ -183,31 +182,31 @@ namespace Tripledot.CanvasKit
         protected override void OnDisable()
         {
             CanvasUpdateRegistry.UnRegisterCanvasElementForRebuild(this);
-            
+
             UnregisterDeferredGraphicRebuild();
             isQueuedForGraphicRebuild = false;
-            
+
             UnregisterCallbacks();
             TextMeshProLayerPreset.ChangedWithDirtyFlags -= OnPresetChanged;
             RestoreDefaultRendering();
             ReleaseStackResources();
             ResetRuntimeState();
-            
+
             base.OnDisable();
         }
 
         protected override void OnDestroy()
         {
             CanvasUpdateRegistry.UnRegisterCanvasElementForRebuild(this);
-            
+
             UnregisterDeferredGraphicRebuild();
             isQueuedForGraphicRebuild = false;
-            
+
             UnregisterCallbacks();
             TextMeshProLayerPreset.ChangedWithDirtyFlags -= OnPresetChanged;
             ReleaseStackResources();
             ResetRuntimeState();
-            
+
             base.OnDestroy();
         }
 
@@ -241,7 +240,7 @@ namespace Tripledot.CanvasKit
         protected override void Reset()
         {
             base.Reset();
-            
+
             layerCompositionDirty = true;
             if (preset != null || localLayers.Count > 0) {
                 SetLayerCompositionChanged();
@@ -253,9 +252,9 @@ namespace Tripledot.CanvasKit
         }
 #endif
 
-        #endregion
+#endregion
 
-        #region ICanvasElement
+#region ICanvasElement
 
         void ICanvasElement.Rebuild(CanvasUpdate executing)
         {
@@ -266,9 +265,7 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        void ICanvasElement.LayoutComplete()
-        {
-        }
+        void ICanvasElement.LayoutComplete() { }
 
         void ICanvasElement.GraphicUpdateComplete()
         {
@@ -280,9 +277,9 @@ namespace Tripledot.CanvasKit
             return this == null;
         }
 
-        #endregion
+#endregion
 
-        #region Callbacks and Dirty State
+#region Callbacks and Dirty State
 
         private void MarkDirty(DirtyFlags flags)
         {
@@ -382,9 +379,9 @@ namespace Tripledot.CanvasKit
             Canvas.willRenderCanvases -= OnWillRenderCanvases;
         }
 
-        #endregion
+#endregion
 
-        #region Rendering
+#region Rendering
 
         private void OnWillRenderCanvases()
         {
@@ -417,7 +414,7 @@ namespace Tripledot.CanvasKit
 
             RegisterCanvasValidation();
             EnsureCanvasShaderChannels();
-            
+
             if (TryMarkCanvasStateDirty()) {
                 MarkDirty(DirtyFlags.Canvas);
             }
@@ -432,7 +429,7 @@ namespace Tripledot.CanvasKit
                 if (TryMarkLayerGeometryStateDirty()) {
                     MarkDirty(PaddingDirtyFlags);
                 }
-                
+
                 var sourceGeometryDirty = (dirtyFlags & DirtyFlags.SourceGeometry) != 0;
                 var geometryDirty = (dirtyFlags & (DirtyFlags.Geometry | DirtyFlags.Padding | DirtyFlags.Layers | DirtyFlags.SourceGeometry)) != 0;
                 var paddingDirty = (dirtyFlags & (DirtyFlags.Padding | DirtyFlags.Layers)) != 0;
@@ -458,7 +455,7 @@ namespace Tripledot.CanvasKit
 
                 var materialContext = TextMeshProLayerMaterialContext.Capture(text, sourceMaterial, renderMaterial, paintBounds, appliedEffectPaddingBudget);
                 UpdateMaterialContextState(materialContext);
-                
+
                 var materialDirty = (dirtyFlags & (DirtyFlags.Material | DirtyFlags.Layers)) != 0;
                 var canvasDirty = (dirtyFlags & (DirtyFlags.Canvas | DirtyFlags.Layers)) != 0;
                 if (materialDirty) {
@@ -530,9 +527,9 @@ namespace Tripledot.CanvasKit
             ReleaseMesh();
         }
 
-        #endregion
+#endregion
 
-        #region Layer Resolution
+#region Layer Resolution
 
         private int RefreshRenderableLayers()
         {
@@ -543,11 +540,11 @@ namespace Tripledot.CanvasKit
             layerCompositionDirty = false;
             layers.Clear();
             layerMaterialScopes.Clear();
-            
+
             ResolveRenderableLayers(layers, layerMaterialScopes);
             EnsureLayerRuntimeStates(layers.Count);
             ResetCanvasRendererState();
-            
+
             MarkRuntimeMaterialsDirty();
             MarkDirty(DirtyFlags.Layers | DirtyFlags.Geometry | DirtyFlags.Material | DirtyFlags.Padding | DirtyFlags.Canvas);
 
@@ -559,7 +556,7 @@ namespace Tripledot.CanvasKit
             var requiredPadding = CalculateMaxSdfPadding(layers);
             var availableSdfPadding = TextMeshProUtility.CalculateAvailablePadding(text);
             var effectPaddingBudget = Mathf.Min(requiredPadding, availableSdfPadding);
-            
+
             appliedEffectPaddingBudget = effectPaddingBudget;
             appliedGeometryPaddingLimit = TextMeshProUtility.GetGeometryPaddingLimit(effectPaddingBudget);
         }
@@ -567,7 +564,7 @@ namespace Tripledot.CanvasKit
         internal static float CalculateMaxSdfPadding(List<TextMeshProLayerData> layers)
         {
             var padding = 0f;
-            for (int i = 0; i < layers.Count; i++) {
+            for (var i = 0; i < layers.Count; i++) {
                 if (layers[i] != null && layers[i].Enabled) {
                     padding = Mathf.Max(padding, layers[i].GetSdfPadding());
                 }
@@ -579,7 +576,7 @@ namespace Tripledot.CanvasKit
         private void ResolveRenderableLayers(List<TextMeshProLayerData> results, List<LayerMaterialScope> materialScopes)
         {
             if (preset == null) {
-                for (int i = 0; i < localLayers.Count; i++) {
+                for (var i = 0; i < localLayers.Count; i++) {
                     if (localLayers[i].Enabled) {
                         results.Add(localLayers[i]);
                         materialScopes?.Add(LayerMaterialScope.Unique);
@@ -587,12 +584,12 @@ namespace Tripledot.CanvasKit
                 }
             } else {
                 EnsurePresetOverrideSlots();
-            
-                for (int i = 0; i < preset.LayerCount; i++) {
+
+                for (var i = 0; i < preset.LayerCount; i++) {
                     var presetLayer = preset.GetLayer(i);
                     var layerOverride = presetLayerOverrides[i];
                     var layer = layerOverride.OverrideLayer ? layerOverride.Layer : presetLayer;
-                    
+
                     if (layer.Enabled) {
                         results.Add(layer);
                         materialScopes?.Add(layerOverride.OverrideLayer ? LayerMaterialScope.Unique : LayerMaterialScope.Shared(preset, i, preset.GetLayerVersion(i)));
@@ -601,9 +598,9 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        #endregion
+#endregion
 
-        #region Preset Overrides
+#region Preset Overrides
 
         private void EnsurePresetOverrideSlots()
         {
@@ -612,7 +609,7 @@ namespace Tripledot.CanvasKit
                 presetLayerOverrides.Add(new TextMeshProLayerOverride());
             }
 
-            for (int i = 0; i < count; i++) {
+            for (var i = 0; i < count; i++) {
                 presetLayerOverrides[i] ??= new TextMeshProLayerOverride();
                 presetLayerOverrides[i].EnsureLayerCopy(preset.GetLayer(i));
             }
@@ -659,24 +656,24 @@ namespace Tripledot.CanvasKit
             }
 
             EnsurePresetOverrideSlots();
-            
-            return presetLayerOverrides[index].OverrideLayer 
-                ? presetLayerOverrides[index].Layer 
+
+            return presetLayerOverrides[index].OverrideLayer
+                ? presetLayerOverrides[index].Layer
                 : preset.GetLayer(index);
         }
 
         internal void CopyEffectivePresetLayersTo(IList<TextMeshProLayerData> destination)
         {
             destination.Clear();
-            
+
             if (preset == null) {
-                for (int i = 0; i < localLayers.Count; i++) {
+                for (var i = 0; i < localLayers.Count; i++) {
                     destination.Add(localLayers[i]?.Clone());
                 }
             } else {
                 EnsurePresetOverrideSlots();
-            
-                for (int i = 0; i < preset.LayerCount; i++) {
+
+                for (var i = 0; i < preset.LayerCount; i++) {
                     destination.Add(GetEffectivePresetLayer(i)?.Clone());
                 }
             }
@@ -685,8 +682,8 @@ namespace Tripledot.CanvasKit
         internal void ClearPresetLayerInstances()
         {
             EnsurePresetOverrideSlots();
-            
-            for (int i = 0; i < presetLayerOverrides.Count; i++) {
+
+            for (var i = 0; i < presetLayerOverrides.Count; i++) {
                 presetLayerOverrides[i].OverrideLayer = false;
                 presetLayerOverrides[i].EnsureLayerCopy(preset != null ? preset.GetLayer(i) : null);
             }
@@ -694,9 +691,9 @@ namespace Tripledot.CanvasKit
             SetLayerCompositionChanged();
         }
 
-        #endregion
+#endregion
 
-        #region Runtime Materials
+#region Runtime Materials
 
         private void EnsureLayerRuntimeStates(int count)
         {
@@ -704,7 +701,7 @@ namespace Tripledot.CanvasKit
                 layerRuntimeStates.Add(new LayerRuntimeState());
             }
 
-            for (int i = count; i < layerRuntimeStates.Count; i++) {
+            for (var i = count; i < layerRuntimeStates.Count; i++) {
                 layerRuntimeStates[i].ReleaseMaterial();
             }
 
@@ -715,7 +712,7 @@ namespace Tripledot.CanvasKit
 
         private void ReleaseLayerRuntimeStates()
         {
-            for (int i = 0; i < layerRuntimeStates.Count; i++) {
+            for (var i = 0; i < layerRuntimeStates.Count; i++) {
                 layerRuntimeStates[i].ReleaseMaterial();
             }
 
@@ -726,8 +723,8 @@ namespace Tripledot.CanvasKit
         {
             allRuntimeMaterialsDirty = true;
             dirtyRuntimeMaterialLayerIndices.Clear();
-            
-            for (int i = 0; i < layerRuntimeStates.Count; i++) {
+
+            for (var i = 0; i < layerRuntimeStates.Count; i++) {
                 layerRuntimeStates[i].SetMaterialDirty();
             }
         }
@@ -753,7 +750,7 @@ namespace Tripledot.CanvasKit
                 return;
             }
 
-            for (int i = 0; i < dirtyRuntimeMaterialLayerIndices.Count; i++) {
+            for (var i = 0; i < dirtyRuntimeMaterialLayerIndices.Count; i++) {
                 TryMarkRuntimeMaterialDirtyForLayer(dirtyRuntimeMaterialLayerIndices[i]);
             }
         }
@@ -771,7 +768,7 @@ namespace Tripledot.CanvasKit
                 return false;
             }
 
-            for (int i = 0; i < layers.Count; i++) {
+            for (var i = 0; i < layers.Count; i++) {
                 if (!ReferenceEquals(layers[i], layer)) {
                     continue;
                 }
@@ -801,7 +798,7 @@ namespace Tripledot.CanvasKit
             }
 
             EnsurePresetOverrideSlots();
-            
+
             var layerOverride = layerIndex < presetLayerOverrides.Count ? presetLayerOverrides[layerIndex] : null;
             return layerOverride is { OverrideLayer: true } ? layerOverride.Layer : preset.GetLayer(layerIndex);
         }
@@ -810,7 +807,7 @@ namespace Tripledot.CanvasKit
         {
             dirtyFlags = DirtyFlags.All;
             ClearPendingRuntimeMaterialDirties();
-            
+
             sourceSdfPaddingState = 0f;
             materialContextState = default;
             hasSourceSdfPaddingState = false;
@@ -824,9 +821,9 @@ namespace Tripledot.CanvasKit
             layerGeometryStates.Clear();
         }
 
-        #endregion
+#endregion
 
-        #region Geometry State
+#region Geometry State
 
         private bool TryMarkLayerGeometryStateDirty()
         {
@@ -835,7 +832,7 @@ namespace Tripledot.CanvasKit
                 layerGeometryStates.Add(default);
             }
 
-            for (int i = 0; i < layers.Count; i++) {
+            for (var i = 0; i < layers.Count; i++) {
                 var nextState = LayerGeometryState.Capture(layers[i]);
                 if (!layerGeometryStates[i].Equals(nextState)) {
                     layerGeometryStates[i] = nextState;
@@ -850,20 +847,20 @@ namespace Tripledot.CanvasKit
             return changed;
         }
 
-        #endregion
+#endregion
 
-        #region Canvas Renderer
+#region Canvas Renderer
 
         private bool CanReapplyCanvasRenderer()
         {
             return dirtyFlags == DirtyFlags.None
-                && !layerCompositionDirty
-                && hasAssignedMesh
-                && mesh != null
-                && hasMaterialContextState
-                && layers.Count > 0
-                && layerRuntimeStates.Count == layers.Count
-                && layerMaterialScopes.Count == layers.Count;
+                   && !layerCompositionDirty
+                   && hasAssignedMesh
+                   && mesh != null
+                   && hasMaterialContextState
+                   && layers.Count > 0
+                   && layerRuntimeStates.Count == layers.Count
+                   && layerMaterialScopes.Count == layers.Count;
         }
 
         private void ReapplyCanvasRenderer()
@@ -873,7 +870,7 @@ namespace Tripledot.CanvasKit
 
         private void ApplyCanvasRenderer(
             TextMeshProUGUI text, Mesh mesh, IList<TextMeshProLayerData> layers,
-            IList<LayerMaterialScope> materialScopes, TextMeshProLayerMaterialContext materialContext, bool materialSharingAllowed, 
+            IList<LayerMaterialScope> materialScopes, TextMeshProLayerMaterialContext materialContext, bool materialSharingAllowed,
             ApplyCanvasRendererFlags applyFlags)
         {
             var canvasRenderer = text.canvasRenderer;
@@ -901,8 +898,8 @@ namespace Tripledot.CanvasKit
 
             EnsureAppliedMaterialSlots(layers.Count);
             var canShareMaterials = materialSharingAllowed && CanSharePresetMaterials(canvasRenderer);
-            
-            for (int i = 0; i < layers.Count; i++) {
+
+            for (var i = 0; i < layers.Count; i++) {
                 var layer = GetRenderLayerForSlot(layers, i);
                 var materialScope = canShareMaterials ? GetRenderMaterialScopeForSlot(materialScopes, i) : LayerMaterialScope.Unique;
                 var material = layerRuntimeStates[i].GetOrCreateMaterial(layer, materialScope, materialContext, name);
@@ -931,7 +928,7 @@ namespace Tripledot.CanvasKit
                 appliedCanvasMaterials.Add(null);
             }
 
-            for (int i = count; i < appliedCanvasMaterials.Count; i++) {
+            for (var i = count; i < appliedCanvasMaterials.Count; i++) {
                 appliedCanvasMaterials[i] = null;
             }
         }
@@ -949,13 +946,13 @@ namespace Tripledot.CanvasKit
             appliedAbsoluteDepth = -1;
         }
 
-        #endregion
+#endregion
 
-        #region Canvas Validation
+#region Canvas Validation
 
         private static void OnWillRenderCanvasesValidateStacks()
         {
-            for (int i = CanvasValidationStacks.Count - 1; i >= 0; i--) {
+            for (var i = CanvasValidationStacks.Count - 1; i >= 0; i--) {
                 var stack = CanvasValidationStacks[i];
                 if (stack == null) {
                     CanvasValidationStacks.RemoveAt(i);
@@ -975,8 +972,7 @@ namespace Tripledot.CanvasKit
             if (!isRegisteredForCanvasValidation) {
                 isRegisteredForCanvasValidation = true;
                 CanvasValidationStacks.Add(this);
-                if (CanvasValidationStacks.Count == 1)
-                {
+                if (CanvasValidationStacks.Count == 1) {
                     Canvas.willRenderCanvases += OnWillRenderCanvasesValidateStacks;
                 }
             }
@@ -987,8 +983,7 @@ namespace Tripledot.CanvasKit
             if (isRegisteredForCanvasValidation) {
                 isRegisteredForCanvasValidation = false;
                 CanvasValidationStacks.Remove(this);
-                if (CanvasValidationStacks.Count == 0)
-                {
+                if (CanvasValidationStacks.Count == 0) {
                     Canvas.willRenderCanvases -= OnWillRenderCanvasesValidateStacks;
                 }
             }
@@ -1025,7 +1020,7 @@ namespace Tripledot.CanvasKit
                 return true;
             }
 
-            for (int i = 0; i < appliedMaterialCount; i++) {
+            for (var i = 0; i < appliedMaterialCount; i++) {
                 var appliedMaterial = appliedCanvasMaterials[i];
                 if (appliedMaterial == null || canvasRenderer.GetMaterial(i) != appliedMaterial) {
                     return true;
@@ -1069,9 +1064,9 @@ namespace Tripledot.CanvasKit
             appliedAbsoluteDepth = canvasRenderer != null ? canvasRenderer.absoluteDepth : -1;
         }
 
-        #endregion
+#endregion
 
-        #region Utility
+#region Utility
 
         private static TextMeshProLayerData GetRenderLayerForSlot(IList<TextMeshProLayerData> layers, int materialSlot)
         {
@@ -1111,9 +1106,9 @@ namespace Tripledot.CanvasKit
             dirtyFlags = DirtyFlags.All;
         }
 
-        #endregion
+#endregion
 
-        #region Mesh and Bounds
+#region Mesh and Bounds
 
         private Mesh GetMesh()
         {
@@ -1164,9 +1159,9 @@ namespace Tripledot.CanvasKit
             return true;
         }
 
-        #endregion
+#endregion
 
-        #region Nested Types
+#region Nested Types
 
         [Serializable]
         internal sealed class TextMeshProLayerOverride
@@ -1177,8 +1172,7 @@ namespace Tripledot.CanvasKit
             [SerializeField]
             private TextMeshProLayerData layer = TextMeshProLayerData.Default();
 
-            public bool OverrideLayer
-            {
+            public bool OverrideLayer {
                 get => overrideLayer;
                 set => overrideLayer = value;
             }
@@ -1343,17 +1337,17 @@ namespace Tripledot.CanvasKit
             public bool Equals(LayerGeometryState other)
             {
                 return layerOffset == other.layerOffset
-                    && faceEnabled == other.faceEnabled
-                    && faceDilate == other.faceDilate
-                    && strokeEnabled == other.strokeEnabled
-                    && strokePosition == other.strokePosition
-                    && strokeWidth == other.strokeWidth
-                    && strokeFeather == other.strokeFeather
-                    && strokeOffset == other.strokeOffset
-                    && shadowEnabled == other.shadowEnabled
-                    && shadowSpread == other.shadowSpread
-                    && shadowBlur == other.shadowBlur
-                    && shadowOffset == other.shadowOffset;
+                       && faceEnabled == other.faceEnabled
+                       && faceDilate == other.faceDilate
+                       && strokeEnabled == other.strokeEnabled
+                       && strokePosition == other.strokePosition
+                       && strokeWidth == other.strokeWidth
+                       && strokeFeather == other.strokeFeather
+                       && strokeOffset == other.strokeOffset
+                       && shadowEnabled == other.shadowEnabled
+                       && shadowSpread == other.shadowSpread
+                       && shadowBlur == other.shadowBlur
+                       && shadowOffset == other.shadowOffset;
             }
         }
 
@@ -1386,6 +1380,6 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        #endregion
+#endregion
     }
 }

@@ -204,7 +204,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         public static int ReadSelectedCurves(AnimationWindow window, List<KeyframeInterpolationCurveSelection> selections)
         {
             selections.Clear();
-            
+
             var windowState = window.state;
             return windowState.showCurveEditor
                 ? AddCurveEditorKeysToSelections(window, windowState, selections)
@@ -247,7 +247,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
             var windowState = window.state;
             windowState.refresh = AnimationWindowState.RefreshType.CurvesOnly;
-            
+
             var editorCurveBindings = new HashSet<EditorCurveBinding>();
             for (var i = 0; i < selections.Count; i++) {
                 var selection = selections[i];
@@ -305,7 +305,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             }
 
             var curveBuckets = new List<SavedCurveBucket>();
-            
+
             for (var i = 0; i < selections.Count; i++) {
                 var selection = selections[i];
                 if (!selection.HasPendingSave || !selection.AnimationIsEditable) {
@@ -361,7 +361,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         {
             var windowState = window.state;
             var curveEditor = GetCurveEditor(window);
-            
+
             if (windowState.showCurveEditor && curveEditor?.selectedCurves != null) {
                 SyncSelectedKeysFromCurveEditor(windowState, curveEditor);
                 curveEditor.SaveKeySelection(undoLabel);
@@ -439,7 +439,8 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                         continue;
                     }
 
-                    var selection = KeyframeInterpolationCurveSelection.CreateForCurveWrapper(ResolveAnimationClip(state, clipObject), clipObject, curveWrapper, windowCurve.isPPtrCurve, windowCurve.isDiscreteCurve);
+                    var selection = KeyframeInterpolationCurveSelection.CreateForCurveWrapper(ResolveAnimationClip(state, clipObject), clipObject, curveWrapper, windowCurve.isPPtrCurve,
+                        windowCurve.isDiscreteCurve);
                     selections.Add(selection);
                     selectionIndex = selections.Count - 1;
                 }
@@ -489,14 +490,14 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             var windowState = window.state;
             var curveEditor = GetCurveEditor(window);
             var curveWrappers = curveEditor?.animationCurves;
-            
+
             if (curveEditor == null || curveWrappers == null || curveWrappers.Length == 0) {
                 return false;
             }
 
             var restoredSelections = new List<CurveSelection>();
             var clipObject = windowState.selection?.clip ?? windowState.activeClip;
-            
+
             for (var i = 0; i < selections.Count; i++) {
                 var selection = selections[i];
                 var curveWrapper = FindCurveWrapperBySelection(curveWrappers, selection, clipObject);
@@ -530,7 +531,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
             SyncSelectedKeysFromCurveEditor(windowState, curveEditor);
             window.Repaint();
-            
+
             return true;
         }
 
@@ -649,7 +650,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         {
             var filteredCurves = state.filteredCurves;
             state.ClearKeySelections();
-            
+
             for (var i = 0; i < curveEditor.selectedCurves.Count; i++) {
                 var windowKeyframe = AnimationWindowUtility.CurveSelectionToAnimationWindowKeyframe(curveEditor.selectedCurves[i], filteredCurves);
                 if (windowKeyframe != null) {
@@ -723,7 +724,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         private static AnimationWindowCurve FindCurveBySelection(AnimationWindowState state, IReadOnlyList<AnimationWindowCurve> curves, KeyframeInterpolationCurveSelection selection)
         {
             AnimationWindowCurve fallback = null;
-            
+
             for (var i = 0; i < curves.Count; i++) {
                 var curve = curves[i];
                 if (!selection.MatchesAnimationWindowCurve(curve, ResolveClipObject(state, curve))) {
@@ -743,7 +744,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         private static CurveWrapper FindCurveWrapperBySelection(IReadOnlyList<CurveWrapper> curveWrappers, KeyframeInterpolationCurveSelection selection, IAnimationWindowClip clipObject)
         {
             CurveWrapper fallback = null;
-            
+
             for (var i = 0; i < curveWrappers.Count; i++) {
                 var curveWrapper = curveWrappers[i];
                 if (!selection.MatchesCurveWrapper(curveWrapper, clipObject)) {

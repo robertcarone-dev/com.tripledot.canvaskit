@@ -29,14 +29,14 @@ namespace Tripledot.CanvasKit.Editor
             var layerPreset = UnityEngine.ScriptableObject.CreateInstance<TextMeshProLayerPreset>();
             stack.CopyEffectivePresetLayersTo(layerPreset.MutableLayers);
             layerPreset.SetFontAsset(GetStackFontAsset(stack));
-            
+
             AssetDatabase.CreateAsset(layerPreset, assetPath);
             AssetDatabase.SaveAssets();
-            
+
             stack.Preset = layerPreset;
             stack.ClearPresetLayerInstances();
             EditorUtility.SetDirty(stack);
-            
+
             return layerPreset;
         }
 
@@ -48,9 +48,9 @@ namespace Tripledot.CanvasKit.Editor
         internal static bool HasFontMismatch(TextMeshProLayerPreset preset, TextMeshProUGUI text)
         {
             return preset != null
-                && text != null
-                && preset.FontAsset != null
-                && text.font != preset.FontAsset;
+                   && text != null
+                   && preset.FontAsset != null
+                   && text.font != preset.FontAsset;
         }
 
         internal static void ApplyPresetFont(TextMeshProLayerPreset preset, TextMeshProUGUI text, TextMeshProLayerStack stack)
@@ -67,11 +67,11 @@ namespace Tripledot.CanvasKit.Editor
             if (stack != null) {
                 Undo.RecordObject(stack, "Apply TextMeshPro Layer Preset Font");
                 stack.SetLayerStackDirty(TextMeshProLayerStack.DirtyFlags.SourceGeometry
-                    | TextMeshProLayerStack.DirtyFlags.Geometry
-                    | TextMeshProLayerStack.DirtyFlags.Padding
-                    | TextMeshProLayerStack.DirtyFlags.Material
-                    | TextMeshProLayerStack.DirtyFlags.Canvas
-                    | TextMeshProLayerStack.DirtyFlags.PaintBounds);
+                                         | TextMeshProLayerStack.DirtyFlags.Geometry
+                                         | TextMeshProLayerStack.DirtyFlags.Padding
+                                         | TextMeshProLayerStack.DirtyFlags.Material
+                                         | TextMeshProLayerStack.DirtyFlags.Canvas
+                                         | TextMeshProLayerStack.DirtyFlags.PaintBounds);
                 EditorUtility.SetDirty(stack);
             }
         }

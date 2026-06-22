@@ -25,20 +25,20 @@ namespace Tripledot.CanvasKit.Editor
 
             Drag.Begin(image, "Move Lattice Selection", points, pivot, pivotWorld, GetHandleRotation(image), Vector3.one);
             var delta = WorldDeltaToLatticeUv(image, localRect, Drag.StartPositionWorld, nextPosition);
-            
+
             ImageLatticeSelectionUtility.MovePoints(
                 source: Drag.SourcePoints,
                 destination: Drag.DestinationPoints,
                 controlPointColumns: image.ControlPointColumns,
                 controlPointRows: image.ControlPointRows,
-                selected: ImageLatticeToolState.Selection, 
-                delta: delta, 
+                selected: ImageLatticeToolState.Selection,
+                delta: delta,
                 mirrorMode: ImageLatticeToolState.MirrorMode,
                 editTarget: ImageLatticeToolState.EditTarget,
                 softSelectionMode: ImageLatticeToolState.SoftSelectionMode,
                 softSelectionRadius: ImageLatticeToolState.SoftSelectionRadius,
                 selectedCells: ImageLatticeToolState.CellSelection);
-            
+
             Drag.CurrentPositionWorld = nextPosition;
             ApplyTransformedPoints(image, Drag.DestinationPoints);
         }

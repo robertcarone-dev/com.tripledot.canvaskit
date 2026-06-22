@@ -244,10 +244,8 @@ namespace Tripledot.CanvasKit
             WeightBold = GetFloat(sourceMaterial, ShaderUtilities.ID_WeightBold, 0.5f);
             AppliedSdfPadding = Mathf.Max(0f, appliedSdfPadding);
             ClipRect = GetVector(renderMaterial, CanvasShaderIds.ClipRect, new Vector4(-32767f, -32767f, 32767f, 32767f));
-            MaskSoftnessX = GetFloat(renderMaterial, CanvasShaderIds.UIMaskSoftnessX,
-                GetFloat(renderMaterial, CanvasShaderIds.LegacyMaskSoftnessX, 0f));
-            MaskSoftnessY = GetFloat(renderMaterial, CanvasShaderIds.UIMaskSoftnessY,
-                GetFloat(renderMaterial, CanvasShaderIds.LegacyMaskSoftnessY, 0f));
+            MaskSoftnessX = GetFloat(renderMaterial, CanvasShaderIds.UIMaskSoftnessX, GetFloat(renderMaterial, CanvasShaderIds.LegacyMaskSoftnessX, 0f));
+            MaskSoftnessY = GetFloat(renderMaterial, CanvasShaderIds.UIMaskSoftnessY, GetFloat(renderMaterial, CanvasShaderIds.LegacyMaskSoftnessY, 0f));
             StencilComp = GetInteger(renderMaterial, CanvasShaderIds.StencilComp, 8);
             Stencil = GetInteger(renderMaterial, CanvasShaderIds.Stencil, 0);
             StencilOp = GetInteger(renderMaterial, CanvasShaderIds.StencilOp, 0);
@@ -260,34 +258,34 @@ namespace Tripledot.CanvasKit
         public static TextMeshProLayerMaterialContext Capture(TextMeshProUGUI text, Material sourceMaterial, Material renderMaterial, Vector4 paintBounds, float appliedSdfPadding)
         {
             var fontAtlas = text?.font?.atlasTexture
-                ?? GetTexture(sourceMaterial, ShaderUtilities.ID_MainTex)
-                ?? GetTexture(renderMaterial, ShaderUtilities.ID_MainTex);
+                            ?? GetTexture(sourceMaterial, ShaderUtilities.ID_MainTex)
+                            ?? GetTexture(renderMaterial, ShaderUtilities.ID_MainTex);
             return new TextMeshProLayerMaterialContext(fontAtlas, paintBounds, sourceMaterial, renderMaterial, appliedSdfPadding);
         }
 
         public bool Equals(TextMeshProLayerMaterialContext other)
         {
             return FontAtlas == other.FontAtlas
-                && PaintBounds == other.PaintBounds
-                && ScaleRatioA == other.ScaleRatioA
-                && GradientScale == other.GradientScale
-                && Sharpness == other.Sharpness
-                && ScaleX == other.ScaleX
-                && ScaleY == other.ScaleY
-                && PerspectiveFilter == other.PerspectiveFilter
-                && WeightNormal == other.WeightNormal
-                && WeightBold == other.WeightBold
-                && AppliedSdfPadding == other.AppliedSdfPadding
-                && ClipRect == other.ClipRect
-                && MaskSoftnessX == other.MaskSoftnessX
-                && MaskSoftnessY == other.MaskSoftnessY
-                && StencilComp == other.StencilComp
-                && Stencil == other.Stencil
-                && StencilOp == other.StencilOp
-                && StencilWriteMask == other.StencilWriteMask
-                && StencilReadMask == other.StencilReadMask
-                && CullMode == other.CullMode
-                && ColorMask == other.ColorMask;
+                   && PaintBounds == other.PaintBounds
+                   && ScaleRatioA == other.ScaleRatioA
+                   && GradientScale == other.GradientScale
+                   && Sharpness == other.Sharpness
+                   && ScaleX == other.ScaleX
+                   && ScaleY == other.ScaleY
+                   && PerspectiveFilter == other.PerspectiveFilter
+                   && WeightNormal == other.WeightNormal
+                   && WeightBold == other.WeightBold
+                   && AppliedSdfPadding == other.AppliedSdfPadding
+                   && ClipRect == other.ClipRect
+                   && MaskSoftnessX == other.MaskSoftnessX
+                   && MaskSoftnessY == other.MaskSoftnessY
+                   && StencilComp == other.StencilComp
+                   && Stencil == other.Stencil
+                   && StencilOp == other.StencilOp
+                   && StencilWriteMask == other.StencilWriteMask
+                   && StencilReadMask == other.StencilReadMask
+                   && CullMode == other.CullMode
+                   && ColorMask == other.ColorMask;
         }
 
         public override bool Equals(object obj)
@@ -297,8 +295,7 @@ namespace Tripledot.CanvasKit
 
         public override int GetHashCode()
         {
-            unchecked
-            {
+            unchecked {
                 var hashCode = FontAtlas != null ? FontAtlas.GetHashCode() : 0;
                 hashCode = (hashCode * 397) ^ PaintBounds.GetHashCode();
                 hashCode = (hashCode * 397) ^ ScaleRatioA.GetHashCode();

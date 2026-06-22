@@ -88,8 +88,7 @@ namespace Tripledot.CanvasKit
         private Vector2[] raycastRowA = Array.Empty<Vector2>();
         private Vector2[] raycastRowB = Array.Empty<Vector2>();
 
-        public int ControlColumns
-        {
+        public int ControlColumns {
             get {
                 EnsureLattice();
                 return controlColumns;
@@ -97,8 +96,7 @@ namespace Tripledot.CanvasKit
             set => SetControlGrid(value, controlRows);
         }
 
-        public int ControlRows
-        {
+        public int ControlRows {
             get {
                 EnsureLattice();
                 return controlRows;
@@ -106,8 +104,7 @@ namespace Tripledot.CanvasKit
             set => SetControlGrid(controlColumns, value);
         }
 
-        public int SegmentsPerCell
-        {
+        public int SegmentsPerCell {
             get {
                 EnsureLattice();
                 return segmentsPerCell;
@@ -127,8 +124,7 @@ namespace Tripledot.CanvasKit
 
         public int ControlPointRows => ControlRows;
 
-        public ImageLatticeRaycastMode RaycastMode
-        {
+        public ImageLatticeRaycastMode RaycastMode {
             get => raycastMode;
             set => raycastMode = value;
         }
@@ -204,7 +200,7 @@ namespace Tripledot.CanvasKit
             EnsureLattice();
             EnsureRuntimeMaterial(baseMaterial, useSourceShader);
             ApplyLatticeMaterial(runtimeMaterial, image);
-            
+
             return runtimeMaterial;
         }
 
@@ -450,8 +446,8 @@ namespace Tripledot.CanvasKit
         {
             return hasMeshSignature &&
                    (meshSignatureControlColumns != controlColumns ||
-                   meshSignatureControlRows != controlRows ||
-                   meshSignatureSegmentsPerCell != segmentsPerCell);
+                    meshSignatureControlRows != controlRows ||
+                    meshSignatureSegmentsPerCell != segmentsPerCell);
         }
 
         private void CaptureMeshSignature()
@@ -861,31 +857,56 @@ namespace Tripledot.CanvasKit
         [StructLayout(LayoutKind.Sequential)]
         private unsafe struct LatticePointStorage
         {
-            [SerializeField] private Vector2 point00;
-            [SerializeField] private Vector2 point01;
-            [SerializeField] private Vector2 point02;
-            [SerializeField] private Vector2 point03;
-            [SerializeField] private Vector2 point04;
-            [SerializeField] private Vector2 point05;
-            [SerializeField] private Vector2 point06;
-            [SerializeField] private Vector2 point07;
-            [SerializeField] private Vector2 point08;
-            [SerializeField] private Vector2 point09;
-            [SerializeField] private Vector2 point10;
-            [SerializeField] private Vector2 point11;
-            [SerializeField] private Vector2 point12;
-            [SerializeField] private Vector2 point13;
-            [SerializeField] private Vector2 point14;
-            [SerializeField] private Vector2 point15;
-            [SerializeField] private Vector2 point16;
-            [SerializeField] private Vector2 point17;
-            [SerializeField] private Vector2 point18;
-            [SerializeField] private Vector2 point19;
-            [SerializeField] private Vector2 point20;
-            [SerializeField] private Vector2 point21;
-            [SerializeField] private Vector2 point22;
-            [SerializeField] private Vector2 point23;
-            [SerializeField] private Vector2 point24;
+            [SerializeField]
+            private Vector2 point00;
+            [SerializeField]
+            private Vector2 point01;
+            [SerializeField]
+            private Vector2 point02;
+            [SerializeField]
+            private Vector2 point03;
+            [SerializeField]
+            private Vector2 point04;
+            [SerializeField]
+            private Vector2 point05;
+            [SerializeField]
+            private Vector2 point06;
+            [SerializeField]
+            private Vector2 point07;
+            [SerializeField]
+            private Vector2 point08;
+            [SerializeField]
+            private Vector2 point09;
+            [SerializeField]
+            private Vector2 point10;
+            [SerializeField]
+            private Vector2 point11;
+            [SerializeField]
+            private Vector2 point12;
+            [SerializeField]
+            private Vector2 point13;
+            [SerializeField]
+            private Vector2 point14;
+            [SerializeField]
+            private Vector2 point15;
+            [SerializeField]
+            private Vector2 point16;
+            [SerializeField]
+            private Vector2 point17;
+            [SerializeField]
+            private Vector2 point18;
+            [SerializeField]
+            private Vector2 point19;
+            [SerializeField]
+            private Vector2 point20;
+            [SerializeField]
+            private Vector2 point21;
+            [SerializeField]
+            private Vector2 point22;
+            [SerializeField]
+            private Vector2 point23;
+            [SerializeField]
+            private Vector2 point24;
 
             public Vector2 GetPoint(int index)
             {

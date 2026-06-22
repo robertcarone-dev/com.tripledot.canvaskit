@@ -23,27 +23,25 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
         private CanvasBlendData blendData;
 
-        CanvasBlendData IRequiresData<CanvasBlendData>.data
-        {
+        CanvasBlendData IRequiresData<CanvasBlendData>.data {
             get => blendData;
             set => blendData = value;
         }
 
-        internal AlphaMode BlendMode
-        {
+        internal AlphaMode BlendMode {
             get => EnsureBlendData().BlendMode;
             set => EnsureBlendData().BlendMode = value;
         }
 
-        internal bool AllowMaterialBlendOverride
-        {
+        internal bool AllowMaterialBlendOverride {
             get => EnsureBlendData().AllowMaterialBlendOverride;
             set => EnsureBlendData().AllowMaterialBlendOverride = value;
         }
 
-        protected override IncludeCollection postgraphIncludes => new IncludeCollection {
-            { CanvasBlendPass, IncludeLocation.Postgraph },
-        };
+        protected override IncludeCollection postgraphIncludes =>
+            new IncludeCollection {
+                { CanvasBlendPass, IncludeLocation.Postgraph },
+            };
 
         public CanvasBlendSubTarget()
         {
@@ -165,8 +163,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
                 { RenderState.Cull(Cull.Off) },
                 { RenderState.ZWrite(ZWrite.Off) },
                 { RenderState.ZTest(CanvasUniforms.ZTest) },
-                { RenderState.ColorMask(CanvasUniforms.ColorMask) },
-                {
+                { RenderState.ColorMask(CanvasUniforms.ColorMask) }, {
                     RenderState.Stencil(new StencilDescriptor {
                         Ref = CanvasUniforms.Ref,
                         Comp = CanvasUniforms.Comp,

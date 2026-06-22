@@ -211,7 +211,7 @@ namespace Tripledot.CanvasKit.Editor
             EditorApplication.delayCall -= MarkPostSaveReadbackReady;
             EditorApplication.delayCall -= RunHandleFieldFocusCheck;
             EditorApplication.delayCall -= RunUndoRedoRefresh;
-            
+
             if (TryTakePendingHandleFieldEdit(out var curve, out var context)) {
                 ApplyManualCurve(curve, context, false);
             }
@@ -419,7 +419,7 @@ namespace Tripledot.CanvasKit.Editor
         private SelectionView GetSelectionView(AnimationWindow animationWindow)
         {
             var usesActiveEditSelection = isDraggingHandle && activeEditSelections.Count > 0;
-            return usesActiveEditSelection 
+            return usesActiveEditSelection
                 ? new SelectionView(activeEditSelections, GetSelectedKeyCount(activeEditSelections), true)
                 : new SelectionView(selections, ReadSelectedCurvesPreservingFocusCache(animationWindow), false);
         }
@@ -497,23 +497,23 @@ namespace Tripledot.CanvasKit.Editor
             var usesLastAppliedManualCurve = !lockActiveEditCurve && HasLastAppliedManualCurveForSelection(displayedSelections);
             var commonMode = GetDisplayMode(analysis, lockActiveEditCurve, usesLastAppliedManualCurve);
             var hasMixedCurveValues = canEditSelection
-                && !lockActiveEditCurve
-                && !usesLastAppliedManualCurve
-                && !analysis.HasCommonCurve
-                && !analysis.HasOnlyIndeterminateCurve
-                && (!analysis.HasCommonMode || commonMode == AnimationUtility.TangentMode.Free);
-            
+                                      && !lockActiveEditCurve
+                                      && !usesLastAppliedManualCurve
+                                      && !analysis.HasCommonCurve
+                                      && !analysis.HasOnlyIndeterminateCurve
+                                      && (!analysis.HasCommonMode || commonMode == AnimationUtility.TangentMode.Free);
+
             var hasCommonManualCurve = lockActiveEditCurve
-                || usesLastAppliedManualCurve
-                || analysis.HasCommonCurve
-                || analysis.HasOnlyIndeterminateCurve;
+                                       || usesLastAppliedManualCurve
+                                       || analysis.HasCommonCurve
+                                       || analysis.HasOnlyIndeterminateCurve;
             var canEditHandles = canEditSelection
-                && !hasMixedCurveValues
-                && commonMode == AnimationUtility.TangentMode.Free
-                && hasCommonManualCurve;
+                                 && !hasMixedCurveValues
+                                 && commonMode == AnimationUtility.TangentMode.Free
+                                 && hasCommonManualCurve;
             var canConvertGraphToFree = canEditSelection
-                && !hasMixedCurveValues
-                && commonMode != AnimationUtility.TangentMode.Free;
+                                        && !hasMixedCurveValues
+                                        && commonMode != AnimationUtility.TangentMode.Free;
             var selectedModeIndex = -1;
             if (canEditSelection
                 && (analysis.HasCommonMode
@@ -530,7 +530,7 @@ namespace Tripledot.CanvasKit.Editor
                     ? currentCurve
                     : analysis.HasOnlyIndeterminateCurve
                         ? currentCurve ?? KeyframeInterpolationCurveUtility.CreateDefaultCurve()
-                    : KeyframeInterpolationCurveUtility.CreateModePreviewCurve(commonMode);
+                        : KeyframeInterpolationCurveUtility.CreateModePreviewCurve(commonMode);
             }
 
             var hasTimeCursor = TryGetCommonTimeCursor(animationWindow, displayedSelections, out var timeCursor);
@@ -569,6 +569,7 @@ namespace Tripledot.CanvasKit.Editor
 
             return commonMode;
         }
+
         private void ApplyViewState(ViewState state)
         {
             updatingControls = true;
@@ -664,7 +665,7 @@ namespace Tripledot.CanvasKit.Editor
         private bool TryResolveApplyContext(out ApplyContext context)
         {
             context = default;
-            
+
             var animationWindow = GetTargetAnimationWindow();
             if (animationWindow == null) {
                 return false;
@@ -738,10 +739,10 @@ namespace Tripledot.CanvasKit.Editor
         private bool HasCapturedSelectionForAnimationWindow(AnimationWindow animationWindow)
         {
             return animationWindow != null
-                && ReferenceEquals(animationWindow, cachedSelectionAnimationWindow)
-                && animationWindow.state != null
-                && animationWindow.state.showCurveEditor == cachedSelectionShowsCurveEditor
-                && selections.Count > 0;
+                   && ReferenceEquals(animationWindow, cachedSelectionAnimationWindow)
+                   && animationWindow.state != null
+                   && animationWindow.state.showCurveEditor == cachedSelectionShowsCurveEditor
+                   && selections.Count > 0;
         }
 
         private bool CanUseCachedSelectionForFocusedWindow(AnimationWindow animationWindow)
@@ -773,9 +774,9 @@ namespace Tripledot.CanvasKit.Editor
             var lockActiveEditCurve = isDraggingHandle && ReferenceEquals(applySelections, activeEditSelections) && currentCurve != null;
             var usesLastAppliedManualCurve = !lockActiveEditCurve && HasLastAppliedManualCurveForSelection(applySelections);
             var hasCommonManualCurve = lockActiveEditCurve
-                || usesLastAppliedManualCurve
-                || analysis.HasCommonCurve
-                || analysis.HasOnlyIndeterminateCurve;
+                                       || usesLastAppliedManualCurve
+                                       || analysis.HasCommonCurve
+                                       || analysis.HasOnlyIndeterminateCurve;
             var canEditCurveValue = canEditSelectionValue && hasCommonManualCurve;
 
             context = new ApplyContext(
@@ -965,7 +966,7 @@ namespace Tripledot.CanvasKit.Editor
             pendingHandleFieldCurve = KeyframeInterpolationCurveUtility.Clone(curve);
             pendingHandleFieldContext = context;
             hasPendingHandleFieldEdit = true;
-            
+
             if (!IsEditingHandleField()) {
                 QueuePendingHandleFieldSave(false);
             }
@@ -1299,7 +1300,7 @@ namespace Tripledot.CanvasKit.Editor
         private void EndGraphDrag()
         {
             ClearHandleDrag();
-            
+
             activeEditSession?.End();
             activeEditSession = null;
 
@@ -1309,7 +1310,7 @@ namespace Tripledot.CanvasKit.Editor
             activeEditSelections.Clear();
             activeEditApplied = false;
             ResetSelectionTracking();
-            
+
             if (shouldDeferRefresh) {
                 QueuePostSaveReadback();
             } else {
@@ -1457,7 +1458,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var selectionsSnapshot = new List<KeyframeInterpolationCurveSelection>();
             CopySelections(selectionsSnapshot, context.Selections);
-            
+
             return new ApplyContext(
                 context.AnimationWindow,
                 selectionsSnapshot,
@@ -1602,7 +1603,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var currentTime = animationWindow.state.currentTime;
             var hasAnySegment = false;
-            
+
             for (var i = 0; i < curveSelections.Count; i++) {
                 var selection = curveSelections[i];
                 if (!selection.AnimationIsEditable || selection.IsObjectReferenceCurve || selection.IsDiscreteCurve) {

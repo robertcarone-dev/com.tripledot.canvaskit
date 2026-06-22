@@ -104,7 +104,7 @@ namespace Tripledot.CanvasKit.Editor
                 outWeight: SanitizeWeight(GetOutWeight(left))) {
                 weightedMode = (weightedMode & WeightedMode.Out) == WeightedMode.Out ? WeightedMode.Out : WeightedMode.None
             };
-            
+
             var end = new Keyframe(
                 time: 1f,
                 value: 1f,
@@ -140,7 +140,7 @@ namespace Tripledot.CanvasKit.Editor
                 outWeight: SanitizeWeight(first.outWeight)) {
                 weightedMode = (first.weightedMode & WeightedMode.Out) == WeightedMode.Out ? WeightedMode.Out : WeightedMode.None
             };
-            
+
             var end = new Keyframe(
                 time: 1f,
                 value: 1f,
@@ -248,7 +248,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var min = 0f;
             var max = 1f;
-            
+
             if (curve != null) {
                 var keys = curve.keys;
                 for (var i = 0; i < keys.Length; i++) {
@@ -307,7 +307,7 @@ namespace Tripledot.CanvasKit.Editor
                 outWeight: SanitizeWeight(outWeight)) {
                 weightedMode = (weightedMode & WeightedMode.Out) == WeightedMode.Out ? WeightedMode.Out : WeightedMode.None
             };
-            
+
             var end = new Keyframe(
                 time: 1f,
                 value: 1f,
@@ -328,13 +328,13 @@ namespace Tripledot.CanvasKit.Editor
                 outWeight = DefaultWeight,
                 weightedMode = WeightedMode.None
             };
-            
+
             var end = new Keyframe(1f, 1f) {
                 inTangent = float.PositiveInfinity,
                 inWeight = DefaultWeight,
                 weightedMode = WeightedMode.None
             };
-            
+
             var curve = new AnimationCurve(start, end);
             AnimationUtility.SetKeyBroken(curve, 0, true);
             AnimationUtility.SetKeyRightTangentMode(curve, 0, AnimationUtility.TangentMode.Constant);
@@ -346,7 +346,7 @@ namespace Tripledot.CanvasKit.Editor
         private static AnimationCurve CreatePreviewCurve(AnimationUtility.TangentMode mode)
         {
             var curve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 1f));
-            
+
             for (var i = 0; i < curve.length; i++) {
                 AnimationUtility.SetKeyBroken(curve, i, false);
                 AnimationUtility.SetKeyLeftTangentMode(curve, i, mode);
@@ -373,23 +373,23 @@ namespace Tripledot.CanvasKit.Editor
         private static bool Approximately(Keyframe a, Keyframe b)
         {
             return Mathf.Abs(a.time - b.time) <= CompareEpsilon
-                && Mathf.Abs(a.value - b.value) <= CompareEpsilon
-                && ApproximatelyTangent(a.inTangent, b.inTangent)
-                && ApproximatelyTangent(a.outTangent, b.outTangent)
-                && Mathf.Abs(a.inWeight - b.inWeight) <= CompareEpsilon
-                && Mathf.Abs(a.outWeight - b.outWeight) <= CompareEpsilon
-                && a.weightedMode == b.weightedMode;
+                   && Mathf.Abs(a.value - b.value) <= CompareEpsilon
+                   && ApproximatelyTangent(a.inTangent, b.inTangent)
+                   && ApproximatelyTangent(a.outTangent, b.outTangent)
+                   && Mathf.Abs(a.inWeight - b.inWeight) <= CompareEpsilon
+                   && Mathf.Abs(a.outWeight - b.outWeight) <= CompareEpsilon
+                   && a.weightedMode == b.weightedMode;
         }
 
         private static bool ApproximatelyEditableShape(Keyframe a, Keyframe b)
         {
             return Mathf.Abs(a.time - b.time) <= CompareEpsilon
-                && Mathf.Abs(a.value - b.value) <= CompareEpsilon
-                && ApproximatelyTangent(a.inTangent, b.inTangent)
-                && ApproximatelyTangent(a.outTangent, b.outTangent)
-                && Mathf.Abs(GetInWeight(a) - GetInWeight(b)) <= CompareEpsilon
-                && Mathf.Abs(GetOutWeight(a) - GetOutWeight(b)) <= CompareEpsilon
-                && a.weightedMode == b.weightedMode;
+                   && Mathf.Abs(a.value - b.value) <= CompareEpsilon
+                   && ApproximatelyTangent(a.inTangent, b.inTangent)
+                   && ApproximatelyTangent(a.outTangent, b.outTangent)
+                   && Mathf.Abs(GetInWeight(a) - GetInWeight(b)) <= CompareEpsilon
+                   && Mathf.Abs(GetOutWeight(a) - GetOutWeight(b)) <= CompareEpsilon
+                   && a.weightedMode == b.weightedMode;
         }
 
         private static bool ApproximatelyTangent(float a, float b)

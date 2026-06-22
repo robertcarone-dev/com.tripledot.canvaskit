@@ -29,8 +29,8 @@ namespace Tripledot.CanvasKit.Editor
                 return false;
             }
 
-            for (int i = 0; i < targets.Length; i++) {
-                if (!CanPreview(targets[i])) {
+            foreach (var target in targets) {
+                if (!CanPreview(target)) {
                     return false;
                 }
             }
@@ -123,10 +123,10 @@ namespace Tripledot.CanvasKit.Editor
 
             var nextIndex = EditorGUILayout.Popup(
                 selectedIndex: NormalizeSizeIndex(selectedSizeIndex),
-                displayedOptions: SizeLabels, 
-                style: EditorStyles.toolbarPopup, 
+                displayedOptions: SizeLabels,
+                style: EditorStyles.toolbarPopup,
                 options: GUILayout.Width(96f));
-            
+
             if (nextIndex != selectedSizeIndex) {
                 selectedSizeIndex = nextIndex;
                 CanvasPreviewSettings.SaveSelectedReferenceSizeIndex(nextIndex);
@@ -212,14 +212,15 @@ namespace Tripledot.CanvasKit.Editor
         {
             return selectedSizeIndex >= 0 &&
                    selectedSizeIndex < CanvasPreviewSize.StandardSizes.Length
-                ? selectedSizeIndex : CanvasPreviewSize.DefaultIndex;
+                ? selectedSizeIndex
+                : CanvasPreviewSize.DefaultIndex;
         }
 
         private static string[] CreateSizeLabels()
         {
             var sizes = CanvasPreviewSize.StandardSizes;
             var labels = new string[sizes.Length];
-            for (int i = 0; i < sizes.Length; i++) {
+            for (var i = 0; i < sizes.Length; i++) {
                 labels[i] = sizes[i].Label;
             }
 
@@ -241,8 +242,7 @@ namespace Tripledot.CanvasKit.Editor
             public readonly RenderMode SourceRenderMode;
             public readonly int SettingsRevision;
 
-            public PreviewState(
-                bool canPreview, CanvasPreviewRole role, CanvasPreviewTargetKind targetKind, RenderMode sourceRenderMode, int settingsRevision)
+            public PreviewState(bool canPreview, CanvasPreviewRole role, CanvasPreviewTargetKind targetKind, RenderMode sourceRenderMode, int settingsRevision)
             {
                 CanPreview = canPreview;
                 Role = role;
@@ -282,11 +282,11 @@ namespace Tripledot.CanvasKit.Editor
             public bool Equals(StaticPreviewKey other)
             {
                 return assetPath == other.assetPath
-                    && assetHash == other.assetHash
-                    && width == other.width
-                    && height == other.height
-                    && settingsRevision == other.settingsRevision
-                    && environmentKey == other.environmentKey;
+                       && assetHash == other.assetHash
+                       && width == other.width
+                       && height == other.height
+                       && settingsRevision == other.settingsRevision
+                       && environmentKey == other.environmentKey;
             }
 
             public override bool Equals(object obj)
@@ -419,7 +419,7 @@ namespace Tripledot.CanvasKit.Editor
             var settingsRevision = CanvasPreviewSettings.Revision;
             var environmentKey = CanvasPreviewEnvironment.CreateCacheKey();
             var renderSize = GetRenderSize(previewSize);
-            
+
             if (previewTexture != null
                 && previewWidth == renderSize.x
                 && previewHeight == renderSize.y
@@ -446,7 +446,7 @@ namespace Tripledot.CanvasKit.Editor
             previewAssetPath = assetPath;
             previewSettingsRevision = settingsRevision;
             previewEnvironmentKey = environmentKey;
-            
+
             return previewTexture;
         }
 
@@ -472,11 +472,10 @@ namespace Tripledot.CanvasKit.Editor
             var height = Mathf.Max(1, previewSize.Height);
             var max = Mathf.Max(1, MaxPreviewTextureSize);
             var scale = Mathf.Min(1f, max / (float)Mathf.Max(width, height));
-            
+
             return new Vector2Int(
                 Mathf.Max(1, Mathf.RoundToInt(width * scale)),
                 Mathf.Max(1, Mathf.RoundToInt(height * scale)));
         }
-
     }
 }

@@ -32,7 +32,7 @@ namespace Tripledot.CanvasKit.Editor
         private TextMeshProLayerInspector layerInspector;
 
         private TextMeshProLayerPreset Preset => (TextMeshProLayerPreset)target;
-        
+
         private void OnEnable()
         {
             fontAsset = serializedObject.FindProperty("fontAsset");
@@ -135,7 +135,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             ReleasePreviewTexture();
-            
+
             previewTexture = TextMeshProLayerPresetPreviewRenderer.RenderPreviewTexture(preset, width, height);
             previewWidth = width;
             previewHeight = height;

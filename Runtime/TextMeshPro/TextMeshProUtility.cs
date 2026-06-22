@@ -68,7 +68,7 @@ namespace Tripledot.CanvasKit
             var max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
             var found = false;
 
-            for (int i = 0; i < textInfo.characterCount; i++) {
+            for (var i = 0; i < textInfo.characterCount; i++) {
                 var character = textInfo.characterInfo[i];
                 if (!TryCalculateVisibleCharacterBounds(character, out var characterMin, out var characterMax, out var localUnitsPerAtlasPixel)) {
                     continue;
@@ -80,7 +80,7 @@ namespace Tripledot.CanvasKit
                     continue;
                 }
 
-                for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++) {
+                for (var layerIndex = 0; layerIndex < layers.Count; layerIndex++) {
                     var layer = layers[layerIndex];
                     if (layer is not { Enabled: true }) {
                         continue;
@@ -117,7 +117,7 @@ namespace Tripledot.CanvasKit
             var max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
             var found = false;
 
-            for (int i = 0; i < textInfo.characterCount; i++) {
+            for (var i = 0; i < textInfo.characterCount; i++) {
                 var character = textInfo.characterInfo[i];
                 if (!character.isVisible || character.materialReferenceIndex < 0 || character.materialReferenceIndex >= textInfo.meshInfo.Length) {
                     continue;
@@ -176,7 +176,8 @@ namespace Tripledot.CanvasKit
             return Mathf.Max(0f, pixels) * SdfPixelsToPaddingPixelsScaleRcp;
         }
 
-        public static void ClampStrokeEffect(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float clampedWidth, out float clampedFeather)
+        public static void ClampStrokeEffect(float width, float feather, TextMeshProStrokePosition position, float availablePadding, float reservedPadding, out float clampedWidth,
+            out float clampedFeather)
         {
             var available = GetRemainingPadding(availablePadding, reservedPadding);
             var strokeWidthFactor = GetStrokeVisualPaddingFactor(position);

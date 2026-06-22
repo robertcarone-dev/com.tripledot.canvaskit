@@ -41,7 +41,7 @@ namespace Tripledot.CanvasKit
         public void Build(Mesh mesh, TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit)
         {
             mesh.Clear(false);
-            
+
             vertices.Clear();
             normals.Clear();
             colors.Clear();
@@ -50,47 +50,47 @@ namespace Tripledot.CanvasKit
             uv2Upload.Clear();
             visibleGlyphs.Clear();
             hasBounds = false;
-            
+
             CollectVisibleGlyphs(textInfo);
-            
+
             var expectedVertexCount = visibleGlyphs.Count * layers.Count * 4;
             mesh.indexFormat = expectedVertexCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
             EnsureUploadCapacity(expectedVertexCount);
             EnsureTriangleBuffers(layers.Count);
 
-            for (int materialSlot = 0; materialSlot < layers.Count; materialSlot++) {
+            for (var materialSlot = 0; materialSlot < layers.Count; materialSlot++) {
                 var layer = GetRenderLayerForSlot(layers, materialSlot);
                 var triangles = submeshTriangles[materialSlot];
                 triangles.Clear();
                 EnsureTriangleCapacity(triangles, visibleGlyphs.Count * 6);
 
-                for (int i = 0; i < visibleGlyphs.Count; i++) {
-                    AddCharacterQuad(visibleGlyphs[i], layer, sdfPaddingLimit, triangles);
+                foreach (var glyph in visibleGlyphs) {
+                    AddCharacterQuad(glyph, layer, sdfPaddingLimit, triangles);
                 }
             }
 
             mesh.SetVertices(vertices);
             mesh.SetNormals(normals);
             mesh.SetColors(colors);
-            
+
             BuildPaintUVs();
             mesh.SetUVs(0, uv0Upload);
             mesh.SetUVs(1, uv1Upload);
             mesh.SetUVs(2, uv2Upload);
-            
+
             mesh.subMeshCount = layers.Count;
-            for (int i = 0; i < layers.Count; i++) {
+            for (var i = 0; i < layers.Count; i++) {
                 mesh.SetTriangles(submeshTriangles[i], i, false);
             }
 
             mesh.bounds = hasBounds ? new Bounds((boundsMin + boundsMax) * 0.5f, boundsMax - boundsMin) : default;
         }
 
-        #region Mesh Building
+#region Mesh Building
 
         private void CollectVisibleGlyphs(TMP_TextInfo textInfo)
         {
-            for (int characterIndex = 0; characterIndex < textInfo.characterCount; characterIndex++) {
+            for (var characterIndex = 0; characterIndex < textInfo.characterCount; characterIndex++) {
                 var character = textInfo.characterInfo[characterIndex];
                 if (!ShouldRenderCharacter(character)) {
                     continue;
@@ -121,7 +121,7 @@ namespace Tripledot.CanvasKit
             var atlasHeight = glyph.AtlasHeight;
             var localUnitsPerAtlasPixel = GetLocalUnitsPerAtlasPixel(meshInfo, vertexIndex, atlasWidth, atlasHeight);
             var layerPadding = layer.GetVisualPadding(sdfPaddingLimit, localUnitsPerAtlasPixel);
-            
+
             var offset = new Vector3(layer.GeometryOffset.x, layer.GeometryOffset.y, 0f);
             var targetUv0 = new Vector2(glyphUv.xMin - layerPadding.x / atlasWidth, glyphUv.yMin - layerPadding.w / atlasHeight);
             var targetUv1 = new Vector2(targetUv0.x, glyphUv.yMax + layerPadding.z / atlasHeight);
@@ -149,14 +149,14 @@ namespace Tripledot.CanvasKit
             var sourceNormals = meshInfo.normals;
             var sourceColors = meshInfo.colors32;
             var sourceUv0 = meshInfo.uvs0;
-            
+
             var vertex = MapUvToSourceQuad(sourceVertices, sourceUv0, vertexIndex, targetUv) + offset;
             vertices.Add(vertex);
             Encapsulate(vertex);
-            
+
             normals.Add(sourceNormals != null && sourceNormals.Length > vertexIndex + cornerIndex ? sourceNormals[vertexIndex + cornerIndex] : Vector3.back);
             colors.Add(sourceColors != null && sourceColors.Length > vertexIndex + cornerIndex ? sourceColors[vertexIndex + cornerIndex] : Color.white);
-            
+
             var sourceUv = sourceUv0[vertexIndex + cornerIndex];
             uv0Upload.Add(new Vector4(targetUv.x, targetUv.y, sourceUv.z, sourceUv.w));
             uv1Upload.Add(safeUv);
@@ -167,7 +167,7 @@ namespace Tripledot.CanvasKit
             var blUv = sourceUv0[vertexIndex + 0];
             var tlUv = sourceUv0[vertexIndex + 1];
             var trUv = sourceUv0[vertexIndex + 2];
-            
+
             var sourceWidth = trUv.x - blUv.x;
             var sourceHeight = tlUv.y - blUv.y;
             if (Mathf.Abs(sourceWidth) < 0.000001f || Mathf.Abs(sourceHeight) < 0.000001f) {
@@ -178,7 +178,7 @@ namespace Tripledot.CanvasKit
             var v = (targetUv.y - blUv.y) / sourceHeight;
             var bottom = Vector3.LerpUnclamped(sourceVertices[vertexIndex + 0], sourceVertices[vertexIndex + 3], u);
             var top = Vector3.LerpUnclamped(sourceVertices[vertexIndex + 1], sourceVertices[vertexIndex + 2], u);
-            
+
             return Vector3.LerpUnclamped(bottom, top, v);
         }
 
@@ -186,13 +186,13 @@ namespace Tripledot.CanvasKit
         {
             var sourceVertices = meshInfo.vertices;
             var sourceUv0 = meshInfo.uvs0;
-            
+
             var localWidth = Vector2.Distance(sourceVertices[vertexIndex + 0], sourceVertices[vertexIndex + 3]);
             var localHeight = Vector2.Distance(sourceVertices[vertexIndex + 0], sourceVertices[vertexIndex + 1]);
-            
+
             var atlasPixelWidth = Mathf.Abs(sourceUv0[vertexIndex + 3].x - sourceUv0[vertexIndex + 0].x) * atlasWidth;
             var atlasPixelHeight = Mathf.Abs(sourceUv0[vertexIndex + 1].y - sourceUv0[vertexIndex + 0].y) * atlasHeight;
-            
+
             return new Vector2(GetLocalUnitsPerAtlasPixel(localWidth, atlasPixelWidth), GetLocalUnitsPerAtlasPixel(localHeight, atlasPixelHeight));
         }
 
@@ -204,10 +204,10 @@ namespace Tripledot.CanvasKit
         private static bool TryGetGlyphUvRect(TMP_CharacterInfo character, out Rect uvRect)
         {
             uvRect = default;
-            
+
             var glyph = character.alternativeGlyph ?? character.textElement?.glyph;
             var fontAsset = character.fontAsset;
-            
+
             var atlasWidth = fontAsset != null ? fontAsset.atlasWidth : 0;
             var atlasHeight = fontAsset != null ? fontAsset.atlasHeight : 0;
             if (glyph == null || atlasWidth <= 0 || atlasHeight <= 0) {
@@ -220,7 +220,7 @@ namespace Tripledot.CanvasKit
                 glyphRect.y / (float)atlasHeight,
                 (glyphRect.x + glyphRect.width) / (float)atlasWidth,
                 (glyphRect.y + glyphRect.height) / (float)atlasHeight);
-            
+
             return uvRect.width > 0f && uvRect.height > 0f;
         }
 
@@ -272,7 +272,7 @@ namespace Tripledot.CanvasKit
                 submeshTriangles.Add(new List<int>(384));
             }
 
-            for (int i = count; i < submeshTriangles.Count; i++) {
+            for (var i = count; i < submeshTriangles.Count; i++) {
                 submeshTriangles[i].Clear();
             }
         }
@@ -307,12 +307,12 @@ namespace Tripledot.CanvasKit
         private void BuildPaintUVs()
         {
             uv2Upload.Clear();
-            
+
             var size = boundsMax - boundsMin;
             var width = Mathf.Max(size.x, 0.0001f);
             var height = Mathf.Max(size.y, 0.0001f);
-            
-            for (int i = 0; i < vertices.Count; i++) {
+
+            for (var i = 0; i < vertices.Count; i++) {
                 var vertex = vertices[i];
                 var atlasUv = uv0Upload[i];
                 uv0Upload[i] = new Vector4(atlasUv.x, atlasUv.y, width, atlasUv.w);
@@ -320,6 +320,6 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        #endregion
+#endregion
     }
 }

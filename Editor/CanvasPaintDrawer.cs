@@ -25,8 +25,8 @@ namespace Tripledot.CanvasKit.Editor
             var type = paint.Type;
             if (type.hasMultipleDifferentValues) {
                 return fields | CanvasPaintVisibleFields.PrimaryColor | CanvasPaintVisibleFields.SecondaryColor |
-                    CanvasPaintVisibleFields.Gradient | CanvasPaintVisibleFields.Texture |
-                    CanvasPaintVisibleFields.Transform | CanvasPaintVisibleFields.GradientMode;
+                       CanvasPaintVisibleFields.Gradient | CanvasPaintVisibleFields.Texture |
+                       CanvasPaintVisibleFields.Transform | CanvasPaintVisibleFields.GradientMode;
             }
 
             var paintType = (CanvasPaintType)type.enumValueIndex;
@@ -294,7 +294,7 @@ namespace Tripledot.CanvasKit.Editor
             {
                 EditGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/TextMeshPro/EditGradientIcon.png");
                 ResetGradient.image = AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/TextMeshPro/ResetIcon.png");
-                
+
                 MappingButtonStyle = new GUIStyle(EditorStyles.miniButton) {
                     alignment = TextAnchor.MiddleCenter,
                     fixedWidth = HeaderButtonWidth,

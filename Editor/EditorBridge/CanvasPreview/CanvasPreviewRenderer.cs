@@ -83,13 +83,13 @@ namespace Tripledot.CanvasKit.Editor
                     ConfigureElementPreviewScalers(canvasObject);
                 }
 
-                PreparePreviewRootRect(previewRootRect, canvasRect, referenceSize, roleResult.Role, 
+                PreparePreviewRootRect(previewRootRect, canvasRect, referenceSize, roleResult.Role,
                     preserveRootRectSettings: target.Kind == CanvasPreviewTargetKind.Canvas);
 
                 cameraObject = new GameObject("Canvas Preview Camera") {
                     hideFlags = HideFlags.HideAndDontSave
                 };
-                
+
                 var camera = cameraObject.AddComponent<Camera>();
                 camera.hideFlags = HideFlags.HideAndDontSave;
 
@@ -151,7 +151,7 @@ namespace Tripledot.CanvasKit.Editor
             PrefabUtility.LoadPrefabContentsIntoPreviewScene(prefabPath, previewScene);
             var currentRoots = previewScene.GetRootGameObjects();
 
-            for (int i = 0; i < currentRoots.Length; i++) {
+            for (var i = 0; i < currentRoots.Length; i++) {
                 var root = currentRoots[i];
                 if (root != null && Array.IndexOf(existingRoots, root) < 0) {
                     return root;
@@ -169,7 +169,7 @@ namespace Tripledot.CanvasKit.Editor
 
             prefabRoot.GetComponentsInChildren(true, TransformBuffer);
             try {
-                for (int i = 0; i < TransformBuffer.Count; i++) {
+                for (var i = 0; i < TransformBuffer.Count; i++) {
                     var transform = TransformBuffer[i];
                     if (transform == null) {
                         continue;
@@ -189,7 +189,7 @@ namespace Tripledot.CanvasKit.Editor
                     }
                 }
 
-                for (int i = 0; i < PrefabInstanceRootBuffer.Count; i++) {
+                for (var i = 0; i < PrefabInstanceRootBuffer.Count; i++) {
                     var instanceRoot = PrefabInstanceRootBuffer[i];
                     if (instanceRoot != null) {
                         PrefabUtility.UnpackPrefabInstance(instanceRoot, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
@@ -204,8 +204,8 @@ namespace Tripledot.CanvasKit.Editor
         private static GameObject CreateReferenceCanvas(Vector2 referenceSize)
         {
             var canvasObject = new GameObject(
-                name: "Canvas Preview Reference", 
-                components: new[]{typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler)}) {
+                name: "Canvas Preview Reference",
+                components: new[] { typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler) }) {
                 hideFlags = HideFlags.HideAndDontSave
             };
             SetLayerRecursively(canvasObject, PreviewLayer);
@@ -246,9 +246,9 @@ namespace Tripledot.CanvasKit.Editor
         private static void ConfigureElementPreviewScalers(GameObject root)
         {
             root.GetComponentsInChildren(true, ScalerBuffer);
-            
+
             try {
-                for (int i = 0; i < ScalerBuffer.Count; i++) {
+                for (var i = 0; i < ScalerBuffer.Count; i++) {
                     var scaler = ScalerBuffer[i];
                     if (scaler == null) {
                         continue;
@@ -385,7 +385,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             root.GetComponentsInChildren(true, CanvasBuffer);
             try {
-                for (int i = 0; i < CanvasBuffer.Count; i++) {
+                for (var i = 0; i < CanvasBuffer.Count; i++) {
                     var canvas = CanvasBuffer[i];
                     if (canvas == null) {
                         continue;
@@ -427,7 +427,7 @@ namespace Tripledot.CanvasKit.Editor
 
             root.GetComponentsInChildren(true, GraphicBuffer);
             try {
-                for (int i = 0; i < GraphicBuffer.Count; i++) {
+                for (var i = 0; i < GraphicBuffer.Count; i++) {
                     var graphic = GraphicBuffer[i];
                     if (graphic == null || !graphic.isActiveAndEnabled || graphic.color.a <= 0f) {
                         continue;
@@ -439,7 +439,7 @@ namespace Tripledot.CanvasKit.Editor
                     }
 
                     rectTransform.GetWorldCorners(CornerBuffer);
-                    for (int cornerIndex = 0; cornerIndex < CornerBuffer.Length; cornerIndex++) {
+                    for (var cornerIndex = 0; cornerIndex < CornerBuffer.Length; cornerIndex++) {
                         var localCorner = relativeTo.InverseTransformPoint(CornerBuffer[cornerIndex]);
                         if (!hasBounds) {
                             bounds = new Bounds(localCorner, Vector3.zero);
@@ -468,7 +468,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             root.GetComponentsInChildren(true, TransformBuffer);
             try {
-                for (int i = 0; i < TransformBuffer.Count; i++) {
+                for (var i = 0; i < TransformBuffer.Count; i++) {
                     TransformBuffer[i].gameObject.layer = layer;
                 }
             } finally {

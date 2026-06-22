@@ -117,8 +117,10 @@ namespace Tripledot.CanvasKit.Editor
             var rangeHeight = Mathf.Max(0.0001f, maxY - minY);
             var overscroll = value < minY
                 ? (minY - value) / rangeHeight
-                : value > maxY ? (value - maxY) / rangeHeight : 0f;
-            
+                : value > maxY
+                    ? (value - maxY) / rangeHeight
+                    : 0f;
+
             if (overscroll <= 0f) {
                 return 1f;
             }

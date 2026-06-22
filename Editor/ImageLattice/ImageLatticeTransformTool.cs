@@ -35,23 +35,23 @@ namespace Tripledot.CanvasKit.Editor
             Drag.Begin(image, "Transform Lattice Selection", points, pivot, pivotWorld, startRotation, Vector3.one);
             var delta = WorldDeltaToLatticeUv(image, localRect, Drag.StartPositionWorld, position);
             var angle = GetSignedHandleAngle(image, Drag.StartRotation, rotation);
-            
+
             ImageLatticeSelectionUtility.TransformPoints(
-                source: Drag.SourcePoints, 
+                source: Drag.SourcePoints,
                 destination: Drag.DestinationPoints,
                 controlPointColumns: image.ControlPointColumns,
                 controlPointRows: image.ControlPointRows,
                 selected: ImageLatticeToolState.Selection,
                 pivot: Drag.Pivot,
                 translation: delta,
-                angleDegrees: angle, 
-                scale: scale2D, 
+                angleDegrees: angle,
+                scale: scale2D,
                 mirrorMode: ImageLatticeToolState.MirrorMode,
                 editTarget: ImageLatticeToolState.EditTarget,
                 softSelectionMode: ImageLatticeToolState.SoftSelectionMode,
                 softSelectionRadius: ImageLatticeToolState.SoftSelectionRadius,
                 selectedCells: ImageLatticeToolState.CellSelection);
-            
+
             Drag.CurrentPositionWorld = position;
             Drag.CurrentRotation = rotation;
             Drag.CurrentScale = scale;
