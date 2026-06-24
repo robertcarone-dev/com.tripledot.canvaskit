@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.KeyframeInterpolation
 {
     internal sealed class KeyframeInterpolationGraphElement : VisualElement
     {

@@ -1,161 +1,11 @@
 using System.Collections.Generic;
-using Tripledot.CanvasKit.Editor;
 using UnityEditor;
 using UnityEditor.AnimationWindowBuiltin;
 using UnityEditorInternal;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.InternalEditorBridge
+namespace Tripledot.CanvasKit.Editor.KeyframeInterpolation
 {
-    internal sealed class KeyframeInterpolationEditSession
-    {
-        private readonly AnimationWindow window;
-        private readonly string undoLabel;
-        private readonly bool continuous;
-        private readonly int undoGroup;
-        private bool committed;
-        private bool ended;
-
-        public KeyframeInterpolationEditSession(AnimationWindow window, string undoLabel, bool continuous)
-        {
-            this.window = window;
-            this.undoLabel = undoLabel;
-            this.continuous = continuous;
-            undoGroup = Undo.GetCurrentGroup();
-            if (continuous) {
-                Undo.SetCurrentGroupName(undoLabel);
-            }
-        }
-
-        public bool ApplyCurve(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, AnimationCurve interpolationCurve)
-        {
-            return ApplyToSelections(selections,
-                (curve, selectedSegments) => KeyframeInterpolationTangentUtility.ApplyCurve(curve, selectedSegments, interpolationCurve));
-        }
-
-        public bool ApplyPreset(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, KeyframeInterpolationPreset preset)
-        {
-            return ApplyToSelections(selections,
-                (curve, selectedSegments) => KeyframeInterpolationTangentUtility.ApplyPreset(curve, selectedSegments, preset));
-        }
-
-        public bool ApplyMode(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, AnimationUtility.TangentMode mode)
-        {
-            return ApplyToSelections(selections,
-                (curve, selectedSegments) => KeyframeInterpolationTangentUtility.ApplyMode(curve, selectedSegments, mode));
-        }
-
-        public bool Commit(IReadOnlyList<KeyframeInterpolationCurveSelection> selections)
-        {
-            if (!ended) {
-                var saved = KeyframeInterpolationAnimationBridge.CommitSavedCurves(window, selections, undoLabel);
-                committed |= saved;
-                return saved;
-            }
-
-            return false;
-        }
-
-        private bool ApplyToSelections(IReadOnlyList<KeyframeInterpolationCurveSelection> selections, KeyframeInterpolationCurveEditStager.CurveMutation mutateCurve)
-        {
-            if (ended || selections.Count == 0) {
-                return false;
-            }
-
-            KeyframeInterpolationAnimationBridge.SynchronizeSelectionForEditing(window, undoLabel);
-
-            var resolvedSelections = new List<KeyframeInterpolationCurveSelection>();
-            if (!KeyframeInterpolationAnimationBridge.TryResolveCurrentSelections(window, selections, resolvedSelections)) {
-                return false;
-            }
-
-            var stagedEdits = new List<KeyframeInterpolationCurveEditStager.StagedCurveEdit>();
-            if (!KeyframeInterpolationCurveEditStager.TryStageEdits(resolvedSelections, mutateCurve, stagedEdits)) {
-                return false;
-            }
-
-            var changedSelections = new List<KeyframeInterpolationCurveSelection>();
-            for (var i = 0; i < stagedEdits.Count; i++) {
-                var stagedEdit = stagedEdits[i];
-                if (!stagedEdit.Selection.ApplyEditedCurve(stagedEdit.Curve)) {
-                    return false;
-                }
-
-                changedSelections.Add(stagedEdit.Selection);
-            }
-
-            return changedSelections.Count != 0 && Commit(changedSelections);
-        }
-
-        public void End()
-        {
-            if (!ended) {
-                ended = true;
-                if (continuous && committed) {
-                    Undo.CollapseUndoOperations(undoGroup);
-                }
-            }
-        }
-    }
-
-    internal static class KeyframeInterpolationCurveEditStager
-    {
-        internal delegate int CurveMutation(AnimationCurve curve, IReadOnlyList<KeyframeInterpolationTangentUtility.KeyframeInterpolationSegmentSelection> selectedSegments);
-
-        internal readonly struct StagedCurveEdit
-        {
-            public readonly KeyframeInterpolationCurveSelection Selection;
-            public readonly AnimationCurve Curve;
-
-            public StagedCurveEdit(KeyframeInterpolationCurveSelection selection, AnimationCurve curve)
-            {
-                Selection = selection;
-                Curve = curve;
-            }
-        }
-
-        public static bool TryStageEdits(
-            IReadOnlyList<KeyframeInterpolationCurveSelection> selections,
-            CurveMutation mutateCurve,
-            List<StagedCurveEdit> stagedEdits)
-        {
-            stagedEdits.Clear();
-            if (selections == null || selections.Count == 0 || mutateCurve == null) {
-                return false;
-            }
-
-            for (var i = 0; i < selections.Count; i++) {
-                var selection = selections[i];
-                if (selection.IsObjectReferenceCurve || selection.IsDiscreteCurve || !selection.AnimationIsEditable) {
-                    continue;
-                }
-
-                var sourceCurve = selection.LoadCurrentCurve();
-                if (sourceCurve == null || sourceCurve.length < 2) {
-                    continue;
-                }
-
-                var curve = KeyframeInterpolationCurveUtility.Clone(sourceCurve);
-                var selectedSegments = KeyframeInterpolationTangentUtility.ResolveSelectedSegments(curve, selection.Keys);
-                if (selectedSegments.Count == 0) {
-                    continue;
-                }
-
-                if (KeyframeInterpolationTangentUtility.HasDuplicateKeyTimes(sourceCurve)
-                    || mutateCurve(curve, selectedSegments) <= 0
-                    || !KeyframeInterpolationCurveUtility.TryGetSanitizedCurveForSave(curve, out var sanitizedCurve)
-                    || !selection.CanApplyEditedCurve(sanitizedCurve)) {
-                    stagedEdits.Clear();
-                    return false;
-                }
-
-                stagedEdits.Add(new StagedCurveEdit(selection, sanitizedCurve));
-            }
-
-            return stagedEdits.Count > 0;
-        }
-    }
-
     internal static class KeyframeInterpolationAnimationBridge
     {
         private const float TimeEpsilon = 0.00001f;
@@ -191,8 +41,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 return null;
             }
 
-            for (var i = 0; i < animationWindows.Count; i++) {
-                var animationWindow = animationWindows[i];
+            foreach (var animationWindow in animationWindows) {
                 if (animationWindow != null && animationWindow.state != null) {
                     return animationWindow;
                 }
@@ -221,8 +70,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 return false;
             }
 
-            for (var i = 0; i < selections.Count; i++) {
-                var selection = selections[i];
+            foreach (var selection in selections) {
                 if (!selection.AnimationIsEditable || selection.IsObjectReferenceCurve || selection.IsDiscreteCurve) {
                     resolvedSelections.Add(selection.Copy());
                     continue;
@@ -249,8 +97,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             windowState.refresh = AnimationWindowState.RefreshType.CurvesOnly;
 
             var editorCurveBindings = new HashSet<EditorCurveBinding>();
-            for (var i = 0; i < selections.Count; i++) {
-                var selection = selections[i];
+            foreach (var selection in selections) {
                 if (!editorCurveBindings.Add(selection.Binding)) {
                     continue;
                 }
@@ -280,10 +127,10 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             if (didSave) {
                 window.state.ResampleAnimation();
 
-                for (var i = 0; i < changedSelections.Count; i++) {
-                    changedSelections[i].ClearPendingSave();
-                    if (changedSelections[i].ClipAsset != null) {
-                        EditorUtility.SetDirty(changedSelections[i].ClipAsset);
+                foreach (var curveSelection in changedSelections) {
+                    curveSelection.ClearPendingSave();
+                    if (curveSelection.ClipAsset != null) {
+                        EditorUtility.SetDirty(curveSelection.ClipAsset);
                     }
                 }
 
@@ -306,8 +153,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
             var curveBuckets = new List<SavedCurveBucket>();
 
-            for (var i = 0; i < selections.Count; i++) {
-                var selection = selections[i];
+            foreach (var selection in selections) {
                 if (!selection.HasPendingSave || !selection.AnimationIsEditable) {
                     continue;
                 }
@@ -332,15 +178,12 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             }
 
             var didSave = false;
-            for (var i = 0; i < curveBuckets.Count; i++) {
-                var bucket = curveBuckets[i];
-                if (bucket.Curves.Count == 0) {
-                    continue;
+            foreach (var bucket in curveBuckets) {
+                if (bucket.Curves.Count > 0) {
+                    Undo.RegisterCompleteObjectUndo(bucket.ClipAsset, undoLabel);
+                    AnimationUtility.SetEditorCurves(bucket.ClipAsset, bucket.Bindings.ToArray(), bucket.Curves.ToArray());
+                    didSave = true;
                 }
-
-                Undo.RegisterCompleteObjectUndo(bucket.ClipAsset, undoLabel);
-                AnimationUtility.SetEditorCurves(bucket.ClipAsset, bucket.Bindings.ToArray(), bucket.Curves.ToArray());
-                didSave = true;
             }
 
             return didSave;
@@ -415,8 +258,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             }
 
             var selectedKeyCount = 0;
-            for (var i = 0; i < curveEditor.selectedCurves.Count; i++) {
-                var curveSelection = curveEditor.selectedCurves[i];
+            foreach (var curveSelection in curveEditor.selectedCurves) {
                 if (curveSelection == null) {
                     continue;
                 }
@@ -462,8 +304,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             }
 
             var restoredKeys = new List<AnimationWindowKeyframe>();
-            for (var i = 0; i < selections.Count; i++) {
-                var selection = selections[i];
+            foreach (var selection in selections) {
                 var curve = FindCurveBySelection(windowState, allCurves, selection);
                 if (curve == null) {
                     continue;
@@ -477,8 +318,8 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             }
 
             windowState.ClearKeySelections();
-            for (var i = 0; i < restoredKeys.Count; i++) {
-                windowState.SelectKey(restoredKeys[i]);
+            foreach (var key in restoredKeys) {
+                windowState.SelectKey(key);
             }
 
             window.Repaint();
@@ -498,15 +339,13 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             var restoredSelections = new List<CurveSelection>();
             var clipObject = windowState.selection?.clip ?? windowState.activeClip;
 
-            for (var i = 0; i < selections.Count; i++) {
-                var selection = selections[i];
+            foreach (var selection in selections) {
                 var curveWrapper = FindCurveWrapperBySelection(curveWrappers, selection, clipObject);
                 if (curveWrapper?.curve == null) {
                     continue;
                 }
 
-                for (var keyIndex = 0; keyIndex < selection.Keys.Count; keyIndex++) {
-                    var selectedKey = selection.Keys[keyIndex];
+                foreach (var selectedKey in selection.Keys) {
                     var resolvedKeyIndex = ResolveCurveKeyIndex(curveWrapper.curve, selectedKey);
                     if (resolvedKeyIndex < 0) {
                         continue;
@@ -523,10 +362,10 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             if (restoredSelections.Count == 0) {
                 return false;
             }
-
+            
             curveEditor.ClearSelection();
-            for (var i = 0; i < restoredSelections.Count; i++) {
-                curveEditor.AddSelection(restoredSelections[i]);
+            foreach (var curveSelection in restoredSelections) {
+                curveEditor.AddSelection(curveSelection);
             }
 
             SyncSelectedKeysFromCurveEditor(windowState, curveEditor);
@@ -554,7 +393,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         {
             resolvedSelection = null;
             var allCurves = state.allCurves;
-            var curves = allCurves != null && allCurves.Count > 0 ? allCurves : state.filteredCurves;
+            var curves = allCurves is { Count: > 0 } ? allCurves : state.filteredCurves;
             if (curves == null || curves.Count == 0) {
                 return false;
             }
@@ -574,6 +413,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 clipObject,
                 windowCurve);
             CopySelectedKeys(selection, resolvedSelection);
+            
             return true;
         }
 
@@ -590,14 +430,8 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 return false;
             }
 
-            var clipObject = state.selection?.clip;
-            if (clipObject == null) {
-                clipObject = state.activeClip;
-            }
-
-            if (clipObject == null) {
-                clipObject = selection.ClipObject;
-            }
+            var clipObject = state.selection?.clip ?? state.activeClip;
+            clipObject ??= selection.ClipObject;
 
             if (clipObject == null || !Equals(clipObject, selection.ClipObject)) {
                 return false;
@@ -615,6 +449,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 selection.IsObjectReferenceCurve,
                 selection.IsDiscreteCurve);
             CopySelectedKeys(selection, resolvedSelection);
+            
             return true;
         }
 
@@ -638,8 +473,8 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 return;
             }
 
-            for (var keyIndex = 0; keyIndex < selection.Keys.Count; keyIndex++) {
-                var keyframe = FindKeyframe(keyframes, selection.Keys[keyIndex]);
+            foreach (var keySelection in selection.Keys) {
+                var keyframe = FindKeyframe(keyframes, keySelection);
                 if (keyframe != null && !restoredKeys.Contains(keyframe)) {
                     restoredKeys.Add(keyframe);
                 }
@@ -651,8 +486,8 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
             var filteredCurves = state.filteredCurves;
             state.ClearKeySelections();
 
-            for (var i = 0; i < curveEditor.selectedCurves.Count; i++) {
-                var windowKeyframe = AnimationWindowUtility.CurveSelectionToAnimationWindowKeyframe(curveEditor.selectedCurves[i], filteredCurves);
+            foreach (var curveSelection in curveEditor.selectedCurves) {
+                var windowKeyframe = AnimationWindowUtility.CurveSelectionToAnimationWindowKeyframe(curveSelection, filteredCurves);
                 if (windowKeyframe != null) {
                     state.SelectKey(windowKeyframe);
                 }
@@ -675,15 +510,15 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
         private static SavedCurveBucket GetOrCreateBucket(List<SavedCurveBucket> buckets, IAnimationWindowClip clipObject, AnimationClip clipAsset)
         {
-            for (var i = 0; i < buckets.Count; i++) {
-                if (Equals(buckets[i].ClipObject, clipObject) && Equals(buckets[i].ClipAsset, clipAsset)) {
-                    return buckets[i];
+            foreach (var bucket in buckets) {
+                if (Equals(bucket.ClipObject, clipObject) && Equals(bucket.ClipAsset, clipAsset)) {
+                    return bucket;
                 }
             }
 
-            var bucket = new SavedCurveBucket(clipObject, clipAsset);
-            buckets.Add(bucket);
-            return bucket;
+            var newBucket = new SavedCurveBucket(clipObject, clipAsset);
+            buckets.Add(newBucket);
+            return newBucket;
         }
 
         private static void AddOrReplaceSavedCurve(SavedCurveBucket bucket, EditorCurveBinding binding, AnimationCurve curve)
@@ -725,8 +560,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         {
             AnimationWindowCurve fallback = null;
 
-            for (var i = 0; i < curves.Count; i++) {
-                var curve = curves[i];
+            foreach (var curve in curves) {
                 if (!selection.MatchesAnimationWindowCurve(curve, ResolveClipObject(state, curve))) {
                     continue;
                 }
@@ -745,8 +579,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
         {
             CurveWrapper fallback = null;
 
-            for (var i = 0; i < curveWrappers.Count; i++) {
-                var curveWrapper = curveWrappers[i];
+            foreach (var curveWrapper in curveWrappers) {
                 if (!selection.MatchesCurveWrapper(curveWrapper, clipObject)) {
                     continue;
                 }
@@ -774,8 +607,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 }
             }
 
-            for (var i = 0; i < keyframes.Count; i++) {
-                var keyframe = keyframes[i];
+            foreach (var keyframe in keyframes) {
                 if (keyframe != null && Mathf.Abs(keyframe.time - selectedKey.Time) <= TimeEpsilon) {
                     return keyframe;
                 }
@@ -826,8 +658,7 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
         private static void AddKeySelection(KeyframeInterpolationCurveSelection selection, int keyIndex, float time, CurveSelection.SelectionType type = CurveSelection.SelectionType.Key)
         {
-            for (var i = 0; i < selection.Keys.Count; i++) {
-                var key = selection.Keys[i];
+            foreach (var key in selection.Keys) {
                 if (key.Index == keyIndex && Mathf.Approximately(key.Time, time) && key.Type == type) {
                     return;
                 }
@@ -842,11 +673,8 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
                 return type;
             }
 
-            if (type == CurveSelection.SelectionType.InTangent && keyIndex == 0) {
-                return CurveSelection.SelectionType.Key;
-            }
-
-            if (type == CurveSelection.SelectionType.OutTangent && keyIndex == curve.length - 1) {
+            if (type == CurveSelection.SelectionType.InTangent && keyIndex == 0 || 
+                type == CurveSelection.SelectionType.OutTangent && keyIndex == curve.length - 1) {
                 return CurveSelection.SelectionType.Key;
             }
 

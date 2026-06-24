@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.KeyframeInterpolation
 {
     internal static class KeyframeInterpolationGraphUtility
     {

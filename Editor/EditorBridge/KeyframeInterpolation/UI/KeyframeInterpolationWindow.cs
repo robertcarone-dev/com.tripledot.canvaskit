@@ -1,18 +1,17 @@
 using System;
 using System.Collections.Generic;
-using Tripledot.CanvasKit.InternalEditorBridge;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Toolbar = UnityEditor.UIElements.Toolbar;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.KeyframeInterpolation
 {
     internal sealed class KeyframeInterpolationWindow : EditorWindow
     {
         private const string UndoLabel = "Set Keyframe Interpolation";
-        private const string StyleSheetPath = "Packages/com.tripledot.canvaskit/Editor/EditorBridge/KeyframeInterpolation/KeyframeInterpolationWindow.uss";
+        private const string StyleSheetPath = "Packages/com.tripledot.canvaskit/Editor/EditorBridge/KeyframeInterpolation/UI/KeyframeInterpolationWindow.uss";
         private const string IconRootPath = "Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/KeyframeInterpolation/";
         private const float MinWindowWidth = 360f;
         private const float TimeCursorEpsilon = 0.0001f;

@@ -3,8 +3,24 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.KeyframeInterpolation
 {
+    internal readonly struct KeyframeInterpolationSegmentInterpolation
+    {
+        public readonly AnimationUtility.TangentMode Mode;
+        public readonly AnimationCurve Curve;
+        public readonly bool HasCurve;
+        public readonly bool IsCurveIndeterminate;
+
+        public KeyframeInterpolationSegmentInterpolation(AnimationUtility.TangentMode mode, AnimationCurve curve, bool hasCurve, bool isCurveIndeterminate = false)
+        {
+            Mode = mode;
+            Curve = curve;
+            HasCurve = hasCurve;
+            IsCurveIndeterminate = isCurveIndeterminate;
+        }
+    }
+    
     internal static class KeyframeInterpolationTangentUtility
     {
         private const float TimeEpsilon = 0.00001f;

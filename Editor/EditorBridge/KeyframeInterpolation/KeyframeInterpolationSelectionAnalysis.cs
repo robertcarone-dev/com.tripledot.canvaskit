@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.KeyframeInterpolation
 {
     internal readonly struct KeyframeInterpolationSelectionAnalysis
     {

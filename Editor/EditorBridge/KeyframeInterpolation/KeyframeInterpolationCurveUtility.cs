@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.KeyframeInterpolation
 {
     internal enum KeyframeInterpolationPreset
     {
@@ -14,22 +14,6 @@ namespace Tripledot.CanvasKit.Editor
         Circular = 6,
         Exponential = 7,
         Elastic = 8
-    }
-
-    internal readonly struct KeyframeInterpolationSegmentInterpolation
-    {
-        public readonly AnimationUtility.TangentMode Mode;
-        public readonly AnimationCurve Curve;
-        public readonly bool HasCurve;
-        public readonly bool IsCurveIndeterminate;
-
-        public KeyframeInterpolationSegmentInterpolation(AnimationUtility.TangentMode mode, AnimationCurve curve, bool hasCurve, bool isCurveIndeterminate = false)
-        {
-            Mode = mode;
-            Curve = curve;
-            HasCurve = hasCurve;
-            IsCurveIndeterminate = isCurveIndeterminate;
-        }
     }
 
     internal static class KeyframeInterpolationCurveUtility
@@ -251,9 +235,9 @@ namespace Tripledot.CanvasKit.Editor
 
             if (curve != null) {
                 var keys = curve.keys;
-                for (var i = 0; i < keys.Length; i++) {
-                    min = Mathf.Min(min, keys[i].value);
-                    max = Mathf.Max(max, keys[i].value);
+                foreach (var key in keys) {
+                    min = Mathf.Min(min, key.value);
+                    max = Mathf.Max(max, key.value);
                 }
 
                 const int sampleCount = 512;
