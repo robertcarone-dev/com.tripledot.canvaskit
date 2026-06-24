@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Animations;
 
-namespace Tripledot.CanvasKit
+namespace Tripledot.CanvasKit.TextMeshPro
 {
     [Serializable]
     public sealed class TextMeshProLayerData
@@ -128,6 +128,7 @@ namespace Tripledot.CanvasKit
             label = source.label;
             blendMode = source.blendMode;
             opacity = source.Opacity;
+            offset = source.offset;
             face = source.face;
             stroke = source.stroke;
             shadow = source.shadow;
@@ -151,53 +152,7 @@ namespace Tripledot.CanvasKit
 
         internal float GetSdfPadding()
         {
-            if (!enabled) {
-                return 0f;
-            }
-
-            return face.GetSdfRange() + Mathf.Max(stroke.GetSdfRange(), shadow.GetSdfRange());
-        }
-
-        internal void ApplyMaterial(Material material, TextMeshProLayerMaterialContext context, TextMeshProLayerMaterialGradientState gradientState)
-        {
-            material.SetInteger(ShaderIds.FaceEnabled, face.Enabled ? 1 : 0);
-            var faceUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(material, face.Paint, ShaderIds.FacePaint, ShaderKeywords.FaceTexture, face.Enabled, gradientState.Face);
-            var faceSdfRange = face.GetSdfRange();
-            material.SetFloat(ShaderIds.FaceDilate, TextMeshProUtility.PixelsToFaceDilate(faceSdfRange, context.GradientScale));
-            
-            var faceLightingEnabled = face.Enabled && face.Lighting.Enabled;
-            var faceBevelWidth = Mathf.Clamp01(face.Lighting.BevelWidth);
-            material.SetInteger(ShaderIds.FaceLightingEnabled, faceLightingEnabled ? 1 : 0);
-            material.SetFloat(ShaderIds.FaceBevelWidth, faceBevelWidth);
-            material.SetFloat(ShaderIds.FaceBevelSoftness, Mathf.Clamp01(face.Lighting.BevelSoftness));
-            material.SetVector(ShaderIds.FaceLightDirection, AngleToDirection(face.Lighting.LightAngle));
-            material.SetColor(ShaderIds.FaceHighlightColor, face.Lighting.HighlightColor);
-            material.SetColor(ShaderIds.FaceShadowColor, face.Lighting.ShadowColor);
-            CanvasUtility.SetKeyword(material, ShaderKeywords.FaceLighting, faceLightingEnabled && faceBevelWidth > 0f);
-
-            TextMeshProUtility.ClampStrokeEffect(stroke.Width, stroke.Feather, stroke.Position, context.AppliedSdfPadding, faceSdfRange, out var strokeWidth, out var strokeFeather);
-            material.SetInteger(ShaderIds.StrokeEnabled, stroke.Enabled ? 1 : 0);
-            material.SetFloat(ShaderIds.StrokeWeight, strokeWidth);
-            material.SetFloat(ShaderIds.StrokeSoftness, strokeFeather);
-            material.SetInteger(ShaderIds.StrokePosition, (int)stroke.Position);
-            material.SetVector(ShaderIds.StrokeOffset, new Vector4(stroke.Offset.x, stroke.Offset.y, 0f, 0f));
-            var strokeUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(material, stroke.Paint, ShaderIds.StrokePaint, ShaderKeywords.StrokeTexture, stroke.Enabled, gradientState.Stroke);
-
-            TextMeshProUtility.ClampShadowEffect(shadow.Spread, shadow.Blur, context.AppliedSdfPadding, faceSdfRange, out var shadowSpread, out var shadowBlur);
-            material.SetInteger(ShaderIds.ShadowEnabled, shadow.Enabled ? 1 : 0);
-            material.SetFloat(ShaderIds.ShadowWeight, shadowBlur);
-            material.SetFloat(ShaderIds.ShadowSpread, shadowSpread);
-            material.SetVector(ShaderIds.ShadowOffset, new Vector4(shadow.Offset.x, shadow.Offset.y, 0f, 0f));
-            var shadowUsesGradientAtlas = TextMeshProLayerMaterial.ApplyPaint(material, shadow.Paint, ShaderIds.ShadowPaint, ShaderKeywords.ShadowTexture, shadow.Enabled, gradientState.Shadow);
-            CanvasUtility.SetKeyword(material, ShaderKeywords.GradientAtlas, faceUsesGradientAtlas || strokeUsesGradientAtlas || shadowUsesGradientAtlas);
-            
-            TextMeshProLayerMaterial.ApplySharedTextProperties(material, context, blendMode, Opacity);
-        }
-
-        private static Vector4 AngleToDirection(float angle)
-        {
-            var radians = angle * Mathf.Deg2Rad;
-            return new Vector4(Mathf.Cos(radians), Mathf.Sin(radians), 0f, 0f);
+            return !enabled ? 0f : face.GetSdfRange() + Mathf.Max(stroke.GetSdfRange(), shadow.GetSdfRange());
         }
 
         private static TextMeshProFace DisabledFace()
@@ -219,74 +174,6 @@ namespace Tripledot.CanvasKit
             var value = TextMeshProShadow.Default;
             value.Enabled = false;
             return value;
-        }
-
-        private static class ShaderKeywords
-        {
-            public const string FaceTexture = "FACE_TEXTURE_ON";
-            public const string StrokeTexture = "STROKE_TEXTURE_ON";
-            public const string ShadowTexture = "SHADOW_TEXTURE_ON";
-            public const string GradientAtlas = "GRADIENT_ATLAS_ON";
-            public const string FaceLighting = "FACE_LIGHTING_ON";
-        }
-
-        private static class ShaderIds
-        {
-            public static readonly int FaceEnabled = Shader.PropertyToID("_FaceEnabled");
-            public static readonly int FaceColor = Shader.PropertyToID("_FaceColor");
-            public static readonly int FaceColorB = Shader.PropertyToID("_FaceColorB");
-            public static readonly int FaceDilate = Shader.PropertyToID("_FaceDilate");
-
-            public static readonly int FaceLightingEnabled = Shader.PropertyToID("_FaceLightingEnabled");
-            public static readonly int FaceBevelWidth = Shader.PropertyToID("_FaceBevelWidth");
-            public static readonly int FaceBevelSoftness = Shader.PropertyToID("_FaceBevelSoftness");
-            public static readonly int FaceLightDirection = Shader.PropertyToID("_FaceLightDirection");
-            public static readonly int FaceHighlightColor = Shader.PropertyToID("_FaceHighlightColor");
-            public static readonly int FaceShadowColor = Shader.PropertyToID("_FaceShadowColor");
-
-            public static readonly TextMeshProLayerMaterial.PaintShaderIds FacePaint = new TextMeshProLayerMaterial.PaintShaderIds(
-                Shader.PropertyToID("_FacePaintMode"),
-                FaceColor,
-                FaceColorB,
-                Shader.PropertyToID("_FaceTexture"),
-                Shader.PropertyToID("_FaceGradientAngle"),
-                Shader.PropertyToID("_FaceGradientAtlasRect"),
-                Shader.PropertyToID("_FaceTextureTransform"),
-                Shader.PropertyToID("_FacePaintTransform0"),
-                Shader.PropertyToID("_FacePaintTransform1"));
-
-            public static readonly int StrokeEnabled = Shader.PropertyToID("_StrokeEnabled");
-            public static readonly int StrokeWeight = Shader.PropertyToID("_StrokeWeight");
-            public static readonly int StrokeSoftness = Shader.PropertyToID("_StrokeSoftness");
-            public static readonly int StrokePosition = Shader.PropertyToID("_StrokePosition");
-            public static readonly int StrokeOffset = Shader.PropertyToID("_StrokeOffset");
-
-            public static readonly TextMeshProLayerMaterial.PaintShaderIds StrokePaint = new TextMeshProLayerMaterial.PaintShaderIds(
-                Shader.PropertyToID("_StrokePaintMode"),
-                Shader.PropertyToID("_StrokeColor"),
-                Shader.PropertyToID("_StrokeColorB"),
-                Shader.PropertyToID("_StrokeTexture"),
-                Shader.PropertyToID("_StrokeGradientAngle"),
-                Shader.PropertyToID("_StrokeGradientAtlasRect"),
-                Shader.PropertyToID("_StrokeTextureTransform"),
-                Shader.PropertyToID("_StrokePaintTransform0"),
-                Shader.PropertyToID("_StrokePaintTransform1"));
-
-            public static readonly int ShadowEnabled = Shader.PropertyToID("_ShadowEnabled");
-            public static readonly int ShadowWeight = Shader.PropertyToID("_ShadowWeight");
-            public static readonly int ShadowSpread = Shader.PropertyToID("_ShadowSpread");
-            public static readonly int ShadowOffset = Shader.PropertyToID("_ShadowOffset");
-
-            public static readonly TextMeshProLayerMaterial.PaintShaderIds ShadowPaint = new TextMeshProLayerMaterial.PaintShaderIds(
-                Shader.PropertyToID("_ShadowPaintMode"),
-                Shader.PropertyToID("_ShadowColor"),
-                Shader.PropertyToID("_ShadowColorB"),
-                Shader.PropertyToID("_ShadowTexture"),
-                Shader.PropertyToID("_ShadowGradientAngle"),
-                Shader.PropertyToID("_ShadowGradientAtlasRect"),
-                Shader.PropertyToID("_ShadowTextureTransform"),
-                Shader.PropertyToID("_ShadowPaintTransform0"),
-                Shader.PropertyToID("_ShadowPaintTransform1"));
         }
     }
 }

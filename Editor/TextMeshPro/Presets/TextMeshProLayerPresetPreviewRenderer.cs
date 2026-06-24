@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.TextMeshPro.Editor
 {
     internal static class TextMeshProLayerPresetPreviewRenderer
     {

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using TMPro;
+using Tripledot.CanvasKit.TextMeshPro;
 using UnityEditor;
 using UnityEngine;
 
@@ -123,7 +124,9 @@ namespace Tripledot.CanvasKit.Editor
             serializedObject.ApplyModifiedProperties();
             EditorUtility.SetDirty(serializedTarget);
             if (serializedTarget is TextMeshProLayerPreset preset) {
-                preset.NotifyChanged();
+                preset.NotifyChanged(TextMeshProLayerChange.Material);
+            } else if (serializedTarget is TextMeshProLayerStack stack) {
+                stack.NotifyChanged(TextMeshProLayerChange.Material);
             }
 
             SceneView.RepaintAll();
@@ -236,7 +239,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void DrawEllipse(RectTransform rectTransform, Vector4 paintBounds, Vector2 origin, Vector2 direction, Vector2 perpendicular, Vector2 scale)
         {
-            for (int i = 0; i <= EllipseSegments; i++) {
+            for (var i = 0; i <= EllipseSegments; i++) {
                 var t = i / (float)EllipseSegments * Mathf.PI * 2f;
                 var uv = origin + direction * (Mathf.Cos(t) * scale.x * 0.5f) + perpendicular * (Mathf.Sin(t) * scale.y * 0.5f);
                 EllipsePoints[i] = UvToWorld(rectTransform, paintBounds, uv);

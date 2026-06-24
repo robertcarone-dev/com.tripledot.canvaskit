@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEditor.ProjectWindowCallback;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.TextMeshPro.Editor
 {
     internal static class TextMeshProLayerPresetCreationUtility
     {
@@ -100,8 +100,8 @@ namespace Tripledot.CanvasKit.Editor
                 return null;
             }
 
-            for (var i = 0; i < selections.Length; i++) {
-                if (selections[i] is TMP_FontAsset fontAsset) {
+            foreach (var obj in selections) {
+                if (obj is TMP_FontAsset fontAsset) {
                     return fontAsset;
                 }
             }
@@ -115,8 +115,8 @@ namespace Tripledot.CanvasKit.Editor
                 return null;
             }
 
-            for (var i = 0; i < selections.Length; i++) {
-                if (selections[i] is Material material && material.HasProperty("_FaceColor")) {
+            foreach (var obj in selections) {
+                if (obj is Material material && material.HasProperty("_FaceColor")) {
                     return material;
                 }
             }
@@ -132,13 +132,11 @@ namespace Tripledot.CanvasKit.Editor
             public override void Action(int instanceId, string pathName, string resourceFile)
             {
                 var preset = CreatePresetAtPath(pathName, FontAsset, MaterialPreset);
-                if (preset == null) {
-                    return;
+                if (preset != null) {
+                    Selection.activeObject = preset;
+                    ProjectWindowUtil.ShowCreatedAsset(preset);
+                    EditorGUIUtility.PingObject(preset);
                 }
-
-                Selection.activeObject = preset;
-                ProjectWindowUtil.ShowCreatedAsset(preset);
-                EditorGUIUtility.PingObject(preset);
             }
         }
     }

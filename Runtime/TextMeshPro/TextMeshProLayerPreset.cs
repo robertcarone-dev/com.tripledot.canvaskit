@@ -3,8 +3,16 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit
+namespace Tripledot.CanvasKit.TextMeshPro
 {
+    [Flags]
+    public enum TextMeshProLayerChange
+    {
+        None = 0,
+        Material = 1 << 0,
+        Geometry = 1 << 1
+    }
+
     public sealed class TextMeshProLayerPreset : ScriptableObject
     {
         [SerializeField]
@@ -13,33 +21,19 @@ namespace Tripledot.CanvasKit
         private List<TextMeshProLayerData> layers = new List<TextMeshProLayerData>();
 
         [NonSerialized]
-        private readonly List<int> layerVersions = new List<int>();
-        [NonSerialized]
         private int version;
-#if UNITY_EDITOR
-        [NonSerialized]
-        private int suppressOnValidateNotifications;
-#endif
 
-        public static event Action<TextMeshProLayerPreset> Changed;
-        internal static event Action<TextMeshProLayerPreset, TextMeshProLayerStack.DirtyFlags, int> ChangedWithDirtyFlags;
+        public static event Action<TextMeshProLayerPreset, TextMeshProLayerChange> Changed;
 
         public TMP_FontAsset FontAsset => fontAsset;
         public IReadOnlyList<TextMeshProLayerData> Layers => layers;
 
-        internal List<TextMeshProLayerData> MutableLayers => layers;
         internal int LayerCount => layers.Count;
         internal int Version => version;
 
-        internal int GetLayerVersion(int index)
-        {
-            EnsureLayerVersionSlots();
-            return index >= 0 && index < layerVersions.Count ? layerVersions[index] : version;
-        }
-
         internal TextMeshProLayerData GetLayer(int index)
         {
-            return index >= 0 && index < layers.Count ? layers[index] : null;
+            return layers[index];
         }
 
         internal void CopyFrom(IList<TextMeshProLayerData> sourceLayers)
@@ -52,16 +46,25 @@ namespace Tripledot.CanvasKit
             layers.Clear();
             fontAsset = sourceFontAsset;
 
-            if (sourceLayers == null) {
-                NotifyChanged();
-                return;
-            }
-
             foreach (var data in sourceLayers) {
-                layers.Add(data?.Clone());
+                layers.Add(data.Clone());
             }
 
             NotifyChanged();
+        }
+
+        internal void AddLayer(TextMeshProLayerData layer)
+        {
+            layers.Add(layer);
+            NotifyChanged();
+        }
+
+        internal void CopyLayersTo(IList<TextMeshProLayerData> destination)
+        {
+            destination.Clear();
+            foreach (var layer in layers) {
+                destination.Add(layer.Clone());
+            }
         }
 
         internal void SetFontAsset(TMP_FontAsset value)
@@ -71,29 +74,19 @@ namespace Tripledot.CanvasKit
             }
 
             fontAsset = value;
-            NotifyChanged(TextMeshProLayerStack.MaterialDirtyFlags);
+            NotifyChanged();
         }
 
         private void OnValidate()
         {
-            EnsureLayerVersionSlots();
 #if UNITY_EDITOR
-            if (suppressOnValidateNotifications > 0) {
-                return;
-            }
-
             NotifyChanged();
 #endif
         }
 
-        internal void NotifyChanged(TextMeshProLayerStack.DirtyFlags flags = TextMeshProLayerStack.CompositionDirtyFlags)
+        internal void NotifyChanged(TextMeshProLayerChange change = TextMeshProLayerChange.Geometry)
         {
-            NotifyChanged(flags, -1);
-        }
-
-        internal void NotifyChanged(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
-        {
-            if (flags == TextMeshProLayerStack.DirtyFlags.None) {
+            if (change == TextMeshProLayerChange.None) {
                 return;
             }
 
@@ -101,53 +94,10 @@ namespace Tripledot.CanvasKit
                 version++;
             }
 
-            IncrementLayerVersion(flags, layerIndex);
-
-            Changed?.Invoke(this);
-            ChangedWithDirtyFlags?.Invoke(this, flags, layerIndex);
-        }
-
-        private void IncrementLayerVersion(TextMeshProLayerStack.DirtyFlags flags, int layerIndex)
-        {
-            EnsureLayerVersionSlots();
-
-            if ((flags & TextMeshProLayerStack.DirtyFlags.Layers) == 0 && layerIndex >= 0 && layerIndex < layerVersions.Count) {
-                unchecked {
-                    layerVersions[layerIndex]++;
-                }
-
-                return;
-            }
-
-            for (var i = 0; i < layerVersions.Count; i++) {
-                unchecked {
-                    layerVersions[i]++;
-                }
-            }
-        }
-
-        private void EnsureLayerVersionSlots()
-        {
-            while (layerVersions.Count < layers.Count) {
-                layerVersions.Add(version);
-            }
-
-            if (layerVersions.Count > layers.Count) {
-                layerVersions.RemoveRange(layers.Count, layerVersions.Count - layers.Count);
-            }
+            Changed?.Invoke(this, change);
         }
 
 #if UNITY_EDITOR
-        internal void BeginSuppressingOnValidateNotifications()
-        {
-            suppressOnValidateNotifications++;
-        }
-
-        internal void EndSuppressingOnValidateNotifications()
-        {
-            suppressOnValidateNotifications = Mathf.Max(0, suppressOnValidateNotifications - 1);
-        }
-
         internal const string DefaultPreviewText = "AaBbYy 123";
 
         [SerializeField]

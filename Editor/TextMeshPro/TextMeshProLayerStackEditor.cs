@@ -1,8 +1,9 @@
 using UnityEditor;
 using UnityEngine;
 using TMPro;
+using Tripledot.CanvasKit.Editor;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.TextMeshPro.Editor
 {
     [CustomEditor(typeof(TextMeshProLayerStack))]
     internal sealed class TextMeshProLayerStackEditor : UnityEditor.Editor

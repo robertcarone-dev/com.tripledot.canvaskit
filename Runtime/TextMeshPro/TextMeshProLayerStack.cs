@@ -4,130 +4,80 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
+using UnityEngine.Scripting.APIUpdating;
 using UnityEngine.UI;
 
-namespace Tripledot.CanvasKit
+namespace Tripledot.CanvasKit.TextMeshPro
 {
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(TextMeshProUGUI))]
     [AddComponentMenu("UI (Canvas)/TextMeshPro - Layer Stack", 11)]
-    public sealed class TextMeshProLayerStack : UIBehaviour, ICanvasElement
+    [MovedFrom("Tripledot.CanvasKit")]
+    public sealed class TextMeshProLayerStack : UIBehaviour
     {
-        private const AdditionalCanvasShaderChannels RequiredCanvasChannels =
-            AdditionalCanvasShaderChannels.TexCoord1 |
-            AdditionalCanvasShaderChannels.TexCoord2;
-
-#region Types
-
-        [Flags]
-        internal enum DirtyFlags
-        {
-            None = 0,
-            Layers = 1 << 0,
-            Geometry = 1 << 1,
-            Material = 1 << 2,
-            Padding = 1 << 3,
-            Canvas = 1 << 4,
-            SourceGeometry = 1 << 5,
-            PaintBounds = 1 << 6,
-            All = Layers | Geometry | Material | Padding | Canvas | SourceGeometry | PaintBounds
-        }
-
-        internal const DirtyFlags MaterialDirtyFlags = DirtyFlags.Material | DirtyFlags.Canvas;
-        internal const DirtyFlags GeometryDirtyFlags = DirtyFlags.Geometry | DirtyFlags.PaintBounds | DirtyFlags.Canvas;
-        internal const DirtyFlags PaddingDirtyFlags = DirtyFlags.Geometry | DirtyFlags.Padding | DirtyFlags.Material | DirtyFlags.PaintBounds | DirtyFlags.Canvas;
-        internal const DirtyFlags CompositionDirtyFlags = DirtyFlags.Layers | DirtyFlags.Geometry | DirtyFlags.Material | DirtyFlags.Padding | DirtyFlags.Canvas | DirtyFlags.PaintBounds;
-
-        [Flags]
-        private enum ApplyCanvasRendererFlags
-        {
-            None = 0,
-            Mesh = 1 << 0,
-            Materials = 1 << 1,
-            Texture = 1 << 2,
-            All = Mesh | Materials | Texture
-        }
-
-#endregion
-
-#region Serialized Fields
-
         [SerializeField]
         private TextMeshProLayerPreset preset;
         [SerializeField]
         private List<TextMeshProLayerData> localLayers = new List<TextMeshProLayerData>();
         [SerializeField]
-        private List<TextMeshProLayerOverride> presetLayerOverrides = new List<TextMeshProLayerOverride>();
+        private List<LayerOverride> presetLayerOverrides = new List<LayerOverride>();
 
-#endregion
-
-#region Fields
-
-        private readonly List<TextMeshProLayerData> layers = new List<TextMeshProLayerData>();
-        private readonly List<LayerMaterialScope> layerMaterialScopes = new List<LayerMaterialScope>();
-        private readonly List<Material> appliedCanvasMaterials = new List<Material>();
+        private readonly List<ResolvedLayer> resolvedLayers = new List<ResolvedLayer>();
+        private readonly List<TextMeshProLayerData> resolvedLayerData = new List<TextMeshProLayerData>();
         private readonly List<LayerRuntimeState> layerRuntimeStates = new List<LayerRuntimeState>();
-        private readonly List<LayerGeometryState> layerGeometryStates = new List<LayerGeometryState>();
-        private readonly List<int> dirtyRuntimeMaterialLayerIndices = new List<int>();
         private readonly TextMeshProLayerMeshBuilder meshBuilder = new TextMeshProLayerMeshBuilder();
 
         private TextMeshProUGUI text;
         private Mesh mesh;
-        private Mesh appliedMesh;
-        private Texture appliedTexture;
-        private DirtyFlags dirtyFlags = DirtyFlags.All;
-        private float sourceSdfPaddingState;
-        private TextMeshProLayerMaterialContext materialContextState;
-        private bool hasSourceSdfPaddingState;
-        private bool hasMaterialContextState;
-        private bool materialSharingAllowedState = true;
         private Vector4 paintBounds;
         private float appliedEffectPaddingBudget;
         private float appliedGeometryPaddingLimit;
-        private int appliedMaterialCount = -1;
-        private bool isQueuedForGraphicRebuild;
-        private bool hasDeferredGraphicRebuild;
-        private bool isRendering;
-        private bool hasAssignedMesh;
+        private TextMeshProLayerChange pendingChange = TextMeshProLayerChange.Geometry;
         private bool hasPaintBounds;
-        private bool layerCompositionDirty = true;
-        private bool allRuntimeMaterialsDirty;
-        private bool isRegisteredForCanvasValidation;
-        private Canvas appliedRootCanvas;
-        private Transform appliedParent;
-        private int appliedSiblingIndex = -1;
-        private int appliedAbsoluteDepth = -1;
-
-        private static readonly List<TextMeshProLayerStack> CanvasValidationStacks = new List<TextMeshProLayerStack>();
-
-#endregion
-
-#region Public API
+        private bool hasAssignedMesh;
+        private bool rebuildQueued;
+        private bool rebuilding;
+        
+        private const AdditionalCanvasShaderChannels RequiredCanvasChannels =
+            AdditionalCanvasShaderChannels.TexCoord1 |
+            AdditionalCanvasShaderChannels.TexCoord2;
 
         public TextMeshProLayerPreset Preset {
             get => preset;
             set {
-                if (preset == value) {
-                    return;
+                if (value != preset) {
+                    preset = value;
+                    NotifyChanged(TextMeshProLayerChange.Geometry);
                 }
-
-                preset = value;
-                SetLayerCompositionChanged();
             }
         }
 
         public void SetLayerStackDirty()
         {
-            SetLayerStackDirty(DirtyFlags.All);
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
-#endregion
+        internal void SetLayerStackDirty(TextMeshProLayerChange change)
+        {
+            NotifyChanged(change);
+        }
 
-#region Internal API
+        internal void SetLayerCompositionChanged()
+        {
+            NotifyChanged(TextMeshProLayerChange.Geometry);
+        }
 
-        internal List<TextMeshProLayerData> LocalLayers => localLayers;
-        internal List<TextMeshProLayerOverride> PresetLayerOverrides => presetLayerOverrides;
+        internal void SetLayerMaterialChanged()
+        {
+            NotifyChanged(TextMeshProLayerChange.Material);
+        }
+
+        internal void NotifyChanged(TextMeshProLayerChange change)
+        {
+            pendingChange = CombineChanges(pendingChange, change);
+            QueueRebuild();
+        }
 
         internal bool TryGetCurrentPaintBounds(out Vector4 bounds)
         {
@@ -135,164 +85,172 @@ namespace Tripledot.CanvasKit
             return hasPaintBounds && paintBounds.z > 0f && paintBounds.w > 0f;
         }
 
-        internal void SetLayerStackDirty(DirtyFlags flags)
+        internal void ReplaceLocalLayers(IList<TextMeshProLayerData> layers)
         {
-            MarkDirty(flags);
-
-            if ((flags & DirtyFlags.Layers) != 0) {
-                layerCompositionDirty = true;
+            preset = null;
+            localLayers.Clear();
+            foreach (var layer in layers) {
+                localLayers.Add(layer.Clone());
             }
 
-            QueueGraphicRebuild();
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
-        internal void SetLayerMaterialChanged()
+        internal void AddLocalLayer(TextMeshProLayerData layer)
         {
-            MarkDirty(MaterialDirtyFlags);
-            MarkRuntimeMaterialsDirty();
-            QueueGraphicRebuild();
+            localLayers.Add(layer);
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
-        internal void SetLayerMaterialChanged(int layerIndex)
+        internal bool IsPresetLayerInstance(int index)
         {
-            MarkDirty(MaterialDirtyFlags);
-            MarkRuntimeMaterialDirty(layerIndex);
-            QueueGraphicRebuild();
+            EnsurePresetOverrideSlots();
+            return index >= 0 && index < presetLayerOverrides.Count && presetLayerOverrides[index].OverrideLayer;
         }
 
-        internal void SetLayerCompositionChanged()
+        internal void SetPresetLayerInstance(int index, bool instance)
         {
-            SetLayerStackDirty(CompositionDirtyFlags);
+            EnsurePresetOverrideSlots();
+            if (index < 0 || index >= presetLayerOverrides.Count) {
+                return;
+            }
+
+            var layerOverride = presetLayerOverrides[index];
+            if (layerOverride.OverrideLayer == instance) {
+                return;
+            }
+
+            if (instance) {
+                layerOverride.CopyFromPreset(preset.GetLayer(index));
+                layerOverride.OverrideLayer = true;
+            } else {
+                layerOverride.OverrideLayer = false;
+                layerOverride.EnsureLayerCopy(preset.GetLayer(index));
+            }
+
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
-#endregion
+        internal TextMeshProLayerData GetEffectivePresetLayer(int index)
+        {
+            if (preset == null || index < 0 || index >= preset.LayerCount) {
+                return null;
+            }
 
-#region Unity Lifecycle
+            EnsurePresetOverrideSlots();
+            return presetLayerOverrides[index].OverrideLayer
+                ? presetLayerOverrides[index].Layer
+                : preset.GetLayer(index);
+        }
+
+        internal void CopyEffectivePresetLayersTo(IList<TextMeshProLayerData> destination)
+        {
+            destination.Clear();
+            if (preset == null) {
+                for (var i = 0; i < localLayers.Count; i++) {
+                    destination.Add(localLayers[i].Clone());
+                }
+
+                return;
+            }
+
+            EnsurePresetOverrideSlots();
+            for (var i = 0; i < preset.LayerCount; i++) {
+                destination.Add(GetEffectivePresetLayer(i).Clone());
+            }
+        }
+
+        internal void ClearPresetLayerInstances()
+        {
+            EnsurePresetOverrideSlots();
+            for (var i = 0; i < presetLayerOverrides.Count; i++) {
+                presetLayerOverrides[i].OverrideLayer = false;
+                presetLayerOverrides[i].EnsureLayerCopy(preset.GetLayer(i));
+            }
+
+            NotifyChanged(TextMeshProLayerChange.Geometry);
+        }
+
+        internal Mesh CurrentMesh => mesh;
 
         protected override void OnEnable()
         {
             base.OnEnable();
 
-            TryGetComponent(out text);
+            text = GetComponent<TextMeshProUGUI>();
             RegisterCallbacks();
-            TextMeshProLayerPreset.ChangedWithDirtyFlags += OnPresetChanged;
-            SetLayerCompositionChanged();
+            TextMeshProLayerPreset.Changed += OnPresetChanged;
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
         protected override void OnDisable()
         {
-            CanvasUpdateRegistry.UnRegisterCanvasElementForRebuild(this);
-
-            UnregisterDeferredGraphicRebuild();
-            isQueuedForGraphicRebuild = false;
-
+            CancelQueuedRebuild();
             UnregisterCallbacks();
-            TextMeshProLayerPreset.ChangedWithDirtyFlags -= OnPresetChanged;
+            TextMeshProLayerPreset.Changed -= OnPresetChanged;
             RestoreDefaultRendering();
-            ReleaseStackResources();
-            ResetRuntimeState();
+            ReleaseResources();
+            pendingChange = TextMeshProLayerChange.Geometry;
 
             base.OnDisable();
         }
 
         protected override void OnDestroy()
         {
-            CanvasUpdateRegistry.UnRegisterCanvasElementForRebuild(this);
-
-            UnregisterDeferredGraphicRebuild();
-            isQueuedForGraphicRebuild = false;
-
+            CancelQueuedRebuild();
             UnregisterCallbacks();
-            TextMeshProLayerPreset.ChangedWithDirtyFlags -= OnPresetChanged;
-            ReleaseStackResources();
-            ResetRuntimeState();
+            TextMeshProLayerPreset.Changed -= OnPresetChanged;
+            ReleaseResources();
 
             base.OnDestroy();
         }
 
         protected override void OnDidApplyAnimationProperties()
         {
-            // Animation support is intentionally limited to material-safe fields.
-            // Geometry, padding, and composition fields are marked NotKeyable because rebuilding those paths every animation tick is too expensive.
-            SetLayerMaterialChanged();
+            NotifyChanged(TextMeshProLayerChange.Material);
             base.OnDidApplyAnimationProperties();
         }
 
         protected override void OnTransformParentChanged()
         {
-            SetLayerStackDirty(DirtyFlags.Canvas);
+            NotifyChanged(TextMeshProLayerChange.Material);
             base.OnTransformParentChanged();
         }
 
         protected override void OnRectTransformDimensionsChange()
         {
-            SetLayerStackDirty(DirtyFlags.SourceGeometry | DirtyFlags.Geometry | DirtyFlags.PaintBounds | DirtyFlags.Canvas);
+            NotifyChanged(TextMeshProLayerChange.Geometry);
             base.OnRectTransformDimensionsChange();
+        }
+
+        protected override void OnCanvasHierarchyChanged()
+        {
+            NotifyChanged(TextMeshProLayerChange.Material);
+            base.OnCanvasHierarchyChanged();
         }
 
 #if UNITY_EDITOR
         protected override void OnValidate()
         {
             EnsurePresetOverrideSlots();
-            SetLayerCompositionChanged();
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
         protected override void Reset()
         {
             base.Reset();
 
-            layerCompositionDirty = true;
-            if (preset != null || localLayers.Count > 0) {
-                SetLayerCompositionChanged();
-                return;
+            if (preset == null && localLayers.Count == 0) {
+                localLayers.Add(TextMeshProLayerData.Default());
             }
 
-            localLayers.Add(TextMeshProLayerData.Default());
-            SetLayerCompositionChanged();
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 #endif
-
-#endregion
-
-#region ICanvasElement
-
-        void ICanvasElement.Rebuild(CanvasUpdate executing)
-        {
-            if (executing == CanvasUpdate.LatePreRender) {
-                isQueuedForGraphicRebuild = false;
-                UnregisterDeferredGraphicRebuild();
-                RenderTextMeshProLayers();
-            }
-        }
-
-        void ICanvasElement.LayoutComplete() { }
-
-        void ICanvasElement.GraphicUpdateComplete()
-        {
-            isQueuedForGraphicRebuild = false;
-        }
-
-        bool ICanvasElement.IsDestroyed()
-        {
-            return this == null;
-        }
-
-#endregion
-
-#region Callbacks and Dirty State
-
-        private void MarkDirty(DirtyFlags flags)
-        {
-            dirtyFlags |= flags;
-        }
 
         private void RegisterCallbacks()
         {
             UnregisterCallbacks();
-            if (text == null) {
-                return;
-            }
-
             text.RegisterDirtyVerticesCallback(OnTextVerticesDirty);
             text.RegisterDirtyMaterialCallback(OnTextMaterialDirty);
             text.RegisterDirtyLayoutCallback(OnTextLayoutDirty);
@@ -311,306 +269,170 @@ namespace Tripledot.CanvasKit
 
         private void OnTextVerticesDirty()
         {
-            MarkDirty(DirtyFlags.SourceGeometry | DirtyFlags.Geometry | DirtyFlags.PaintBounds | DirtyFlags.Canvas);
-            QueueGraphicRebuild();
-        }
-
-        private void OnPresetChanged(TextMeshProLayerPreset changedPreset, DirtyFlags flags, int layerIndex)
-        {
-            if (changedPreset == preset) {
-                if (flags == MaterialDirtyFlags && layerIndex >= 0) {
-                    SetLayerMaterialChanged(layerIndex);
-                    return;
-                }
-
-                SetLayerStackDirty(flags);
-            }
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
         private void OnTextMaterialDirty()
         {
-            MarkDirty(MaterialDirtyFlags);
-            UpdateSourcePaddingState();
-            QueueGraphicRebuild();
+            NotifyChanged(TextMeshProLayerChange.Material);
         }
 
         private void OnTextLayoutDirty()
         {
-            MarkDirty(DirtyFlags.SourceGeometry | DirtyFlags.Geometry | DirtyFlags.PaintBounds | DirtyFlags.Canvas);
-            QueueGraphicRebuild();
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
-        private void QueueGraphicRebuild()
+        private void OnPresetChanged(TextMeshProLayerPreset changedPreset, TextMeshProLayerChange change)
         {
-            if (!isActiveAndEnabled || text == null || !text.enabled || isRendering) {
-                return;
+            if (changedPreset == preset) {
+                NotifyChanged(change);
             }
-
-            RegisterDeferredGraphicRebuild();
-
-            if (isQueuedForGraphicRebuild) {
-                return;
-            }
-
-            if (CanvasUpdateRegistry.IsRebuildingGraphics()) {
-                return;
-            }
-
-            isQueuedForGraphicRebuild = CanvasUpdateRegistry.TryRegisterCanvasElementForGraphicRebuild(this);
         }
 
-        private void RegisterDeferredGraphicRebuild()
+        private void QueueRebuild()
         {
-            if (hasDeferredGraphicRebuild) {
+            if (!isActiveAndEnabled || text == null || !text.enabled || rebuilding || rebuildQueued) {
                 return;
             }
 
-            hasDeferredGraphicRebuild = true;
+            rebuildQueued = true;
             Canvas.willRenderCanvases += OnWillRenderCanvases;
         }
 
-        private void UnregisterDeferredGraphicRebuild()
+        private void CancelQueuedRebuild()
         {
-            if (!hasDeferredGraphicRebuild) {
+            if (!rebuildQueued) {
                 return;
             }
 
-            hasDeferredGraphicRebuild = false;
+            rebuildQueued = false;
             Canvas.willRenderCanvases -= OnWillRenderCanvases;
         }
 
-#endregion
-
-#region Rendering
-
         private void OnWillRenderCanvases()
         {
-            UnregisterDeferredGraphicRebuild();
-            if (!isActiveAndEnabled || !text.enabled || isRendering) {
+            CancelQueuedRebuild();
+            if (!isActiveAndEnabled || !text.enabled || rebuilding) {
                 return;
             }
 
-            isQueuedForGraphicRebuild = false;
-            if (CanReapplyCanvasRenderer()) {
-                ReapplyCanvasRenderer();
-                return;
-            }
-
-            RenderTextMeshProLayers();
+            Rebuild();
         }
 
-        private void RenderTextMeshProLayers()
+        private void Rebuild()
         {
-            if (!isActiveAndEnabled || !text.enabled || isRendering) {
-                return;
+            var change = pendingChange;
+            if (mesh == null || !hasAssignedMesh) {
+                change = CombineChanges(change, TextMeshProLayerChange.Geometry);
             }
 
-            var layerCount = RefreshRenderableLayers();
-            if (layerCount == 0) {
-                UnregisterCanvasValidation();
-                ClearLayerRendering();
-                return;
-            }
-
-            RegisterCanvasValidation();
-            EnsureCanvasShaderChannels();
-
-            if (TryMarkCanvasStateDirty()) {
-                MarkDirty(DirtyFlags.Canvas);
-            }
-
-            isRendering = true;
+            pendingChange = TextMeshProLayerChange.None;
+            rebuilding = true;
             try {
-                var renderMaterial = text.materialForRendering != null ? text.materialForRendering : text.fontSharedMaterial;
-                var sourceMaterial = GetSourceSharedMaterial(renderMaterial);
-                materialSharingAllowedState = renderMaterial == sourceMaterial;
-
-                UpdateSourcePaddingState();
-                if (TryMarkLayerGeometryStateDirty()) {
-                    MarkDirty(PaddingDirtyFlags);
+                if ((change & TextMeshProLayerChange.Geometry) != 0) {
+                    RebuildGeometry();
                 }
 
-                var sourceGeometryDirty = (dirtyFlags & DirtyFlags.SourceGeometry) != 0;
-                var geometryDirty = (dirtyFlags & (DirtyFlags.Geometry | DirtyFlags.Padding | DirtyFlags.Layers | DirtyFlags.SourceGeometry)) != 0;
-                var paddingDirty = (dirtyFlags & (DirtyFlags.Padding | DirtyFlags.Layers)) != 0;
-                var paintBoundsDirty = (dirtyFlags & DirtyFlags.PaintBounds) != 0 || !hasPaintBounds;
-
-                if (paddingDirty || sourceGeometryDirty || paintBoundsDirty) {
-                    text.ForceMeshUpdate();
-                }
-
-                if (paddingDirty) {
-                    RefreshLayerPaddingBudget(text, layers);
-                }
-
-                if (geometryDirty) {
-                    var targetMesh = GetMesh();
-                    meshBuilder.Build(targetMesh, text.textInfo, layers, appliedGeometryPaddingLimit);
-                    RefreshPaintBounds(targetMesh, text);
-                    dirtyFlags &= ~(DirtyFlags.Geometry | DirtyFlags.Padding | DirtyFlags.SourceGeometry | DirtyFlags.PaintBounds);
-                } else if (paintBoundsDirty) {
-                    RefreshPaintBounds(mesh, text);
-                    dirtyFlags &= ~DirtyFlags.PaintBounds;
-                }
-
-                var materialContext = TextMeshProLayerMaterialContext.Capture(text, sourceMaterial, renderMaterial, paintBounds, appliedEffectPaddingBudget);
-                UpdateMaterialContextState(materialContext);
-
-                var materialDirty = (dirtyFlags & (DirtyFlags.Material | DirtyFlags.Layers)) != 0;
-                var canvasDirty = (dirtyFlags & (DirtyFlags.Canvas | DirtyFlags.Layers)) != 0;
-                if (materialDirty) {
-                    ApplyPendingRuntimeMaterialDirties();
-                }
-
-                if (!geometryDirty && !materialDirty && !canvasDirty && hasAssignedMesh) {
+                if (resolvedLayers.Count == 0) {
+                    ClearLayerRendering();
                     return;
                 }
 
-                if (geometryDirty || materialDirty || canvasDirty || !hasAssignedMesh) {
-                    var applyFlags = GetApplyFlags(geometryDirty, materialDirty, canvasDirty);
-                    ApplyCanvasRenderer(text, GetMesh(), layers, layerMaterialScopes, materialContext, materialSharingAllowedState, applyFlags);
-                    dirtyFlags &= ~(DirtyFlags.Material | DirtyFlags.Canvas | DirtyFlags.Layers);
-                    ClearPendingRuntimeMaterialDirties();
+                if ((change & (TextMeshProLayerChange.Geometry | TextMeshProLayerChange.Material)) != 0) {
+                    ApplyMaterials();
                 }
             } finally {
-                isRendering = false;
+                rebuilding = false;
+            }
+
+            if (pendingChange != TextMeshProLayerChange.None) {
+                QueueRebuild();
             }
         }
 
-        private ApplyCanvasRendererFlags GetApplyFlags(bool geometryDirty, bool materialDirty, bool canvasDirty)
+        private void RebuildGeometry()
         {
-            if (!hasAssignedMesh) {
-                return ApplyCanvasRendererFlags.All;
-            }
-
-            var flags = ApplyCanvasRendererFlags.None;
-            if (geometryDirty) {
-                flags |= ApplyCanvasRendererFlags.Mesh | ApplyCanvasRendererFlags.Materials | ApplyCanvasRendererFlags.Texture;
-            } else if (materialDirty) {
-                flags |= ApplyCanvasRendererFlags.Materials;
-            } else if (canvasDirty) {
-                flags |= ApplyCanvasRendererFlags.Mesh | ApplyCanvasRendererFlags.Materials | ApplyCanvasRendererFlags.Texture;
-            }
-
-            return flags;
-        }
-
-        private void UpdateSourcePaddingState()
-        {
-            var nextSourceSdfPadding = text != null ? TextMeshProUtility.CalculateAvailablePadding(text) : 0f;
-            if (!hasSourceSdfPaddingState) {
-                sourceSdfPaddingState = nextSourceSdfPadding;
-                hasSourceSdfPaddingState = true;
+            ResolveRenderableLayers();
+            EnsureLayerRuntimeStates(resolvedLayers.Count);
+            if (resolvedLayers.Count == 0) {
                 return;
             }
 
-            if (sourceSdfPaddingState != nextSourceSdfPadding) {
-                sourceSdfPaddingState = nextSourceSdfPadding;
-                MarkDirty(DirtyFlags.Padding | DirtyFlags.Geometry | DirtyFlags.PaintBounds | DirtyFlags.Canvas);
+            CanvasUtility.EnsureChannels(text.canvas, RequiredCanvasChannels);
+            text.ForceMeshUpdate();
+            RefreshLayerPaddingBudget();
+
+            var targetMesh = GetMesh();
+            meshBuilder.Build(targetMesh, text.textInfo, GetResolvedLayerData(), appliedGeometryPaddingLimit);
+            RefreshPaintBounds(targetMesh);
+        }
+
+        private void ApplyMaterials()
+        {
+            var renderMaterial = text.materialForRendering;
+            var sourceMaterial = text.fontSharedMaterial != null ? text.fontSharedMaterial : renderMaterial;
+            var materialContext = TextMeshProLayerMaterialContext.Capture(text, sourceMaterial, renderMaterial, appliedEffectPaddingBudget);
+            var canvasRenderer = text.canvasRenderer;
+
+            canvasRenderer.cull = false;
+            canvasRenderer.SetMesh(mesh);
+            canvasRenderer.materialCount = resolvedLayers.Count;
+            canvasRenderer.SetTexture(materialContext.FontAtlas);
+            hasAssignedMesh = true;
+
+            for (var materialSlot = 0; materialSlot < resolvedLayers.Count; materialSlot++) {
+                var resolvedLayer = GetRenderLayerForSlot(materialSlot);
+                var material = layerRuntimeStates[materialSlot].GetOrCreateMaterial(resolvedLayer, materialContext, name);
+                canvasRenderer.SetMaterial(material, materialSlot);
             }
         }
 
-        private void UpdateMaterialContextState(TextMeshProLayerMaterialContext nextMaterialContext)
+        private void ResolveRenderableLayers()
         {
-            if (!hasMaterialContextState || !materialContextState.Equals(nextMaterialContext)) {
-                materialContextState = nextMaterialContext;
-                hasMaterialContextState = true;
-                MarkDirty(DirtyFlags.Material | DirtyFlags.Canvas);
-            }
-        }
-
-        private void ReleaseStackResources()
-        {
-            UnregisterCanvasValidation();
-            ResetCanvasRendererState();
-            ReleaseLayerRuntimeStates();
-            ReleaseMesh();
-        }
-
-#endregion
-
-#region Layer Resolution
-
-        private int RefreshRenderableLayers()
-        {
-            if (!layerCompositionDirty) {
-                return layers.Count;
-            }
-
-            layerCompositionDirty = false;
-            layers.Clear();
-            layerMaterialScopes.Clear();
-
-            ResolveRenderableLayers(layers, layerMaterialScopes);
-            EnsureLayerRuntimeStates(layers.Count);
-            ResetCanvasRendererState();
-
-            MarkRuntimeMaterialsDirty();
-            MarkDirty(DirtyFlags.Layers | DirtyFlags.Geometry | DirtyFlags.Material | DirtyFlags.Padding | DirtyFlags.Canvas);
-
-            return layers.Count;
-        }
-
-        private void RefreshLayerPaddingBudget(TextMeshProUGUI text, List<TextMeshProLayerData> layers)
-        {
-            var requiredPadding = CalculateMaxSdfPadding(layers);
-            var availableSdfPadding = TextMeshProUtility.CalculateAvailablePadding(text);
-            var effectPaddingBudget = Mathf.Min(requiredPadding, availableSdfPadding);
-
-            appliedEffectPaddingBudget = effectPaddingBudget;
-            appliedGeometryPaddingLimit = TextMeshProUtility.GetGeometryPaddingLimit(effectPaddingBudget);
-        }
-
-        internal static float CalculateMaxSdfPadding(List<TextMeshProLayerData> layers)
-        {
-            var padding = 0f;
-            for (var i = 0; i < layers.Count; i++) {
-                if (layers[i] != null && layers[i].Enabled) {
-                    padding = Mathf.Max(padding, layers[i].GetSdfPadding());
-                }
-            }
-
-            return padding;
-        }
-
-        private void ResolveRenderableLayers(List<TextMeshProLayerData> results, List<LayerMaterialScope> materialScopes)
-        {
+            resolvedLayers.Clear();
             if (preset == null) {
                 for (var i = 0; i < localLayers.Count; i++) {
-                    if (localLayers[i].Enabled) {
-                        results.Add(localLayers[i]);
-                        materialScopes?.Add(LayerMaterialScope.Unique);
+                    var layer = localLayers[i];
+                    if (layer.Enabled) {
+                        resolvedLayers.Add(ResolvedLayer.Unique(layer));
                     }
                 }
-            } else {
-                EnsurePresetOverrideSlots();
 
-                for (var i = 0; i < preset.LayerCount; i++) {
-                    var presetLayer = preset.GetLayer(i);
-                    var layerOverride = presetLayerOverrides[i];
-                    var layer = layerOverride.OverrideLayer ? layerOverride.Layer : presetLayer;
+                return;
+            }
 
-                    if (layer.Enabled) {
-                        results.Add(layer);
-                        materialScopes?.Add(layerOverride.OverrideLayer ? LayerMaterialScope.Unique : LayerMaterialScope.Shared(preset, i, preset.GetLayerVersion(i)));
-                    }
+            EnsurePresetOverrideSlots();
+            for (var i = 0; i < preset.LayerCount; i++) {
+                var presetLayer = preset.GetLayer(i);
+                var layerOverride = presetLayerOverrides[i];
+                var layer = layerOverride.OverrideLayer ? layerOverride.Layer : presetLayer;
+                if (layer.Enabled) {
+                    resolvedLayers.Add(layerOverride.OverrideLayer
+                        ? ResolvedLayer.Unique(layer)
+                        : ResolvedLayer.Shared(layer, preset, i));
                 }
             }
         }
 
-#endregion
+        private IList<TextMeshProLayerData> GetResolvedLayerData()
+        {
+            resolvedLayerData.Clear();
+            for (var i = 0; i < resolvedLayers.Count; i++) {
+                resolvedLayerData.Add(resolvedLayers[i].Layer);
+            }
 
-#region Preset Overrides
+            return resolvedLayerData;
+        }
 
         private void EnsurePresetOverrideSlots()
         {
             var count = preset != null ? preset.LayerCount : 0;
             while (presetLayerOverrides.Count < count) {
-                presetLayerOverrides.Add(new TextMeshProLayerOverride());
+                presetLayerOverrides.Add(new LayerOverride());
             }
 
             for (var i = 0; i < count; i++) {
-                presetLayerOverrides[i] ??= new TextMeshProLayerOverride();
+                presetLayerOverrides[i] ??= new LayerOverride();
                 presetLayerOverrides[i].EnsureLayerCopy(preset.GetLayer(i));
             }
 
@@ -619,81 +441,24 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        internal bool IsPresetLayerInstance(int index)
+        private void RefreshLayerPaddingBudget()
         {
-            EnsurePresetOverrideSlots();
-            return index >= 0 && index < presetLayerOverrides.Count &&
-                   presetLayerOverrides[index].OverrideLayer;
+            var requiredPadding = CalculateMaxSdfPadding();
+            var availableSdfPadding = TextMeshProUtility.CalculateAvailablePadding(text);
+
+            appliedEffectPaddingBudget = Mathf.Min(requiredPadding, availableSdfPadding);
+            appliedGeometryPaddingLimit = TextMeshProUtility.GetGeometryPaddingLimit(appliedEffectPaddingBudget);
         }
 
-        internal void SetPresetLayerInstance(int index, bool instance)
+        private float CalculateMaxSdfPadding()
         {
-            EnsurePresetOverrideSlots();
-            if (index < 0 || index >= presetLayerOverrides.Count) {
-                return;
+            var padding = 0f;
+            for (var i = 0; i < resolvedLayers.Count; i++) {
+                padding = Mathf.Max(padding, resolvedLayers[i].Layer.GetSdfPadding());
             }
 
-            var layerOverride = presetLayerOverrides[index];
-            if (layerOverride.OverrideLayer == instance) {
-                return;
-            }
-
-            if (instance) {
-                layerOverride.CopyFromPreset(preset != null ? preset.GetLayer(index) : null);
-                layerOverride.OverrideLayer = true;
-            } else {
-                layerOverride.OverrideLayer = false;
-                layerOverride.EnsureLayerCopy(preset != null ? preset.GetLayer(index) : null);
-            }
-
-            SetLayerCompositionChanged();
+            return padding;
         }
-
-        internal TextMeshProLayerData GetEffectivePresetLayer(int index)
-        {
-            if (preset == null || index < 0 || index >= preset.LayerCount) {
-                return null;
-            }
-
-            EnsurePresetOverrideSlots();
-
-            return presetLayerOverrides[index].OverrideLayer
-                ? presetLayerOverrides[index].Layer
-                : preset.GetLayer(index);
-        }
-
-        internal void CopyEffectivePresetLayersTo(IList<TextMeshProLayerData> destination)
-        {
-            destination.Clear();
-
-            if (preset == null) {
-                for (var i = 0; i < localLayers.Count; i++) {
-                    destination.Add(localLayers[i]?.Clone());
-                }
-            } else {
-                EnsurePresetOverrideSlots();
-
-                for (var i = 0; i < preset.LayerCount; i++) {
-                    destination.Add(GetEffectivePresetLayer(i)?.Clone());
-                }
-            }
-        }
-
-        internal void ClearPresetLayerInstances()
-        {
-            EnsurePresetOverrideSlots();
-
-            for (var i = 0; i < presetLayerOverrides.Count; i++) {
-                presetLayerOverrides[i].OverrideLayer = false;
-                presetLayerOverrides[i].EnsureLayerCopy(preset != null ? preset.GetLayer(i) : null);
-            }
-
-            SetLayerCompositionChanged();
-        }
-
-#endregion
-
-#region Runtime Materials
 
         private void EnsureLayerRuntimeStates(int count)
         {
@@ -719,396 +484,14 @@ namespace Tripledot.CanvasKit
             layerRuntimeStates.Clear();
         }
 
-        private void MarkRuntimeMaterialsDirty()
+        private void ReleaseResources()
         {
-            allRuntimeMaterialsDirty = true;
-            dirtyRuntimeMaterialLayerIndices.Clear();
-
-            for (var i = 0; i < layerRuntimeStates.Count; i++) {
-                layerRuntimeStates[i].SetMaterialDirty();
-            }
-        }
-
-        private void MarkRuntimeMaterialDirty(int layerIndex)
-        {
-            if (layerIndex < 0) {
-                MarkRuntimeMaterialsDirty();
-                return;
-            }
-
-            if (!dirtyRuntimeMaterialLayerIndices.Contains(layerIndex)) {
-                dirtyRuntimeMaterialLayerIndices.Add(layerIndex);
-            }
-
-            TryMarkRuntimeMaterialDirtyForLayer(layerIndex);
-        }
-
-        private void ApplyPendingRuntimeMaterialDirties()
-        {
-            if (allRuntimeMaterialsDirty || dirtyRuntimeMaterialLayerIndices.Count == 0) {
-                MarkRuntimeMaterialsDirty();
-                return;
-            }
-
-            for (var i = 0; i < dirtyRuntimeMaterialLayerIndices.Count; i++) {
-                TryMarkRuntimeMaterialDirtyForLayer(dirtyRuntimeMaterialLayerIndices[i]);
-            }
-        }
-
-        private void ClearPendingRuntimeMaterialDirties()
-        {
-            allRuntimeMaterialsDirty = false;
-            dirtyRuntimeMaterialLayerIndices.Clear();
-        }
-
-        private bool TryMarkRuntimeMaterialDirtyForLayer(int layerIndex)
-        {
-            var layer = GetEffectiveLayerForMaterialDirty(layerIndex);
-            if (layer == null) {
-                return false;
-            }
-
-            for (var i = 0; i < layers.Count; i++) {
-                if (!ReferenceEquals(layers[i], layer)) {
-                    continue;
-                }
-
-                var materialSlot = layers.Count - 1 - i;
-                if (materialSlot >= 0 && materialSlot < layerRuntimeStates.Count) {
-                    layerRuntimeStates[materialSlot].SetMaterialDirty();
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private TextMeshProLayerData GetEffectiveLayerForMaterialDirty(int layerIndex)
-        {
-            if (layerIndex < 0) {
-                return null;
-            }
-
-            if (preset == null) {
-                return layerIndex < localLayers.Count ? localLayers[layerIndex] : null;
-            }
-
-            if (layerIndex >= preset.LayerCount) {
-                return null;
-            }
-
-            EnsurePresetOverrideSlots();
-
-            var layerOverride = layerIndex < presetLayerOverrides.Count ? presetLayerOverrides[layerIndex] : null;
-            return layerOverride is { OverrideLayer: true } ? layerOverride.Layer : preset.GetLayer(layerIndex);
-        }
-
-        private void ResetRuntimeState()
-        {
-            dirtyFlags = DirtyFlags.All;
-            ClearPendingRuntimeMaterialDirties();
-
-            sourceSdfPaddingState = 0f;
-            materialContextState = default;
-            hasSourceSdfPaddingState = false;
-            hasMaterialContextState = false;
-            materialSharingAllowedState = true;
-            paintBounds = default;
-            appliedEffectPaddingBudget = 0f;
-            appliedGeometryPaddingLimit = 0f;
+            ReleaseLayerRuntimeStates();
+            ReleaseMesh();
+            resolvedLayers.Clear();
             hasPaintBounds = false;
-            layerCompositionDirty = true;
-            layerGeometryStates.Clear();
-        }
-
-#endregion
-
-#region Geometry State
-
-        private bool TryMarkLayerGeometryStateDirty()
-        {
-            var changed = layerGeometryStates.Count != layers.Count;
-            while (layerGeometryStates.Count < layers.Count) {
-                layerGeometryStates.Add(default);
-            }
-
-            for (var i = 0; i < layers.Count; i++) {
-                var nextState = LayerGeometryState.Capture(layers[i]);
-                if (!layerGeometryStates[i].Equals(nextState)) {
-                    layerGeometryStates[i] = nextState;
-                    changed = true;
-                }
-            }
-
-            if (layerGeometryStates.Count > layers.Count) {
-                layerGeometryStates.RemoveRange(layers.Count, layerGeometryStates.Count - layers.Count);
-            }
-
-            return changed;
-        }
-
-#endregion
-
-#region Canvas Renderer
-
-        private bool CanReapplyCanvasRenderer()
-        {
-            return dirtyFlags == DirtyFlags.None
-                   && !layerCompositionDirty
-                   && hasAssignedMesh
-                   && mesh != null
-                   && hasMaterialContextState
-                   && layers.Count > 0
-                   && layerRuntimeStates.Count == layers.Count
-                   && layerMaterialScopes.Count == layers.Count;
-        }
-
-        private void ReapplyCanvasRenderer()
-        {
-            ApplyCanvasRenderer(text, mesh, layers, layerMaterialScopes, materialContextState, materialSharingAllowedState, ApplyCanvasRendererFlags.All);
-        }
-
-        private void ApplyCanvasRenderer(
-            TextMeshProUGUI text, Mesh mesh, IList<TextMeshProLayerData> layers,
-            IList<LayerMaterialScope> materialScopes, TextMeshProLayerMaterialContext materialContext, bool materialSharingAllowed,
-            ApplyCanvasRendererFlags applyFlags)
-        {
-            var canvasRenderer = text.canvasRenderer;
-            canvasRenderer.cull = false;
-            var forceMeshAssignment = (applyFlags & ApplyCanvasRendererFlags.Mesh) != 0;
-            var forceMaterialAssignment = (applyFlags & ApplyCanvasRendererFlags.Materials) != 0;
-            var forceTextureAssignment = (applyFlags & ApplyCanvasRendererFlags.Texture) != 0;
-
-            if (forceMeshAssignment || !hasAssignedMesh || appliedMesh != mesh) {
-                canvasRenderer.SetMesh(mesh);
-                appliedMesh = mesh;
-                hasAssignedMesh = true;
-            }
-
-            forceMaterialAssignment = forceMaterialAssignment || appliedMaterialCount != layers.Count || canvasRenderer.materialCount != layers.Count;
-            if (forceMaterialAssignment) {
-                canvasRenderer.materialCount = layers.Count;
-                appliedMaterialCount = layers.Count;
-            }
-
-            if (forceTextureAssignment || materialContext.FontAtlas != appliedTexture) {
-                canvasRenderer.SetTexture(materialContext.FontAtlas);
-                appliedTexture = materialContext.FontAtlas;
-            }
-
-            EnsureAppliedMaterialSlots(layers.Count);
-            var canShareMaterials = materialSharingAllowed && CanSharePresetMaterials(canvasRenderer);
-
-            for (var i = 0; i < layers.Count; i++) {
-                var layer = GetRenderLayerForSlot(layers, i);
-                var materialScope = canShareMaterials ? GetRenderMaterialScopeForSlot(materialScopes, i) : LayerMaterialScope.Unique;
-                var material = layerRuntimeStates[i].GetOrCreateMaterial(layer, materialScope, materialContext, name);
-                if (forceMaterialAssignment || appliedCanvasMaterials[i] != material) {
-                    canvasRenderer.SetMaterial(material, i);
-                    appliedCanvasMaterials[i] = material;
-                }
-            }
-
-            CacheAppliedCanvasState(text, canvasRenderer);
-        }
-
-        private void EnsureCanvasShaderChannels()
-        {
-            CanvasUtility.EnsureChannels(text != null ? text.canvas : null, RequiredCanvasChannels);
-        }
-
-        private static bool CanSharePresetMaterials(CanvasRenderer canvasRenderer)
-        {
-            return canvasRenderer == null || (!canvasRenderer.hasRectClipping && canvasRenderer.clippingSoftness == Vector2.zero);
-        }
-
-        private void EnsureAppliedMaterialSlots(int count)
-        {
-            while (appliedCanvasMaterials.Count < count) {
-                appliedCanvasMaterials.Add(null);
-            }
-
-            for (var i = count; i < appliedCanvasMaterials.Count; i++) {
-                appliedCanvasMaterials[i] = null;
-            }
-        }
-
-        private void ResetCanvasRendererState()
-        {
-            appliedCanvasMaterials.Clear();
-            appliedMaterialCount = -1;
-            appliedMesh = null;
-            appliedTexture = null;
             hasAssignedMesh = false;
-            appliedRootCanvas = null;
-            appliedParent = null;
-            appliedSiblingIndex = -1;
-            appliedAbsoluteDepth = -1;
         }
-
-#endregion
-
-#region Canvas Validation
-
-        private static void OnWillRenderCanvasesValidateStacks()
-        {
-            for (var i = CanvasValidationStacks.Count - 1; i >= 0; i--) {
-                var stack = CanvasValidationStacks[i];
-                if (stack == null) {
-                    CanvasValidationStacks.RemoveAt(i);
-                    continue;
-                }
-
-                stack.ValidateCanvasRendererForRender();
-            }
-
-            if (CanvasValidationStacks.Count == 0) {
-                Canvas.willRenderCanvases -= OnWillRenderCanvasesValidateStacks;
-            }
-        }
-
-        private void RegisterCanvasValidation()
-        {
-            if (!isRegisteredForCanvasValidation) {
-                isRegisteredForCanvasValidation = true;
-                CanvasValidationStacks.Add(this);
-                if (CanvasValidationStacks.Count == 1) {
-                    Canvas.willRenderCanvases += OnWillRenderCanvasesValidateStacks;
-                }
-            }
-        }
-
-        private void UnregisterCanvasValidation()
-        {
-            if (isRegisteredForCanvasValidation) {
-                isRegisteredForCanvasValidation = false;
-                CanvasValidationStacks.Remove(this);
-                if (CanvasValidationStacks.Count == 0) {
-                    Canvas.willRenderCanvases -= OnWillRenderCanvasesValidateStacks;
-                }
-            }
-        }
-
-        private void ValidateCanvasRendererForRender()
-        {
-            if (!CanReapplyCanvasRenderer() || isQueuedForGraphicRebuild) {
-                return;
-            }
-
-            if (TryMarkCanvasStateDirty()) {
-                MarkDirty(DirtyFlags.Canvas);
-                RenderTextMeshProLayers();
-                return;
-            }
-
-            if (HasCanvasRendererDrifted(text.canvasRenderer)) {
-                ReapplyCanvasRenderer();
-            }
-        }
-
-        private bool HasCanvasRendererDrifted(CanvasRenderer canvasRenderer)
-        {
-            if (canvasRenderer.cull || canvasRenderer.materialCount != appliedMaterialCount) {
-                return true;
-            }
-
-            if (canvasRenderer.GetMesh() != appliedMesh) {
-                return true;
-            }
-
-            if (appliedCanvasMaterials.Count < appliedMaterialCount) {
-                return true;
-            }
-
-            for (var i = 0; i < appliedMaterialCount; i++) {
-                var appliedMaterial = appliedCanvasMaterials[i];
-                if (appliedMaterial == null || canvasRenderer.GetMaterial(i) != appliedMaterial) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private bool TryMarkCanvasStateDirty()
-        {
-            if (!hasAssignedMesh) {
-                return false;
-            }
-
-            var canvasRenderer = text.canvasRenderer;
-            var currentRootCanvas = text.canvas != null ? text.canvas.rootCanvas : null;
-            var currentParent = transform.parent;
-            var currentSiblingIndex = transform.GetSiblingIndex();
-            var currentAbsoluteDepth = canvasRenderer != null ? canvasRenderer.absoluteDepth : -1;
-
-            if (appliedRootCanvas == currentRootCanvas
-                && appliedParent == currentParent
-                && appliedSiblingIndex == currentSiblingIndex
-                && appliedAbsoluteDepth == currentAbsoluteDepth) {
-                return false;
-            }
-
-            appliedRootCanvas = currentRootCanvas;
-            appliedParent = currentParent;
-            appliedSiblingIndex = currentSiblingIndex;
-            appliedAbsoluteDepth = currentAbsoluteDepth;
-            return true;
-        }
-
-        private void CacheAppliedCanvasState(TextMeshProUGUI text, CanvasRenderer canvasRenderer)
-        {
-            appliedRootCanvas = text.canvas != null ? text.canvas.rootCanvas : null;
-            appliedParent = transform.parent;
-            appliedSiblingIndex = transform.GetSiblingIndex();
-            appliedAbsoluteDepth = canvasRenderer != null ? canvasRenderer.absoluteDepth : -1;
-        }
-
-#endregion
-
-#region Utility
-
-        private static TextMeshProLayerData GetRenderLayerForSlot(IList<TextMeshProLayerData> layers, int materialSlot)
-        {
-            return layers[layers.Count - 1 - materialSlot];
-        }
-
-        private Material GetSourceSharedMaterial(Material renderMaterial)
-        {
-            return text != null && text.fontSharedMaterial != null ? text.fontSharedMaterial : renderMaterial;
-        }
-
-        private static LayerMaterialScope GetRenderMaterialScopeForSlot(IList<LayerMaterialScope> materialScopes, int materialSlot)
-        {
-            return materialScopes != null && materialSlot >= 0 && materialSlot < materialScopes.Count
-                ? materialScopes[materialScopes.Count - 1 - materialSlot]
-                : LayerMaterialScope.Unique;
-        }
-
-        private void RestoreDefaultRendering()
-        {
-            if (text == null) {
-                return;
-            }
-
-            text.SetVerticesDirty();
-            text.SetMaterialDirty();
-        }
-
-        private void ClearLayerRendering()
-        {
-            if (!hasAssignedMesh && mesh == null) {
-                return;
-            }
-
-            ReleaseStackResources();
-            RestoreDefaultRendering();
-            dirtyFlags = DirtyFlags.All;
-        }
-
-#endregion
-
-#region Mesh and Bounds
 
         private Mesh GetMesh()
         {
@@ -1127,26 +510,20 @@ namespace Tripledot.CanvasKit
         {
             CoreUtils.Destroy(mesh);
             mesh = null;
-            hasPaintBounds = false;
-            ClearMeshAssignment();
         }
 
-        private void ClearMeshAssignment()
+        private void RefreshPaintBounds(Mesh layerMesh)
         {
-            hasAssignedMesh = false;
-            appliedMesh = null;
-        }
-
-        private void RefreshPaintBounds(Mesh layerMesh, TextMeshProUGUI text)
-        {
-            paintBounds = TryGetMeshPaintBounds(layerMesh, out var meshBounds) ? meshBounds : TextMeshProUtility.CalculateBounds(text);
+            paintBounds = TryGetMeshPaintBounds(layerMesh, out var meshBounds)
+                ? meshBounds
+                : TextMeshProUtility.CalculateFrameBounds(text);
             hasPaintBounds = true;
         }
 
         private static bool TryGetMeshPaintBounds(Mesh layerMesh, out Vector4 bounds)
         {
             bounds = default;
-            if (layerMesh == null || layerMesh.vertexCount == 0) {
+            if (layerMesh.vertexCount == 0) {
                 return false;
             }
 
@@ -1159,12 +536,43 @@ namespace Tripledot.CanvasKit
             return true;
         }
 
-#endregion
+        private void RestoreDefaultRendering()
+        {
+            if (text == null) {
+                return;
+            }
 
-#region Nested Types
+            text.SetVerticesDirty();
+            text.SetMaterialDirty();
+        }
+
+        private void ClearLayerRendering()
+        {
+            ReleaseResources();
+            RestoreDefaultRendering();
+            pendingChange = TextMeshProLayerChange.Geometry;
+        }
+
+        private ResolvedLayer GetRenderLayerForSlot(int materialSlot)
+        {
+            return resolvedLayers[resolvedLayers.Count - 1 - materialSlot];
+        }
+
+        private static TextMeshProLayerChange CombineChanges(TextMeshProLayerChange current, TextMeshProLayerChange next)
+        {
+            if ((next & TextMeshProLayerChange.Geometry) != 0) {
+                return TextMeshProLayerChange.Geometry | TextMeshProLayerChange.Material;
+            }
+
+            if ((current & TextMeshProLayerChange.Geometry) != 0) {
+                return current | TextMeshProLayerChange.Material;
+            }
+
+            return current | next;
+        }
 
         [Serializable]
-        internal sealed class TextMeshProLayerOverride
+        private sealed class LayerOverride
         {
             [SerializeField]
             private bool overrideLayer;
@@ -1182,63 +590,75 @@ namespace Tripledot.CanvasKit
             internal void EnsureLayerCopy(TextMeshProLayerData source)
             {
                 if (layer == null) {
-                    layer = source != null ? source.Clone() : TextMeshProLayerData.Default();
-                    return;
-                }
-
-                if (!overrideLayer && source != null) {
-                    layer.CopyFrom(source);
+                    layer = source.Clone();
+                } else {
+                    if (!overrideLayer) {
+                        layer.CopyFrom(source);
+                    }
                 }
             }
 
             internal void CopyFromPreset(TextMeshProLayerData source)
             {
                 if (layer == null) {
-                    layer = source != null ? source.Clone() : TextMeshProLayerData.Default();
-                    return;
-                }
-
-                if (source != null) {
+                    layer = source.Clone();
+                } else {
                     layer.CopyFrom(source);
                 }
+            }
+        }
+
+        private readonly struct ResolvedLayer
+        {
+            public readonly TextMeshProLayerData Layer;
+            public readonly LayerMaterialScope MaterialScope;
+
+            private ResolvedLayer(TextMeshProLayerData layer, LayerMaterialScope materialScope)
+            {
+                Layer = layer;
+                MaterialScope = materialScope;
+            }
+
+            public static ResolvedLayer Unique(TextMeshProLayerData layer)
+            {
+                return new ResolvedLayer(layer, LayerMaterialScope.Unique);
+            }
+
+            public static ResolvedLayer Shared(TextMeshProLayerData layer, TextMeshProLayerPreset preset, int layerIndex)
+            {
+                return new ResolvedLayer(layer, LayerMaterialScope.Shared(preset, layerIndex));
             }
         }
 
         private sealed class LayerRuntimeState
         {
             private Material uniqueMaterial;
-            private TextMeshProLayerMaterialContext uniqueMaterialContext;
             private readonly TextMeshProLayerMaterialGradientState uniqueGradientState = new TextMeshProLayerMaterialGradientState();
-            private bool hasUniqueMaterialContext;
-            private bool uniqueMaterialDirty = true;
 
             private TextMeshProLayerMaterialCache.Entry sharedMaterialEntry;
             private TextMeshProLayerMaterialCacheKey sharedMaterialKey;
             private bool hasSharedMaterialKey;
 
-            internal Material GetOrCreateMaterial(TextMeshProLayerData layer, LayerMaterialScope materialScope, TextMeshProLayerMaterialContext context, string ownerName)
+            public Material GetOrCreateMaterial(ResolvedLayer resolvedLayer, TextMeshProLayerMaterialContext context, string ownerName)
             {
-                if (materialScope.CanShare) {
-                    return GetOrCreateSharedMaterial(layer, materialScope, context);
+                if (resolvedLayer.MaterialScope.CanShare) {
+                    return GetOrCreateSharedMaterial(resolvedLayer, context);
                 }
 
                 ReleaseSharedMaterial();
-                return GetOrCreateUniqueMaterial(layer, context, ownerName);
+                return GetOrCreateUniqueMaterial(resolvedLayer.Layer, context, ownerName);
             }
 
-            private Material GetOrCreateSharedMaterial(TextMeshProLayerData layer, LayerMaterialScope materialScope, TextMeshProLayerMaterialContext context)
+            private Material GetOrCreateSharedMaterial(ResolvedLayer resolvedLayer, TextMeshProLayerMaterialContext context)
             {
                 ReleaseUniqueMaterial();
 
-                var key = materialScope.CreateCacheKey(context);
-                if (sharedMaterialEntry == null || sharedMaterialEntry.Material == null || !hasSharedMaterialKey || !sharedMaterialKey.Equals(key)) {
+                var key = resolvedLayer.MaterialScope.CreateCacheKey(context);
+                if (sharedMaterialEntry == null || !hasSharedMaterialKey || !sharedMaterialKey.Equals(key)) {
                     ReleaseSharedMaterial();
-                    sharedMaterialEntry = TextMeshProLayerMaterialCache.Acquire(key, layer, context);
+                    sharedMaterialEntry = TextMeshProLayerMaterialCache.Acquire(key, resolvedLayer.Layer, context);
                     sharedMaterialKey = key;
                     hasSharedMaterialKey = true;
-                } else if (sharedMaterialEntry.PresetVersion != key.PresetVersion) {
-                    layer.ApplyMaterial(sharedMaterialEntry.Material, context, sharedMaterialEntry.GradientState);
-                    sharedMaterialEntry.PresetVersion = key.PresetVersion;
                 }
 
                 return sharedMaterialEntry.Material;
@@ -1247,27 +667,15 @@ namespace Tripledot.CanvasKit
             private Material GetOrCreateUniqueMaterial(TextMeshProLayerData layer, TextMeshProLayerMaterialContext context, string ownerName)
             {
                 if (uniqueMaterial == null) {
-                    ReleaseUniqueMaterial();
-                    uniqueMaterial = TextMeshProLayerMaterial.CreateMaterial(TextMeshProLayerMaterial.ResolveCoreShader());
+                    uniqueMaterial = TextMeshProLayerMaterial.CreateRuntimeMaterial();
                     uniqueMaterial.name = ownerName + " (TextMeshPro Layer Material)";
                 }
 
-                if (uniqueMaterialDirty || !hasUniqueMaterialContext || !uniqueMaterialContext.Equals(context)) {
-                    layer.ApplyMaterial(uniqueMaterial, context, uniqueGradientState);
-                    uniqueMaterialContext = context;
-                    hasUniqueMaterialContext = true;
-                    uniqueMaterialDirty = false;
-                }
-
+                TextMeshProLayerMaterial.ApplyLayer(uniqueMaterial, layer, context, uniqueGradientState);
                 return uniqueMaterial;
             }
 
-            internal void SetMaterialDirty()
-            {
-                uniqueMaterialDirty = true;
-            }
-
-            internal void ReleaseMaterial()
+            public void ReleaseMaterial()
             {
                 ReleaseUniqueMaterial();
                 ReleaseSharedMaterial();
@@ -1278,9 +686,6 @@ namespace Tripledot.CanvasKit
                 uniqueGradientState.Release();
                 CoreUtils.Destroy(uniqueMaterial);
                 uniqueMaterial = null;
-                uniqueMaterialContext = default;
-                hasUniqueMaterialContext = false;
-                uniqueMaterialDirty = true;
             }
 
             private void ReleaseSharedMaterial()
@@ -1292,94 +697,30 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        private readonly struct LayerGeometryState : IEquatable<LayerGeometryState>
-        {
-            private readonly Vector2 layerOffset;
-            private readonly bool faceEnabled;
-            private readonly float faceDilate;
-            private readonly bool strokeEnabled;
-            private readonly TextMeshProStrokePosition strokePosition;
-            private readonly float strokeWidth;
-            private readonly float strokeFeather;
-            private readonly Vector2 strokeOffset;
-            private readonly bool shadowEnabled;
-            private readonly float shadowSpread;
-            private readonly float shadowBlur;
-            private readonly Vector2 shadowOffset;
-
-            private LayerGeometryState(TextMeshProLayerData layer)
-            {
-                layerOffset = layer?.GeometryOffset ?? Vector2.zero;
-
-                var face = layer?.Face ?? default;
-                faceEnabled = face.Enabled;
-                faceDilate = face.Dilate;
-
-                var stroke = layer?.Stroke ?? default;
-                strokeEnabled = stroke.Enabled;
-                strokePosition = stroke.Position;
-                strokeWidth = stroke.Width;
-                strokeFeather = stroke.Feather;
-                strokeOffset = stroke.Offset;
-
-                var shadow = layer?.Shadow ?? default;
-                shadowEnabled = shadow.Enabled;
-                shadowSpread = shadow.Spread;
-                shadowBlur = shadow.Blur;
-                shadowOffset = shadow.Offset;
-            }
-
-            public static LayerGeometryState Capture(TextMeshProLayerData layer)
-            {
-                return new LayerGeometryState(layer);
-            }
-
-            public bool Equals(LayerGeometryState other)
-            {
-                return layerOffset == other.layerOffset
-                       && faceEnabled == other.faceEnabled
-                       && faceDilate == other.faceDilate
-                       && strokeEnabled == other.strokeEnabled
-                       && strokePosition == other.strokePosition
-                       && strokeWidth == other.strokeWidth
-                       && strokeFeather == other.strokeFeather
-                       && strokeOffset == other.strokeOffset
-                       && shadowEnabled == other.shadowEnabled
-                       && shadowSpread == other.shadowSpread
-                       && shadowBlur == other.shadowBlur
-                       && shadowOffset == other.shadowOffset;
-            }
-        }
-
         private readonly struct LayerMaterialScope
         {
-            internal static readonly LayerMaterialScope Unique = new LayerMaterialScope(null, -1, 0);
+            public static readonly LayerMaterialScope Unique = new LayerMaterialScope(null, -1);
 
             private readonly TextMeshProLayerPreset preset;
             private readonly int layerIndex;
-            private readonly int presetVersion;
 
-            private LayerMaterialScope(TextMeshProLayerPreset preset, int layerIndex, int presetVersion)
+            private LayerMaterialScope(TextMeshProLayerPreset preset, int layerIndex)
             {
                 this.preset = preset;
                 this.layerIndex = layerIndex;
-                this.presetVersion = presetVersion;
             }
 
-            public bool CanShare => preset != null && layerIndex >= 0;
+            public bool CanShare => preset != null;
 
-            public static LayerMaterialScope Shared(TextMeshProLayerPreset preset, int layerIndex, int presetVersion)
+            public static LayerMaterialScope Shared(TextMeshProLayerPreset preset, int layerIndex)
             {
-                return new LayerMaterialScope(preset, layerIndex, presetVersion);
+                return new LayerMaterialScope(preset, layerIndex);
             }
 
             public TextMeshProLayerMaterialCacheKey CreateCacheKey(TextMeshProLayerMaterialContext context)
             {
-                var currentPresetVersion = preset != null ? preset.GetLayerVersion(layerIndex) : presetVersion;
-                return new TextMeshProLayerMaterialCacheKey(preset, currentPresetVersion, layerIndex, context);
+                return new TextMeshProLayerMaterialCacheKey(preset, preset.Version, layerIndex, context);
             }
         }
-
-#endregion
     }
 }

@@ -2,14 +2,8 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit
+namespace Tripledot.CanvasKit.TextMeshPro
 {
-    public enum TextMeshProSdfLengthUnit
-    {
-        Pixels = 0,
-        Percent = 1
-    }
-
     internal static class TextMeshProUtility
     {
         private const float SdfPixelsToPaddingPixelsScale = 2f;
@@ -80,8 +74,7 @@ namespace Tripledot.CanvasKit
                     continue;
                 }
 
-                for (var layerIndex = 0; layerIndex < layers.Count; layerIndex++) {
-                    var layer = layers[layerIndex];
+                foreach (var layer in layers) {
                     if (layer is not { Enabled: true }) {
                         continue;
                     }
@@ -156,9 +149,7 @@ namespace Tripledot.CanvasKit
 
         public static float GetGradientScale(Material material)
         {
-            return material != null && material.HasProperty(ShaderUtilities.ID_GradientScale)
-                ? material.GetFloat(ShaderUtilities.ID_GradientScale)
-                : 0f;
+            return material.GetFloat(ShaderUtilities.ID_GradientScale);
         }
 
         public static float PixelsToFaceDilate(float pixels, float gradientScale)
@@ -206,16 +197,6 @@ namespace Tripledot.CanvasKit
         public static float GetGeometryPaddingLimit(float effectPaddingBudget)
         {
             return effectPaddingBudget > 0f ? SdfPixelsToPaddingPixels(effectPaddingBudget) : 0f;
-        }
-
-        public static float PixelsToPercent(float pixels, float availablePadding)
-        {
-            return availablePadding <= 0f ? 0f : pixels / availablePadding * 100f;
-        }
-
-        public static float PercentToPixels(float percent, float availablePadding)
-        {
-            return availablePadding <= 0f ? 0f : percent * availablePadding / 100f;
         }
 
         public static float GetEffectiveGradientScale(Material material)

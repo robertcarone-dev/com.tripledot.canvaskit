@@ -11,10 +11,8 @@ namespace Tripledot.CanvasKit.Editor
         {
             public const float SliderNumericFieldWidth = 50f;
             public const float SliderRowGap = 4f;
-            public const float SliderUnitWidth = 52f;
             public const float DefaultSdfSliderPadding = 64f;
             public const int RoundedInspectorContentPadding = 8;
-            public const float SliderValueGroupWidth = SliderNumericFieldWidth + SliderRowGap + SliderUnitWidth;
             public const float CheckerSize = 4f;
 
             private const int RoundedInspectorTextureSize = 16;
@@ -23,11 +21,6 @@ namespace Tripledot.CanvasKit.Editor
 
             public static readonly GUIContent X = L10n.TextContent("X", "Adjust the horizontal component.");
             public static readonly GUIContent Y = L10n.TextContent("Y", "Adjust the vertical component.");
-
-            public static readonly GUIContent[] SdfLengthUnitLabels = {
-                L10n.TextContent("PX", "Edit this SDF length in pixels."),
-                L10n.TextContent("%", "Edit this SDF length as a percentage of available SDF padding.")
-            };
 
             public static readonly Color CheckerLight = new Color(0.72f, 0.72f, 0.72f, 1f);
             public static readonly Color CheckerDark = new Color(0.47f, 0.47f, 0.47f, 1f);
@@ -123,8 +116,8 @@ namespace Tripledot.CanvasKit.Editor
                 };
 
                 var clear = new Color(0f, 0f, 0f, 0f);
-                for (int y = 0; y < texture.height; y++) {
-                    for (int x = 0; x < texture.width; x++) {
+                for (var y = 0; y < texture.height; y++) {
+                    for (var x = 0; x < texture.width; x++) {
                         var inside = IsInsideRoundedRect(x + 0.5f, y + 0.5f, texture.width, texture.height, RoundedInspectorRadius, roundTop, roundBottom);
                         if (!inside) {
                             texture.SetPixel(x, y, clear);
@@ -141,7 +134,7 @@ namespace Tripledot.CanvasKit.Editor
 
             private static void AddRoundedRectCorner(Vector3[] points, ref int index, float centerX, float centerY, float radius, float startDegrees, float endDegrees)
             {
-                for (int i = 0; i <= RoundedInspectorBorderSegments; i++) {
+                for (var i = 0; i <= RoundedInspectorBorderSegments; i++) {
                     var angle = Mathf.Lerp(startDegrees, endDegrees, i / (float)RoundedInspectorBorderSegments) * Mathf.Deg2Rad;
                     points[index++] = new Vector3(
                         centerX + Mathf.Cos(angle) * radius,
@@ -180,20 +173,6 @@ namespace Tripledot.CanvasKit.Editor
                 var dx = x - centerX;
                 var dy = y - centerY;
                 return dx * dx + dy * dy <= radius * radius;
-            }
-        }
-
-        internal readonly struct SdfLengthPresentation
-        {
-            public readonly float AuthoredPixels;
-            public readonly float EffectivePixels;
-            public readonly float FieldPixels;
-
-            public SdfLengthPresentation(float authoredPixels, float effectivePixels, bool showEffectiveInField)
-            {
-                AuthoredPixels = authoredPixels;
-                EffectivePixels = effectivePixels;
-                FieldPixels = showEffectiveInField ? effectivePixels : authoredPixels;
             }
         }
 
@@ -247,18 +226,17 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        public static void SdfLengthSlider(SerializedProperty pixelProperty, SerializedProperty unitProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels)
+        public static void SdfLengthSlider(SerializedProperty pixelProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels)
         {
-            SdfLengthSlider(pixelProperty, unitProperty, label, availablePadding, minPixels, maxPixels, false);
+            SdfLengthSlider(pixelProperty, label, availablePadding, minPixels, maxPixels, false);
         }
 
-        public static void ConstrainedSdfLengthSlider(SerializedProperty pixelProperty, SerializedProperty unitProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels)
+        public static void ConstrainedSdfLengthSlider(SerializedProperty pixelProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels)
         {
-            SdfLengthSlider(pixelProperty, unitProperty, label, availablePadding, minPixels, maxPixels, true);
+            SdfLengthSlider(pixelProperty, label, availablePadding, minPixels, maxPixels, true);
         }
 
-        private static void SdfLengthSlider(SerializedProperty pixelProperty, SerializedProperty unitProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels,
-            bool showEffectiveValue)
+        private static void SdfLengthSlider(SerializedProperty pixelProperty, GUIContent label, float availablePadding, float minPixels, float maxPixels, bool showEffectiveValue)
         {
             var sliderPadding = float.IsPositiveInfinity(availablePadding) ? 0f : availablePadding;
             var fallbackMax = GetSdfSliderMax(sliderPadding, pixelProperty.floatValue);
@@ -273,28 +251,13 @@ namespace Tripledot.CanvasKit.Editor
             NormalizeSdfLengthRange(ref minPixels, ref maxPixels);
 
             var currentPixels = pixelProperty.floatValue;
-            var presentation = showEffectiveValue
-                ? GetConstrainedSdfLengthPresentation(currentPixels, minPixels, maxPixels)
-                : new SdfLengthPresentation(currentPixels, Mathf.Clamp(currentPixels, minPixels, maxPixels), false);
+            var effectivePixels = Mathf.Clamp(currentPixels, minPixels, maxPixels);
+            var fieldValue = showEffectiveValue ? effectivePixels : currentPixels;
+            var sliderValue = effectivePixels;
 
-            var unit = (TextMeshProSdfLengthUnit)Mathf.Clamp(unitProperty.enumValueIndex, 0, 1);
-            var percentBasis = availablePadding > 0f && !float.IsPositiveInfinity(availablePadding)
-                ? availablePadding
-                : Mathf.Max(Styles.DefaultSdfSliderPadding, Mathf.Abs(currentPixels), Mathf.Abs(minPixels), Mathf.Abs(maxPixels));
-
-            var fieldValue = GetSdfLengthDisplayValue(presentation.FieldPixels, unit, percentBasis);
-            var sliderValue = GetSdfLengthDisplayValue(presentation.EffectivePixels, unit, percentBasis);
-            var min = GetSdfLengthDisplayValue(minPixels, unit, percentBasis);
-            var max = GetSdfLengthDisplayValue(maxPixels, unit, percentBasis);
-
-            if (DrawSdfLengthSliderValue(label, ref sliderValue, ref fieldValue, min, max, unit, pixelProperty.hasMultipleDifferentValues, unitProperty is { hasMultipleDifferentValues: true },
-                    out var nextUnit, out var valueChange)) {
+            if (DrawSdfLengthSliderValue(label, ref sliderValue, ref fieldValue, minPixels, maxPixels, pixelProperty.hasMultipleDifferentValues, out var valueChange)) {
                 var nextValue = valueChange == SdfLengthValueChange.Slider ? sliderValue : fieldValue;
-                pixelProperty.floatValue = GetConstrainedSdfLengthEditedPixels(nextValue, nextUnit, percentBasis, minPixels, maxPixels);
-            }
-
-            if (nextUnit != unit) {
-                unitProperty.enumValueIndex = (int)nextUnit;
+                pixelProperty.floatValue = Mathf.Clamp(nextValue, minPixels, maxPixels);
             }
         }
 
@@ -324,19 +287,6 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        public static SdfLengthPresentation GetConstrainedSdfLengthPresentation(float authoredPixels, float minPixels, float maxPixels)
-        {
-            NormalizeSdfLengthRange(ref minPixels, ref maxPixels);
-            return new SdfLengthPresentation(authoredPixels, Mathf.Clamp(authoredPixels, minPixels, maxPixels), true);
-        }
-
-        public static float GetConstrainedSdfLengthEditedPixels(float displayValue, TextMeshProSdfLengthUnit unit, float percentBasis, float minPixels, float maxPixels)
-        {
-            NormalizeSdfLengthRange(ref minPixels, ref maxPixels);
-            var pixels = unit == TextMeshProSdfLengthUnit.Percent ? TextMeshProUtility.PercentToPixels(displayValue, percentBasis) : displayValue;
-            return Mathf.Clamp(pixels, minPixels, maxPixels);
-        }
-
         public static void Vector2PercentSliders(SerializedProperty property, GUIContent label, float min = 0f, float max = 100f)
         {
             EditorGUILayout.LabelField(label, GUIContent.none);
@@ -364,19 +314,9 @@ namespace Tripledot.CanvasKit.Editor
             return value / 100f;
         }
 
-        public static float GetSdfLengthDisplayValue(float pixels, TextMeshProSdfLengthUnit unit, float percentBasis)
-        {
-            return unit == TextMeshProSdfLengthUnit.Percent ? TextMeshProUtility.PixelsToPercent(pixels, percentBasis) : pixels;
-        }
-
         public static void CalculateSliderValueRects(Rect controlRect, out Rect sliderRect, out Rect fieldRect)
         {
-            CalculateSliderRowRects(controlRect, false, out sliderRect, out fieldRect, out _);
-        }
-
-        public static void CalculateSdfSliderValueRects(Rect controlRect, out Rect sliderRect, out Rect fieldRect, out Rect unitRect)
-        {
-            CalculateSliderRowRects(controlRect, true, out sliderRect, out fieldRect, out unitRect);
+            CalculateSliderRowRects(controlRect, out sliderRect, out fieldRect);
         }
 
         public static bool SliderValue(GUIContent label, ref float value, float min, float max, bool mixed)
@@ -542,14 +482,13 @@ namespace Tripledot.CanvasKit.Editor
             Field
         }
 
-        private static bool DrawSdfLengthSliderValue(GUIContent label, ref float sliderValue, ref float fieldValue, float min, float max, TextMeshProSdfLengthUnit unit, bool valueMixed,
-            bool unitMixed, out TextMeshProSdfLengthUnit nextUnit, out SdfLengthValueChange valueChange)
+        private static bool DrawSdfLengthSliderValue(GUIContent label, ref float sliderValue, ref float fieldValue, float min, float max, bool valueMixed,
+            out SdfLengthValueChange valueChange)
         {
-            nextUnit = unit;
             valueChange = SdfLengthValueChange.None;
             var rect = EditorGUILayout.GetControlRect();
             var controlRect = EditorGUI.PrefixLabel(rect, label);
-            CalculateSliderRowRects(controlRect, true, out var sliderRect, out var fieldRect, out var unitRect);
+            CalculateSliderRowRects(controlRect, out var sliderRect, out var fieldRect);
 
             var previousIndent = EditorGUI.indentLevel;
             EditorGUI.indentLevel = 0;
@@ -573,17 +512,6 @@ namespace Tripledot.CanvasKit.Editor
                 }
 
                 EditorGUI.showMixedValue = false;
-
-                EditorGUI.showMixedValue = unitMixed;
-                EditorGUI.BeginChangeCheck();
-                var unitIndex = GUI.Toolbar(unitRect, (int)unit, Styles.SdfLengthUnitLabels, EditorStyles.miniButton);
-                var unitChanged = EditorGUI.EndChangeCheck();
-                EditorGUI.showMixedValue = false;
-
-                if (unitChanged) {
-                    nextUnit = (TextMeshProSdfLengthUnit)Mathf.Clamp(unitIndex, 0, 1);
-                }
-
                 return valueChange != SdfLengthValueChange.None;
             } finally {
                 EditorGUI.showMixedValue = false;
@@ -591,21 +519,10 @@ namespace Tripledot.CanvasKit.Editor
             }
         }
 
-        private static void CalculateSliderRowRects(Rect controlRect, bool includeUnit, out Rect sliderRect, out Rect fieldRect, out Rect unitRect)
+        private static void CalculateSliderRowRects(Rect controlRect, out Rect sliderRect, out Rect fieldRect)
         {
-            var valueGroupWidth = includeUnit ? Styles.SliderValueGroupWidth : Styles.SliderNumericFieldWidth;
-            var valueGroupRect = new Rect(controlRect.xMax - valueGroupWidth, controlRect.y, valueGroupWidth, controlRect.height);
-            if (includeUnit) {
-                var fieldWidth = Mathf.Min(Styles.SliderNumericFieldWidth, valueGroupWidth);
-                var remainingWidth = Mathf.Max(0f, valueGroupWidth - fieldWidth);
-                var unitWidth = remainingWidth > Styles.SliderRowGap ? Mathf.Min(Styles.SliderUnitWidth, remainingWidth - Styles.SliderRowGap) : 0f;
-                var unitGap = unitWidth > 0f ? Styles.SliderRowGap : 0f;
-                unitRect = new Rect(valueGroupRect.xMax - unitWidth, controlRect.y, unitWidth, controlRect.height);
-                fieldRect = new Rect(unitRect.xMin - unitGap - fieldWidth, controlRect.y, fieldWidth, controlRect.height);
-            } else {
-                unitRect = Rect.zero;
-                fieldRect = valueGroupRect;
-            }
+            var valueGroupRect = new Rect(controlRect.xMax - Styles.SliderNumericFieldWidth, controlRect.y, Styles.SliderNumericFieldWidth, controlRect.height);
+            fieldRect = valueGroupRect;
 
             var sliderWidth = Mathf.Max(0f, valueGroupRect.xMin - Styles.SliderRowGap - controlRect.x);
             sliderRect = new Rect(controlRect.x, controlRect.y + 3f, sliderWidth, Mathf.Max(0f, controlRect.height - 6f));
@@ -642,7 +559,7 @@ namespace Tripledot.CanvasKit.Editor
         private static void DrawGradientRange(Rect rect, Gradient gradient, float alphaScale, bool opaque)
         {
             var steps = Mathf.Max(1, Mathf.RoundToInt(rect.width));
-            for (int i = 0; i < steps; i++) {
+            for (var i = 0; i < steps; i++) {
                 var t = steps == 1 ? 0f : i / (steps - 1f);
                 var slice = new Rect(rect.x + i, rect.y, 1f, rect.height);
                 var color = gradient.Evaluate(t);
@@ -653,7 +570,7 @@ namespace Tripledot.CanvasKit.Editor
         private static void DrawColorRange(Rect rect, Color left, Color right, float alphaScale, bool opaque)
         {
             var steps = Mathf.Max(1, Mathf.RoundToInt(rect.width));
-            for (int i = 0; i < steps; i++) {
+            for (var i = 0; i < steps; i++) {
                 var t = steps == 1 ? 0f : i / (steps - 1f);
                 var slice = new Rect(rect.x + i, rect.y, 1f, rect.height);
                 var color = Color.Lerp(left, right, t);
@@ -665,8 +582,8 @@ namespace Tripledot.CanvasKit.Editor
         {
             var columns = Mathf.Max(1, Mathf.CeilToInt(rect.width / Styles.CheckerSize));
             var rows = Mathf.Max(1, Mathf.CeilToInt(rect.height / Styles.CheckerSize));
-            for (int y = 0; y < rows; y++) {
-                for (int x = 0; x < columns; x++) {
+            for (var y = 0; y < rows; y++) {
+                for (var x = 0; x < columns; x++) {
                     var tile = new Rect(
                         rect.x + x * Styles.CheckerSize,
                         rect.y + y * Styles.CheckerSize,

@@ -5,11 +5,12 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.TextMeshPro.Editor
 {
     [InitializeOnLoad]
     internal static class TextMeshProLayerPresetSceneDragHandler
     {
+        private const string CreateLayerStackMenu = "GameObject/UI/TextMeshPro - Layer Stack";
         private const string UiLayerName = "UI";
         private static readonly Vector2 DefaultTextSize = new Vector2(220f, 80f);
 
@@ -17,6 +18,14 @@ namespace Tripledot.CanvasKit.Editor
         {
             SceneView.duringSceneGui += OnSceneGUI;
             EditorApplication.hierarchyWindowItemOnGUI += OnHierarchyGUI;
+        }
+
+        [MenuItem(CreateLayerStackMenu, false, 2002)]
+        private static void CreateLayerStack(MenuCommand command)
+        {
+            CreateTextObject("TextMeshPro Layer Stack", "New Text", GetMenuParent(command), null, null, out _, out var stack);
+            stack.ReplaceLocalLayers(new[] { TextMeshProLayerData.Default() });
+            stack.SetLayerStackDirty();
         }
 
         public static GameObject CreateTextObjectForPreset(TextMeshProLayerPreset preset, Vector2? sceneMousePosition = null, SceneView sceneView = null)
@@ -31,14 +40,29 @@ namespace Tripledot.CanvasKit.Editor
 
         private static GameObject CreateTextObjectForPreset(TextMeshProLayerPreset preset, Transform parent, Vector2? sceneMousePosition, SceneView sceneView)
         {
-            if (preset == null) {
-                return null;
+            var textObject = CreateTextObject(preset.name, preset.GetPreviewText(), parent, sceneMousePosition, sceneView, out var text, out var stack);
+            if (preset.FontAsset != null) {
+                text.font = preset.FontAsset;
             }
 
+            stack.Preset = preset;
+            stack.SetLayerStackDirty();
+            return textObject;
+        }
+
+        private static GameObject CreateTextObject(
+            string objectName,
+            string textValue,
+            Transform parent,
+            Vector2? sceneMousePosition,
+            SceneView sceneView,
+            out TextMeshProUGUI text,
+            out TextMeshProLayerStack stack)
+        {
             var canvas = parent != null ? parent.GetComponentInParent<Canvas>() : GetOrCreateCanvas();
             parent ??= canvas.transform;
 
-            var textObject = ObjectFactory.CreateGameObject(preset.name, typeof(RectTransform), typeof(TextMeshProUGUI), typeof(TextMeshProLayerStack));
+            var textObject = ObjectFactory.CreateGameObject(objectName, typeof(RectTransform), typeof(TextMeshProUGUI), typeof(TextMeshProLayerStack));
             Undo.RegisterCreatedObjectUndo(textObject, "Create TextMeshPro Layer Stack");
             GameObjectUtility.SetParentAndAlign(textObject, parent.gameObject);
 
@@ -46,20 +70,14 @@ namespace Tripledot.CanvasKit.Editor
             rectTransform.sizeDelta = DefaultTextSize;
             rectTransform.anchoredPosition = GetAnchoredPosition(canvas, sceneMousePosition, sceneView);
 
-            var text = textObject.GetComponent<TextMeshProUGUI>();
-            if (preset.FontAsset != null) {
-                text.font = preset.FontAsset;
-            }
-
-            text.text = preset.GetPreviewText();
+            text = textObject.GetComponent<TextMeshProUGUI>();
+            text.text = textValue;
             text.fontSize = 36f;
             text.alignment = TextAlignmentOptions.Center;
             text.raycastTarget = false;
             text.color = Color.white;
 
-            var stack = textObject.GetComponent<TextMeshProLayerStack>();
-            stack.Preset = preset;
-            stack.SetLayerStackDirty();
+            stack = textObject.GetComponent<TextMeshProLayerStack>();
 
             Selection.activeGameObject = textObject;
             EditorSceneManager.MarkSceneDirty(textObject.scene);
@@ -69,8 +87,8 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void OnSceneGUI(SceneView sceneView)
         {
-            var current = Event.current;
-            if (current == null || current.type is not (EventType.DragUpdated or EventType.DragPerform)) {
+            var evt = Event.current;
+            if (evt.type is not (EventType.DragUpdated or EventType.DragPerform)) {
                 return;
             }
 
@@ -79,20 +97,19 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
-            if (current.type == EventType.DragPerform) {
+            if (evt.type == EventType.DragPerform) {
                 DragAndDrop.AcceptDrag();
-                CreateTextObjectForPreset(preset, current.mousePosition, sceneView);
+                CreateTextObjectForPreset(preset, evt.mousePosition, sceneView);
             }
 
-            current.Use();
+            evt.Use();
         }
 
         private static void OnHierarchyGUI(int instanceId, Rect selectionRect)
         {
-            var current = Event.current;
-            if (current == null
-                || current.type is not (EventType.DragUpdated or EventType.DragPerform)
-                || !selectionRect.Contains(current.mousePosition)) {
+            var evt = Event.current;
+            if (evt.type is not (EventType.DragUpdated or EventType.DragPerform)
+                || !selectionRect.Contains(evt.mousePosition)) {
                 return;
             }
 
@@ -108,24 +125,25 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
-            if (current.type == EventType.DragPerform) {
+            if (evt.type == EventType.DragPerform) {
                 DragAndDrop.AcceptDrag();
                 CreateTextObjectForPresetInHierarchy(preset, target);
             }
 
-            current.Use();
+            evt.Use();
         }
 
         private static bool TryGetDraggedPreset(out TextMeshProLayerPreset preset)
         {
             preset = null;
+            
             var references = DragAndDrop.objectReferences;
             if (references == null) {
                 return false;
             }
 
-            for (var i = 0; i < references.Length; i++) {
-                if (references[i] is TextMeshProLayerPreset layerPreset) {
+            foreach (var obj in references) {
+                if (obj is TextMeshProLayerPreset layerPreset) {
                     preset = layerPreset;
                     return true;
                 }
@@ -134,18 +152,30 @@ namespace Tripledot.CanvasKit.Editor
             return false;
         }
 
+        private static Transform GetMenuParent(MenuCommand command)
+        {
+            var target = command.context as GameObject;
+            if (target == null && Selection.activeGameObject != null && Selection.activeGameObject.GetComponentInParent<Canvas>() != null) {
+                target = Selection.activeGameObject;
+            }
+
+            return GetHierarchyParent(target);
+        }
+
         private static Canvas GetOrCreateCanvas()
         {
             var selected = Selection.activeGameObject;
             if (selected != null) {
                 var parentCanvas = selected.GetComponentInParent<Canvas>();
                 if (parentCanvas != null) {
+                    EnsureEventSystem();
                     return parentCanvas;
                 }
             }
 
             var canvas = Object.FindFirstObjectByType<Canvas>();
             if (canvas != null) {
+                EnsureEventSystem();
                 return canvas;
             }
 
@@ -155,10 +185,7 @@ namespace Tripledot.CanvasKit.Editor
             canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
-            if (Object.FindFirstObjectByType<EventSystem>() == null) {
-                var eventSystem = ObjectFactory.CreateGameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-                Undo.RegisterCreatedObjectUndo(eventSystem, "Create EventSystem");
-            }
+            EnsureEventSystem();
 
             return canvas;
         }
@@ -170,10 +197,12 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             if (target.GetComponentInParent<Canvas>() != null && target.transform is RectTransform) {
+                EnsureEventSystem();
                 return target.transform;
             }
 
             if (target.TryGetComponent(out Canvas targetCanvas)) {
+                EnsureEventSystem();
                 return targetCanvas.transform;
             }
 
@@ -185,12 +214,17 @@ namespace Tripledot.CanvasKit.Editor
             var canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
+            EnsureEventSystem();
+
+            return canvas.transform;
+        }
+
+        private static void EnsureEventSystem()
+        {
             if (Object.FindFirstObjectByType<EventSystem>() == null) {
                 var eventSystem = ObjectFactory.CreateGameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
                 Undo.RegisterCreatedObjectUndo(eventSystem, "Create EventSystem");
             }
-
-            return canvas.transform;
         }
 
         private static Vector2 GetAnchoredPosition(Canvas canvas, Vector2? sceneMousePosition, SceneView sceneView)

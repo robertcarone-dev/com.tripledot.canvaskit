@@ -2,11 +2,11 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.TextMeshPro.Editor
 {
     internal static class TextMeshProLayerUpgradeMenu
     {
-        private const string UpgradeSelectedMenu = "GameObject/UI (Canvas)/TextMeshPro - Upgrade To Layer Stack";
+        private const string UpgradeSelectedMenu = "GameObject/UI/TextMeshPro - Upgrade To Layer Stack";
         private const string CreatePresetMenu = "Assets/TextMeshPro/Upgrade TMP Material To Layer Stack Preset";
 
         [MenuItem("CONTEXT/TextMeshProUGUI/Upgrade to TMP Layer Stack")]
@@ -21,8 +21,8 @@ namespace Tripledot.CanvasKit.Editor
         private static void UpgradeSelected()
         {
             var texts = Selection.GetFiltered<TextMeshProUGUI>(SelectionMode.Editable | SelectionMode.Deep);
-            for (var i = 0; i < texts.Length; i++) {
-                UpgradeText(texts[i]);
+            foreach (var text in texts) {
+                UpgradeText(text);
             }
         }
 

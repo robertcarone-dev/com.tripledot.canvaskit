@@ -3,23 +3,10 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Tripledot.CanvasKit
+namespace Tripledot.CanvasKit.TextMeshPro
 {
     internal sealed class TextMeshProLayerMeshBuilder
     {
-        private readonly List<Vector3> vertices = new List<Vector3>(256);
-        private readonly List<Vector3> normals = new List<Vector3>(256);
-        private readonly List<Color32> colors = new List<Color32>(256);
-        private readonly List<Vector4> uv0Upload = new List<Vector4>(256);
-        private readonly List<Vector4> uv1Upload = new List<Vector4>(256);
-        private readonly List<Vector4> uv2Upload = new List<Vector4>(256);
-        private readonly List<List<int>> submeshTriangles = new List<List<int>>();
-        private readonly List<VisibleGlyph> visibleGlyphs = new List<VisibleGlyph>(128);
-
-        private Vector3 boundsMin;
-        private Vector3 boundsMax;
-        private bool hasBounds;
-
         private readonly struct VisibleGlyph
         {
             public readonly TMP_MeshInfo MeshInfo;
@@ -37,6 +24,19 @@ namespace Tripledot.CanvasKit
                 AtlasHeight = atlasHeight;
             }
         }
+        
+        private readonly List<Vector3> vertices = new List<Vector3>(256);
+        private readonly List<Vector3> normals = new List<Vector3>(256);
+        private readonly List<Color32> colors = new List<Color32>(256);
+        private readonly List<Vector4> uv0Upload = new List<Vector4>(256);
+        private readonly List<Vector4> uv1Upload = new List<Vector4>(256);
+        private readonly List<Vector4> uv2Upload = new List<Vector4>(256);
+        private readonly List<List<int>> submeshTriangles = new List<List<int>>();
+        private readonly List<VisibleGlyph> visibleGlyphs = new List<VisibleGlyph>(128);
+
+        private Vector3 boundsMin;
+        private Vector3 boundsMax;
+        private bool hasBounds;
 
         public void Build(Mesh mesh, TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit)
         {
@@ -85,8 +85,6 @@ namespace Tripledot.CanvasKit
 
             mesh.bounds = hasBounds ? new Bounds((boundsMin + boundsMax) * 0.5f, boundsMax - boundsMin) : default;
         }
-
-#region Mesh Building
 
         private void CollectVisibleGlyphs(TMP_TextInfo textInfo)
         {
@@ -319,7 +317,5 @@ namespace Tripledot.CanvasKit
                 uv2Upload.Add(new Vector4((vertex.x - boundsMin.x) / width, (vertex.y - boundsMin.y) / height, height, 0f));
             }
         }
-
-#endregion
     }
 }

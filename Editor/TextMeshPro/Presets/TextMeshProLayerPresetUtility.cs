@@ -1,10 +1,13 @@
 using UnityEditor;
 using TMPro;
+using System.Collections.Generic;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.TextMeshPro.Editor
 {
     internal static class TextMeshProLayerPresetUtility
     {
+        private static readonly List<TextMeshProLayerData> LayerBuffer = new List<TextMeshProLayerData>();
+
         internal static TextMeshProLayerPreset CreateFromLocalLayers(TextMeshProLayerStack stack, string assetPath)
         {
             if (stack == null || string.IsNullOrEmpty(assetPath)) {
@@ -12,7 +15,8 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             var layerPreset = UnityEngine.ScriptableObject.CreateInstance<TextMeshProLayerPreset>();
-            layerPreset.CopyFrom(stack.LocalLayers, GetStackFontAsset(stack));
+            stack.CopyEffectivePresetLayersTo(LayerBuffer);
+            layerPreset.CopyFrom(LayerBuffer, GetStackFontAsset(stack));
             AssetDatabase.CreateAsset(layerPreset, assetPath);
             AssetDatabase.SaveAssets();
             stack.Preset = layerPreset;
@@ -27,8 +31,8 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             var layerPreset = UnityEngine.ScriptableObject.CreateInstance<TextMeshProLayerPreset>();
-            stack.CopyEffectivePresetLayersTo(layerPreset.MutableLayers);
-            layerPreset.SetFontAsset(GetStackFontAsset(stack));
+            stack.CopyEffectivePresetLayersTo(LayerBuffer);
+            layerPreset.CopyFrom(LayerBuffer, GetStackFontAsset(stack));
 
             AssetDatabase.CreateAsset(layerPreset, assetPath);
             AssetDatabase.SaveAssets();
@@ -47,10 +51,10 @@ namespace Tripledot.CanvasKit.Editor
 
         internal static bool HasFontMismatch(TextMeshProLayerPreset preset, TextMeshProUGUI text)
         {
-            return preset != null
-                   && text != null
-                   && preset.FontAsset != null
-                   && text.font != preset.FontAsset;
+            return preset != null && 
+                   text != null && 
+                   preset.FontAsset != null && 
+                   text.font != preset.FontAsset;
         }
 
         internal static void ApplyPresetFont(TextMeshProLayerPreset preset, TextMeshProUGUI text, TextMeshProLayerStack stack)
@@ -66,12 +70,7 @@ namespace Tripledot.CanvasKit.Editor
 
             if (stack != null) {
                 Undo.RecordObject(stack, "Apply TextMeshPro Layer Preset Font");
-                stack.SetLayerStackDirty(TextMeshProLayerStack.DirtyFlags.SourceGeometry
-                                         | TextMeshProLayerStack.DirtyFlags.Geometry
-                                         | TextMeshProLayerStack.DirtyFlags.Padding
-                                         | TextMeshProLayerStack.DirtyFlags.Material
-                                         | TextMeshProLayerStack.DirtyFlags.Canvas
-                                         | TextMeshProLayerStack.DirtyFlags.PaintBounds);
+                stack.SetLayerStackDirty(TextMeshProLayerChange.Geometry);
                 EditorUtility.SetDirty(stack);
             }
         }

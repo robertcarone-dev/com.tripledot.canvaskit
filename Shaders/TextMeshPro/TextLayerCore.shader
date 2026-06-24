@@ -67,17 +67,19 @@ Shader "TextMeshPro/Tripledot/Text Core"
         _PerspectiveFilter ("Perspective Correction", Range(0,1)) = 0.875
         _WeightNormal ("Weight Normal", Float) = 0
         _WeightBold ("Weight Bold", Float) = 0.5
+        _OutlineWidth ("Outline Thickness", Range(0,1)) = 0
+        _OutlineSoftness ("Outline Softness", Range(0,1)) = 0
 
         _ClipRect ("Clip Rect", Vector) = (-32767,-32767,32767,32767)
         _UIMaskSoftnessX ("UI Mask Softness X", Float) = 1
         _UIMaskSoftnessY ("UI Mask Softness Y", Float) = 1
-        _StencilComp ("Stencil Comparison", Integer) = 8
-        _Stencil ("Stencil ID", Integer) = 0
-        _StencilOp ("Stencil Operation", Integer) = 0
-        _StencilWriteMask ("Stencil Write Mask", Integer) = 255
-        _StencilReadMask ("Stencil Read Mask", Integer) = 255
-        _CullMode ("Cull Mode", Integer) = 0
-        _ColorMask ("Color Mask", Integer) = 15
+        _StencilComp ("Stencil Comparison", Float) = 8
+        _Stencil ("Stencil ID", Float) = 0
+        _StencilOp ("Stencil Operation", Float) = 0
+        _StencilWriteMask ("Stencil Write Mask", Float) = 255
+        _StencilReadMask ("Stencil Read Mask", Float) = 255
+        _CullMode ("Cull Mode", Float) = 0
+        _ColorMask ("Color Mask", Float) = 15
     }
 
     SubShader

@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.TextMeshPro.Editor
 {
     [CustomEditor(typeof(TextMeshProLayerPreset))]
     internal sealed class TextMeshProLayerPresetEditor : UnityEditor.Editor
@@ -49,11 +49,7 @@ namespace Tripledot.CanvasKit.Editor
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(fontAsset, Styles.FontAsset);
-            if (EditorGUI.EndChangeCheck()) {
-                layerInspector.QueuePresetDirty();
-            }
 
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(previewText, Styles.PreviewText);
@@ -67,22 +63,13 @@ namespace Tripledot.CanvasKit.Editor
             EditorGUILayout.Space();
             layerInspector.Draw();
 
-            var preset = Preset;
-            preset.BeginSuppressingOnValidateNotifications();
-
-            bool appliedProperties;
-            try {
-                appliedProperties = serializedObject.ApplyModifiedProperties();
-            } finally {
-                preset.EndSuppressingOnValidateNotifications();
-            }
+            var appliedProperties = serializedObject.ApplyModifiedProperties();
 
             if (appliedProperties) {
                 EditorUtility.SetDirty(target);
             }
 
             FlushPreviewDirty();
-            layerInspector.FlushPresetDirties(Preset);
         }
 
         public override bool HasPreviewGUI()

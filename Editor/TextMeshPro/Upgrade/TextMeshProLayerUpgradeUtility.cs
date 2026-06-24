@@ -3,7 +3,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.TextMeshPro.Editor
 {
     internal static class TextMeshProLayerUpgradeUtility
     {
@@ -42,13 +42,8 @@ namespace Tripledot.CanvasKit.Editor
 
             var material = text.fontSharedMaterial != null ? text.fontSharedMaterial : text.materialForRendering;
             var layers = ConvertMaterial(material);
-            stack.Preset = null;
-            stack.LocalLayers.Clear();
-            for (var i = 0; i < layers.Count; i++) {
-                stack.LocalLayers.Add(layers[i]);
-            }
 
-            stack.SetLayerStackDirty();
+            stack.ReplaceLocalLayers(layers);
             EditorUtility.SetDirty(stack);
             EditorUtility.SetDirty(text);
 
@@ -78,21 +73,16 @@ namespace Tripledot.CanvasKit.Editor
             var mainTexture = GetTexture(material, ShaderUtilities.ID_MainTex);
             var guids = AssetDatabase.FindAssets("t:TMP_FontAsset");
 
-            for (var i = 0; i < guids.Length; i++) {
-                var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetDatabase.GUIDToAssetPath(guids[i]));
+            foreach (var guid in guids) {
+                var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetDatabase.GUIDToAssetPath(guid));
                 if (font == null) {
                     continue;
                 }
 
-                if (!string.IsNullOrEmpty(materialAssetPath) && font.material == material) {
-                    return font;
-                }
-
-                if (mainTexture != null && font.atlasTexture == mainTexture) {
-                    return font;
-                }
-
-                if (font.material != null && GetTexture(font.material, ShaderUtilities.ID_MainTex) == mainTexture && mainTexture != null) {
+                if (!string.IsNullOrEmpty(materialAssetPath) && font.material == material || 
+                    mainTexture != null && font.atlasTexture == mainTexture ||
+                    font.material != null && GetTexture(font.material, ShaderUtilities.ID_MainTex) == mainTexture && 
+                    mainTexture != null) {
                     return font;
                 }
             }
@@ -121,7 +111,6 @@ namespace Tripledot.CanvasKit.Editor
                 Enabled = true,
                 Paint = CanvasPaint.Solid(GetColor(material, ShaderUtilities.ID_FaceColor, Color.white)),
                 Dilate = NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_FaceDilate, 0f), gradientScale),
-                DilateUnit = TextMeshProSdfLengthUnit.Pixels,
                 Lighting = CreateFaceLighting(material)
             };
 
@@ -135,9 +124,7 @@ namespace Tripledot.CanvasKit.Editor
                     Paint = CanvasPaint.Solid(outlineColor),
                     Position = TextMeshProStrokePosition.Center,
                     Width = NormalizedOutlineWidthToPixels(outlineWidth, gradientScale),
-                    WidthUnit = TextMeshProSdfLengthUnit.Pixels,
-                    Feather = NormalizedSoftnessToPixels(outlineSoftness, gradientScale),
-                    FeatherUnit = TextMeshProSdfLengthUnit.Pixels
+                    Feather = NormalizedSoftnessToPixels(outlineSoftness, gradientScale)
                 };
             }
 
@@ -155,9 +142,7 @@ namespace Tripledot.CanvasKit.Editor
                     NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_UnderlayOffsetX, 0f), gradientScale),
                     NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_UnderlayOffsetY, 0f), gradientScale)),
                 Spread = NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_UnderlayDilate, 0f), gradientScale),
-                SpreadUnit = TextMeshProSdfLengthUnit.Pixels,
-                Blur = NormalizedSoftnessToPixels(GetFloat(material, ShaderUtilities.ID_UnderlaySoftness, 0f), gradientScale),
-                BlurUnit = TextMeshProSdfLengthUnit.Pixels
+                Blur = NormalizedSoftnessToPixels(GetFloat(material, ShaderUtilities.ID_UnderlaySoftness, 0f), gradientScale)
             };
             return layer;
         }
@@ -165,7 +150,6 @@ namespace Tripledot.CanvasKit.Editor
         private static TextMeshProLayerData CreateGlowLayer(Material material, float gradientScale)
         {
             var layer = TextMeshProLayerData.GlowPreset();
-
             var spread = NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_GlowOffset, 0f) - GetFloat(material, ShaderUtilities.ID_GlowInner, 0f), gradientScale);
             var blur = NormalizedDistanceToPixels(GetFloat(material, ShaderUtilities.ID_GlowOuter, 0f) + GetFloat(material, ShaderUtilities.ID_GlowInner, 0f), gradientScale);
 
@@ -174,9 +158,7 @@ namespace Tripledot.CanvasKit.Editor
                 Paint = CanvasPaint.Solid(GetColor(material, ShaderUtilities.ID_GlowColor, new Color(1f, 1f, 1f, 0.5f))),
                 Offset = Vector2.zero,
                 Spread = spread,
-                SpreadUnit = TextMeshProSdfLengthUnit.Pixels,
-                Blur = blur,
-                BlurUnit = TextMeshProSdfLengthUnit.Pixels
+                Blur = blur
             };
 
             return layer;

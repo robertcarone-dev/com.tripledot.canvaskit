@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - Fixed `KeyframeInterpolation` curve saves to batch animation curve writes per clip while preserving current selection.
 
+### Changed
+- Removed percentage unity from `TextMeshProLayerStack` as it was convoluting the code and inspector. Might add back in the future if requested.
+- Refactored code to be more modular, easier to maintain, and more efficient.
 
 ## [0.4.7-preview] - 2026-06-11
 
