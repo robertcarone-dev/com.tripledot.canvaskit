@@ -34,8 +34,8 @@ namespace Tripledot.CanvasKit.Editor
             serializedObject.Update();
 
             DrawWarnings();
+            
             var dirtyFlags = DrawLatticeControls();
-
             var changed = serializedObject.ApplyModifiedProperties();
             if (changed) {
                 MarkTargetsDirty(dirtyFlags);
@@ -45,7 +45,9 @@ namespace Tripledot.CanvasKit.Editor
         private void DrawWarnings()
         {
             if (AnyUnsupportedImageType()) {
-                EditorGUILayout.HelpBox("Image Lattice modifies Simple Image type only. Other Image types render normally until changed to Simple.", MessageType.Warning);
+                EditorGUILayout.HelpBox(
+                    "Image Lattice modifies Simple Image type only. Other Image types render normally until changed to Simple.",
+                    MessageType.Warning);
             }
 
             if (AnyExplicitNonLatticeMaterial()) {
@@ -55,7 +57,9 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             if (AnySpriteMeshEnabled()) {
-                EditorGUILayout.HelpBox("Image Lattice ignores tight sprite mesh rendering and generates its own tessellated mesh.", MessageType.Info);
+                EditorGUILayout.HelpBox(
+                    "Image Lattice ignores tight sprite mesh rendering and generates its own tessellated mesh.",
+                    MessageType.Info);
             }
 
             if (AnyDeformedRaycastWithAlphaHitTest()) {
@@ -113,15 +117,13 @@ namespace Tripledot.CanvasKit.Editor
         private void ResetSelectedLattices()
         {
             serializedObject.ApplyModifiedProperties();
-            for (var i = 0; i < targets.Length; i++) {
-                if (targets[i] is not ImageLattice image) {
-                    continue;
+            foreach (var target in targets) {
+                if (target is ImageLattice image) {
+                    Undo.RecordObject(image, "Reset Lattice");
+                    image.ResetLattice();
+                    ImageLatticeToolState.NotifyImageChanged(image);
+                    EditorUtility.SetDirty(image);
                 }
-
-                Undo.RecordObject(image, "Reset Lattice");
-                image.ResetLattice();
-                ImageLatticeToolState.NotifyImageChanged(image);
-                EditorUtility.SetDirty(image);
             }
 
             serializedObject.Update();
@@ -152,8 +154,8 @@ namespace Tripledot.CanvasKit.Editor
 
         private bool AnyUnsupportedImageType()
         {
-            for (var i = 0; i < targetImages.Length; i++) {
-                if (targetImages[i].type != Image.Type.Simple) {
+            foreach (var image in targetImages) {
+                if (image.type != Image.Type.Simple) {
                     return true;
                 }
             }
@@ -163,9 +165,8 @@ namespace Tripledot.CanvasKit.Editor
 
         private bool AnyExplicitNonLatticeMaterial()
         {
-            for (var i = 0; i < targetImages.Length; i++) {
-                var graphicImage = targetImages[i];
-                if (HasExplicitMaterial(graphicImage) && !ImageLattice.IsLatticeMaterial(graphicImage.material)) {
+            foreach (var image in targetImages) {
+                if (HasExplicitMaterial(image) && !ImageLattice.IsLatticeMaterial(image.material)) {
                     return true;
                 }
             }
@@ -175,9 +176,8 @@ namespace Tripledot.CanvasKit.Editor
 
         private bool AnySpriteMeshEnabled()
         {
-            for (var i = 0; i < targetImages.Length; i++) {
-                var graphicImage = targetImages[i];
-                if (graphicImage.type == Image.Type.Simple && graphicImage.useSpriteMesh) {
+            foreach (var image in targetImages) {
+                if (image.type == Image.Type.Simple && image.useSpriteMesh) {
                     return true;
                 }
             }
@@ -192,8 +192,8 @@ namespace Tripledot.CanvasKit.Editor
                     continue;
                 }
 
-                var graphicImage = targetImages[i];
-                if (graphicImage.alphaHitTestMinimumThreshold > 0f) {
+                var targetImage = targetImages[i];
+                if (targetImage.alphaHitTestMinimumThreshold > 0f) {
                     return true;
                 }
             }
@@ -220,8 +220,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             public static readonly GUIContent ControlColumns = L10n.TextContent("Control Columns", "Number of editable lattice control-point columns across the image.");
             public static readonly GUIContent ControlRows = L10n.TextContent("Control Rows", "Number of editable lattice control-point rows down the image.");
-            public static readonly GUIContent SegmentsPerCell = L10n.TextContent("Segments Per Cell",
-                "Mesh segments generated between neighboring control points. Higher values render smoother curves with more vertices.");
+            public static readonly GUIContent SegmentsPerCell = L10n.TextContent("Segments Per Cell", "Mesh segments generated between neighboring control points. Higher values render smoother curves with more vertices.");
             public static readonly GUIContent RaycastMode = L10n.TextContent("Raycast Mode", "Choose whether raycasts use Unity's Image behavior or the current deformed lattice shape.");
             public static readonly GUIContent EditLattice = L10n.TextContent("Edit Lattice", "Activate the Image Lattice tool context.");
             public static readonly GUIContent EditingLattice = L10n.TextContent("Editing Lattice", "Image Lattice tool context is active.");

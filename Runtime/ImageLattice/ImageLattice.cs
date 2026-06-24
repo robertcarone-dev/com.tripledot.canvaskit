@@ -19,7 +19,6 @@ namespace Tripledot.CanvasKit
 
     [ExecuteAlways]
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(RectTransform))]
     [RequireComponent(typeof(Image))]
     [Icon("Packages/com.tripledot.canvaskit/Editor Default Resources/Icons/ImageLattice/ComponentIcon.png")]
     [AddComponentMenu("UI (Canvas)/Image Lattice", 12)]
@@ -29,14 +28,6 @@ namespace Tripledot.CanvasKit
         public const int MaxControlPointsPerAxis = 5;
         public const int MinSegmentsPerCell = 1;
         public const int MaxSegmentsPerCell = 4;
-
-        private const int DefaultControlPointsPerAxis = 3;
-        private const int DefaultSegmentsPerCell = 3;
-        private const int PackedLatticePointCount = (MaxControlPointsPerAxis * MaxControlPointsPerAxis + 1) / 2;
-        private const AdditionalCanvasShaderChannels RequiredCanvasChannels = AdditionalCanvasShaderChannels.TexCoord1;
-        private const string ShaderName = "UI/Tripledot/Image Lattice";
-
-        private static readonly Vector4[] LatticePointBuffer = new Vector4[PackedLatticePointCount];
 
         [SerializeField, NotKeyable]
         private int controlColumns = DefaultControlPointsPerAxis;
@@ -88,32 +79,28 @@ namespace Tripledot.CanvasKit
         private Vector2[] raycastRowA = Array.Empty<Vector2>();
         private Vector2[] raycastRowB = Array.Empty<Vector2>();
 
+        private const int DefaultControlPointsPerAxis = 3;
+        private const int DefaultSegmentsPerCell = 3;
+        private const int PackedLatticePointCount = (MaxControlPointsPerAxis * MaxControlPointsPerAxis + 1) / 2;
+        private const AdditionalCanvasShaderChannels RequiredCanvasChannels = AdditionalCanvasShaderChannels.TexCoord1;
+
+        private static readonly Vector4[] LatticePointBuffer = new Vector4[PackedLatticePointCount];
+
         public int ControlColumns {
-            get {
-                EnsureLattice();
-                return controlColumns;
-            }
+            get => controlColumns;
             set => SetControlGrid(value, controlRows);
         }
 
         public int ControlRows {
-            get {
-                EnsureLattice();
-                return controlRows;
-            }
+            get => controlRows;
             set => SetControlGrid(controlColumns, value);
         }
 
         public int SegmentsPerCell {
-            get {
-                EnsureLattice();
-                return segmentsPerCell;
-            }
+            get => segmentsPerCell;
             set {
-                ValidateSegmentsPerCell(value);
-                EnsureLattice();
                 if (segmentsPerCell != value) {
-                    segmentsPerCell = value;
+                    segmentsPerCell = Mathf.Clamp(value, MinSegmentsPerCell, MaxSegmentsPerCell);
                     image.SetVerticesDirty();
                     CaptureMeshSignature();
                 }
@@ -132,14 +119,12 @@ namespace Tripledot.CanvasKit
         public Vector2 GetLatticePoint(int x, int y)
         {
             EnsureLattice();
-            ValidatePointIndex(x, y);
             return GetStoredLatticePoint(x, y);
         }
 
         public void SetLatticePoint(int x, int y, Vector2 point)
         {
             EnsureLattice();
-            ValidatePointIndex(x, y);
             if (GetStoredLatticePoint(x, y) == point) {
                 return;
             }
@@ -157,11 +142,8 @@ namespace Tripledot.CanvasKit
 
         public void ModifyMesh(Mesh mesh)
         {
-            if (!IsActive()) {
-                return;
-            }
-
-            using (var vertexHelper = new VertexHelper(mesh)) {
+            if (IsActive()) {
+                using var vertexHelper = new VertexHelper(mesh);
                 ModifyMesh(vertexHelper);
                 vertexHelper.FillMesh(mesh);
             }
@@ -210,8 +192,7 @@ namespace Tripledot.CanvasKit
                 return true;
             }
 
-            if (image.type != Image.Type.Simple ||
-                !RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out var localPoint)) {
+            if (image.type != Image.Type.Simple || !RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out var localPoint)) {
                 return true;
             }
 
@@ -236,17 +217,8 @@ namespace Tripledot.CanvasKit
         {
             EnsureLattice();
 
-            if (!IsActive() || image.type != Image.Type.Simple) {
-                image.SetMaterialDirty();
-                return;
-            }
-
-            if (HasExplicitMaterial(image) && !IsLatticeMaterial(image.material)) {
-                image.SetMaterialDirty();
-                return;
-            }
-
-            if (runtimeMaterial == null) {
+            if (!IsActive() || image.type != Image.Type.Simple ||
+                HasExplicitMaterial(image) && !IsLatticeMaterial(image.material) || runtimeMaterial == null) {
                 image.SetMaterialDirty();
                 return;
             }
@@ -259,36 +231,10 @@ namespace Tripledot.CanvasKit
             return latticePointStorage.GetPoint(index);
         }
 
-        internal static string GetSerializedPointFieldName(int pointIndex)
-        {
-            if (pointIndex < 0 || pointIndex >= MaxControlPointsPerAxis * MaxControlPointsPerAxis) {
-                throw new ArgumentOutOfRangeException(nameof(pointIndex));
-            }
-
-            return $"point{pointIndex:00}";
-        }
-
-        internal static string GetSerializedPointComponentName(int pointIndex, string component)
-        {
-            if (pointIndex < 0 || pointIndex >= MaxControlPointsPerAxis * MaxControlPointsPerAxis) {
-                throw new ArgumentOutOfRangeException(nameof(pointIndex));
-            }
-
-            if (component != "x" && component != "y") {
-                throw new ArgumentException("Lattice point component must be x or y.", nameof(component));
-            }
-
-            return component;
-        }
-
-        internal static string GetSerializedPointComponentPropertyPath(int pointIndex, string component)
-        {
-            return $"{nameof(latticePointStorage)}.{GetSerializedPointFieldName(pointIndex)}.{GetSerializedPointComponentName(pointIndex, component)}";
-        }
-
         internal void CopyPackedLatticePointsTo(Vector4[] destination)
         {
             EnsureLattice();
+            
             unsafe {
                 fixed (Vector4* destinationPtr = destination) {
                     var packedCount = Mathf.Min(destination.Length, PackedLatticePointCount);
@@ -303,21 +249,17 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        protected override void Awake()
-        {
-            base.Awake();
-            image = GetComponent<Image>();
-            rectTransform = (RectTransform)transform;
-        }
-
         protected override void OnEnable()
         {
             base.OnEnable();
+            
             image = GetComponent<Image>();
             rectTransform = (RectTransform)transform;
+            
             EnsureLattice();
             EnsureCanvasShaderChannels();
             CaptureMeshSignature();
+            
             image.SetVerticesDirty();
             image.SetMaterialDirty();
         }
@@ -353,6 +295,7 @@ namespace Tripledot.CanvasKit
         protected override void OnValidate()
         {
             base.OnValidate();
+            
             image = GetComponent<Image>();
             rectTransform = (RectTransform)transform;
             EnsureLattice();
@@ -368,9 +311,8 @@ namespace Tripledot.CanvasKit
 
         private void SetControlGrid(int columns, int rows)
         {
-            ValidateControlPointCount(columns);
-            ValidateControlPointCount(rows);
-            EnsureLattice();
+            columns = Mathf.Clamp(columns, MinControlPointsPerAxis, MaxControlPointsPerAxis);
+            rows = Mathf.Clamp(rows, MinControlPointsPerAxis, MaxControlPointsPerAxis);
 
             if (controlColumns == columns && controlRows == rows) {
                 return;
@@ -378,8 +320,10 @@ namespace Tripledot.CanvasKit
 
             controlColumns = columns;
             controlRows = rows;
+            
             WriteIdentityPoints(controlColumns, controlRows);
             image.SetVerticesDirty();
+            
             CaptureMeshSignature();
             UpdateRuntimeMaterialPayloadOrDirtyImage();
         }
@@ -388,12 +332,17 @@ namespace Tripledot.CanvasKit
         {
             EnsureLattice();
 
-            var controlPointColumns = ControlPointColumns;
-            var controlPointRows = ControlPointRows;
-            var xSegments = GetSegmentCount(0f, 1f, controlPointColumns, SegmentsPerCell);
-            var ySegments = GetSegmentCount(0f, 1f, controlPointRows, SegmentsPerCell);
+            var xSegments = GetSegmentCount(0f, 1f, ControlPointColumns, SegmentsPerCell);
+            var ySegments = GetSegmentCount(0f, 1f, ControlPointRows, SegmentsPerCell);
             var rowLength = xSegments + 1;
-            EnsureRaycastRows(rowLength);
+            
+            if (raycastRowA.Length < rowLength) {
+                raycastRowA = new Vector2[rowLength];
+            }
+
+            if (raycastRowB.Length < rowLength) {
+                raycastRowB = new Vector2[rowLength];
+            }
 
             FillRaycastRow(raycastRowA, xSegments, 0f, geometryRect);
             for (var y = 0; y < ySegments; y++) {
@@ -418,20 +367,10 @@ namespace Tripledot.CanvasKit
             return false;
         }
 
-        private void EnsureRaycastRows(int rowLength)
-        {
-            if (raycastRowA.Length < rowLength) {
-                raycastRowA = new Vector2[rowLength];
-            }
-
-            if (raycastRowB.Length < rowLength) {
-                raycastRowB = new Vector2[rowLength];
-            }
-        }
-
         private void FillRaycastRow(Vector2[] row, int xSegments, float v, Rect geometryRect)
         {
             var size = new Vector2(geometryRect.width, geometryRect.height);
+            
             for (var x = 0; x <= xSegments; x++) {
                 var u = x / (float)xSegments;
                 var latticeUv = new Vector2(u, v);
@@ -460,79 +399,9 @@ namespace Tripledot.CanvasKit
 
         private void EnsureLattice()
         {
-            MigrateLegacySerializedFields();
-            ClampSerializedConfiguration();
-
-            if (!latticeInitialized) {
+            if (!latticeInitialized || storageControlColumns != controlColumns || storageControlRows != controlRows) {
                 WriteIdentityPoints(controlColumns, controlRows);
-                return;
             }
-
-            if (storageControlColumns == controlColumns && storageControlRows == controlRows) {
-                return;
-            }
-
-            WriteIdentityPoints(controlColumns, controlRows);
-        }
-
-        private void MigrateLegacySerializedFields()
-        {
-            if (latticeColumns >= MinControlPointsPerAxis) {
-                controlColumns = ClampControlPointCount(latticeColumns);
-                latticeColumns = -1;
-            }
-
-            if (latticeRows >= MinControlPointsPerAxis) {
-                controlRows = ClampControlPointCount(latticeRows);
-                latticeRows = -1;
-            }
-
-            if (subdivisionsPerCell >= MinSegmentsPerCell) {
-                segmentsPerCell = ClampSegmentsPerCell(subdivisionsPerCell);
-                subdivisionsPerCell = -1;
-            }
-
-            if (latticeStorageColumns >= MinControlPointsPerAxis) {
-                storageControlColumns = ClampControlPointCount(latticeStorageColumns);
-                latticeStorageColumns = -1;
-            }
-
-            if (latticeStorageRows >= MinControlPointsPerAxis) {
-                storageControlRows = ClampControlPointCount(latticeStorageRows);
-                latticeStorageRows = -1;
-            }
-
-            if (horizontalSubdivisions >= MinControlPointsPerAxis - 1) {
-                controlColumns = ClampControlPointCount(horizontalSubdivisions + 1);
-                horizontalSubdivisions = -1;
-            }
-
-            if (verticalSubdivisions >= MinControlPointsPerAxis - 1) {
-                controlRows = ClampControlPointCount(verticalSubdivisions + 1);
-                verticalSubdivisions = -1;
-            }
-
-            if (surfaceResolution >= MinSegmentsPerCell) {
-                segmentsPerCell = ClampSegmentsPerCell(surfaceResolution);
-                surfaceResolution = -1;
-            }
-
-            if (storageHorizontalSubdivisions >= MinControlPointsPerAxis - 1) {
-                storageControlColumns = ClampControlPointCount(storageHorizontalSubdivisions + 1);
-                storageHorizontalSubdivisions = -1;
-            }
-
-            if (storageVerticalSubdivisions >= MinControlPointsPerAxis - 1) {
-                storageControlRows = ClampControlPointCount(storageVerticalSubdivisions + 1);
-                storageVerticalSubdivisions = -1;
-            }
-        }
-
-        private void ClampSerializedConfiguration()
-        {
-            controlColumns = ClampControlPointCount(controlColumns);
-            controlRows = ClampControlPointCount(controlRows);
-            segmentsPerCell = ClampSegmentsPerCell(segmentsPerCell);
         }
 
         private void WriteIdentityPoints(int controlPointColumns, int controlPointRows)
@@ -550,23 +419,28 @@ namespace Tripledot.CanvasKit
 
         private Vector2 GetStoredLatticePoint(int x, int y)
         {
+            if (x < 0 || x >= ControlPointColumns) {
+                throw new ArgumentOutOfRangeException(nameof(x), $"Lattice point x coordinate must be in the range [0, {ControlPointColumns - 1}].");
+            }
+
+            if (y < 0 || y >= ControlPointRows) {
+                throw new ArgumentOutOfRangeException(nameof(y), $"Lattice point y coordinate must be in the range [0, {ControlPointRows - 1}].");
+            }
+            
             return latticePointStorage.GetPoint(GetPointIndex(x, y, ControlPointColumns));
         }
 
         private void SetStoredLatticePoint(int x, int y, Vector2 value)
         {
-            latticePointStorage.SetPoint(GetPointIndex(x, y, ControlPointColumns), value);
-        }
-
-        private void ValidatePointIndex(int x, int y)
-        {
             if (x < 0 || x >= ControlPointColumns) {
-                throw new ArgumentOutOfRangeException(nameof(x));
+                throw new ArgumentOutOfRangeException(nameof(x), $"Lattice point x coordinate must be in the range [0, {ControlPointColumns - 1}].");
             }
-
+            
             if (y < 0 || y >= ControlPointRows) {
-                throw new ArgumentOutOfRangeException(nameof(y));
+                throw new ArgumentOutOfRangeException(nameof(y), $"Lattice point y coordinate must be in the range [0, {ControlPointRows - 1}].");
             }
+            
+            latticePointStorage.SetPoint(GetPointIndex(x, y, ControlPointColumns), value);
         }
 
         private void EnsureCanvasShaderChannels()
@@ -576,34 +450,39 @@ namespace Tripledot.CanvasKit
             }
         }
 
-        private void BuildMesh(VertexHelper vertexHelper, Image graphicImage)
+        private void BuildMesh(VertexHelper vertexHelper, Image image)
         {
             vertexHelper.Clear();
-            BuildSimple(vertexHelper, graphicImage, graphicImage.preserveAspect);
-        }
-
-        private void BuildSimple(VertexHelper vertexHelper, Image graphicImage, bool preserveAspect)
-        {
-            var dimensions = GetDrawingDimensions(graphicImage, preserveAspect);
+            
+            var dimensions = GetDrawingDimensions(image, image.preserveAspect);
             var geometryRect = Rect.MinMaxRect(dimensions.x, dimensions.y, dimensions.z, dimensions.w);
             if (geometryRect.width <= 0f || geometryRect.height <= 0f) {
                 return;
             }
 
-            var sprite = GetActiveSprite(graphicImage);
+            var sprite = GetActiveSprite(image);
             var uv = sprite != null ? DataUtility.GetOuterUV(sprite) : new Vector4(0f, 0f, 1f, 1f);
-            AddTessellatedPatch(vertexHelper, graphicImage,
+            
+            AddTessellatedPatch(vertexHelper, image,
                 new Vector2(dimensions.x, dimensions.y), new Vector2(dimensions.z, dimensions.w),
                 new Vector2(uv.x, uv.y), new Vector2(uv.z, uv.w), geometryRect);
         }
 
-        private void AddTessellatedPatch(VertexHelper vertexHelper, Image graphicImage, Vector2 positionMin, Vector2 positionMax,
-            Vector2 uvMin, Vector2 uvMax, Rect geometryRect)
+        private void AddTessellatedPatch(
+            VertexHelper vertexHelper,
+            Image graphicImage, 
+            Vector2 positionMin,
+            Vector2 positionMax,
+            Vector2 uvMin, 
+            Vector2 uvMax, 
+            Rect geometryRect)
         {
             var normalizedMin = PositionToLatticeUv(positionMin, geometryRect);
             var normalizedMax = PositionToLatticeUv(positionMax, geometryRect);
+            
             var xSegments = GetSegmentCount(normalizedMin.x, normalizedMax.x, ControlPointColumns, SegmentsPerCell);
             var ySegments = GetSegmentCount(normalizedMin.y, normalizedMax.y, ControlPointRows, SegmentsPerCell);
+            
             var startIndex = vertexHelper.currentVertCount;
             var color = (Color32)graphicImage.color;
             var size = new Vector2(geometryRect.width, geometryRect.height);
@@ -661,10 +540,7 @@ namespace Tripledot.CanvasKit
 
         private Material CreateRuntimeMaterial(Material sourceMaterial, bool useSourceShader)
         {
-            var material = useSourceShader
-                ? new Material(sourceMaterial)
-                : CreateDefaultLatticeMaterial();
-
+            var material = useSourceShader ? new Material(sourceMaterial) : CreateDefaultLatticeMaterial();
             material.hideFlags = HideFlags.HideAndDontSave;
             if (!useSourceShader) {
                 material.CopyPropertiesFromMaterial(sourceMaterial);
@@ -675,8 +551,7 @@ namespace Tripledot.CanvasKit
 
         private Material CreateDefaultLatticeMaterial()
         {
-            if (GraphicsSettings.TryGetRenderPipelineSettings<CanvasKitResourcesURP>(out var resources) &&
-                resources.ImageLatticeDefaultMaterial != null) {
+            if (GraphicsSettings.TryGetRenderPipelineSettings<CanvasKitResourcesURP>(out var resources)) {
                 return new Material(resources.ImageLatticeDefaultMaterial);
             }
 
@@ -689,6 +564,7 @@ namespace Tripledot.CanvasKit
 
             var sprite = GetActiveSprite(graphicImage);
             var alphaTexture = sprite != null ? sprite.associatedAlphaSplitTexture : null;
+            
             material.SetTexture(ShaderIds.MainTex, graphicImage.mainTexture);
             material.SetTexture(ShaderIds.AlphaTex, alphaTexture != null ? alphaTexture : Texture2D.whiteTexture);
             material.SetVector(ShaderIds.LatticeGrid, new Vector4(ControlPointColumns, ControlPointRows, 0f, 0f));
@@ -707,15 +583,17 @@ namespace Tripledot.CanvasKit
         private static bool PointInTriangle(Vector2 point, Vector2 a, Vector2 b, Vector2 c)
         {
             const float epsilon = 0.00001f;
-            if (Mathf.Abs(Cross(b - a, c - a)) <= epsilon) {
+            if (Mathf.Abs(Cross(b - a, c - a)) <= Mathf.Epsilon) {
                 return false;
             }
 
             var d1 = Cross(point - a, b - a);
             var d2 = Cross(point - b, c - b);
             var d3 = Cross(point - c, a - c);
+            
             var hasNegative = d1 < -epsilon || d2 < -epsilon || d3 < -epsilon;
             var hasPositive = d1 > epsilon || d2 > epsilon || d3 > epsilon;
+            
             return !(hasNegative && hasPositive);
         }
 
@@ -724,44 +602,14 @@ namespace Tripledot.CanvasKit
             return a.x * b.y - a.y * b.x;
         }
 
-        private static void ValidateControlPointCount(int value)
-        {
-            if (value < MinControlPointsPerAxis || value > MaxControlPointsPerAxis) {
-                throw new ArgumentOutOfRangeException(nameof(value), value, $"Control point count must be between {MinControlPointsPerAxis} and {MaxControlPointsPerAxis}.");
-            }
-        }
-
-        private static void ValidateSegmentsPerCell(int value)
-        {
-            if (value < MinSegmentsPerCell || value > MaxSegmentsPerCell) {
-                throw new ArgumentOutOfRangeException(nameof(value), value, $"Segments per cell must be between {MinSegmentsPerCell} and {MaxSegmentsPerCell}.");
-            }
-        }
-
-        private static int ClampControlPointCount(int value)
-        {
-            return Mathf.Clamp(value, MinControlPointsPerAxis, MaxControlPointsPerAxis);
-        }
-
-        private static int ClampSegmentsPerCell(int value)
-        {
-            return Mathf.Clamp(value, MinSegmentsPerCell, MaxSegmentsPerCell);
-        }
-
         private static Shader ResolveShader()
         {
-            if (GraphicsSettings.TryGetRenderPipelineSettings<CanvasKitResourcesURP>(out var resources) &&
-                resources.ImageLatticeShader != null) {
+            if (GraphicsSettings.TryGetRenderPipelineSettings<CanvasKitResourcesURP>(out var resources)) {
                 return resources.ImageLatticeShader;
             }
 
-            var shader = Shader.Find(ShaderName);
-            if (shader != null) {
-                return shader;
-            }
-
             throw new InvalidOperationException(
-                $"Failed to resolve required image shader '{ShaderName}'. " +
+                $"Failed to resolve required image lattice shader. " +
                 $"Make sure the image lattice shader is assigned in the {nameof(CanvasKitResourcesURP)} asset.");
         }
 
@@ -911,6 +759,7 @@ namespace Tripledot.CanvasKit
             public Vector2 GetPoint(int index)
             {
                 CheckIndex(index);
+                
                 fixed (Vector2* points = &point00) {
                     return points[index];
                 }
@@ -919,6 +768,7 @@ namespace Tripledot.CanvasKit
             public void SetPoint(int index, Vector2 value)
             {
                 CheckIndex(index);
+                
                 fixed (Vector2* points = &point00) {
                     points[index] = value;
                 }
@@ -931,8 +781,8 @@ namespace Tripledot.CanvasKit
                 }
 
                 var destinationByteCount = vectorCount * sizeof(float) * 4;
-                var sourceByteCount = MaxControlPointsPerAxis * MaxControlPointsPerAxis * sizeof(float) * 2;
-                var copyByteCount = Math.Min(destinationByteCount, sourceByteCount);
+                var copyByteCount = Math.Min(destinationByteCount, MaxControlPointsPerAxis * MaxControlPointsPerAxis * sizeof(float) * 2);
+                
                 fixed (Vector2* points = &point00) {
                     UnsafeUtility.MemClear(destination, destinationByteCount);
                     UnsafeUtility.MemCpy(destination, points, copyByteCount);

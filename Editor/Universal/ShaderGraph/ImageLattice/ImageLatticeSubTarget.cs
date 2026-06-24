@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace UnityEditor.Rendering.Universal.ShaderGraph
 {
-    internal sealed class CanvasImageLatticeSubTarget : UniversalCanvasSubTarget
+    internal sealed class ImageLatticeSubTarget : UniversalCanvasSubTarget
     {
         private static readonly GUID SourceCodeGuid = new GUID("c8ae7aa10ab64e5895e84d030c6ec721");
         private const string CanvasImageLatticePass = "Packages/com.tripledot.canvaskit/Editor/Universal/ShaderGraph/Includes/CanvasKitImageLatticePass.hlsl";
@@ -14,7 +14,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
                 { CanvasImageLatticePass, IncludeLocation.Postgraph },
             };
 
-        public CanvasImageLatticeSubTarget()
+        public ImageLatticeSubTarget()
         {
             displayName = "Canvas Image Lattice";
         }

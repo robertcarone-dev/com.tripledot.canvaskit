@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using UnityEditor.Graphing;
-using UnityEditor.ProjectWindowCallback;
 using UnityEditor.ShaderGraph;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
@@ -9,14 +8,14 @@ using UnityEngine.Rendering;
 
 namespace UnityEditor.Rendering.Universal.ShaderGraph
 {
-    internal static class CreateCanvasImageLatticeShaderGraph
+    internal static class CreateImageLatticeShaderGraph
     {
         private const string DefaultGraphName = "New Canvas Image Lattice Shader Graph.shadergraph";
 
         [MenuItem("Assets/Create/Shader Graph/URP/Canvas Image Lattice Shader Graph", priority = CoreUtils.Sections.section5 + CoreUtils.Priorities.assetsCreateShaderMenuPriority + 2)]
         public static void CreateCanvasImageLatticeGraph()
         {
-            var graphItem = ScriptableObject.CreateInstance<CreateCanvasImageLatticeShaderGraphAction>();
+            var graphItem = ScriptableObject.CreateInstance<CreateImageLatticeShaderGraphAction>();
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, graphItem, DefaultGraphName, null, null);
         }
 
@@ -43,7 +42,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
         private static Target[] CreateTargets()
         {
             var target = (UniversalTarget)Activator.CreateInstance(typeof(UniversalTarget));
-            target.TrySetActiveSubTarget(typeof(CanvasImageLatticeSubTarget));
+            target.TrySetActiveSubTarget(typeof(ImageLatticeSubTarget));
             return new Target[] { target };
         }
 

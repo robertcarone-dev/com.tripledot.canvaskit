@@ -131,8 +131,10 @@ namespace Tripledot.CanvasKit.Editor
         {
             var pivot = bounds.center;
             var pivotWorld = ImageLatticeSceneView.LatticeUvToWorld(image, localRect, pivot);
+            
             var handleRotation = GetHandleRotation(image);
             var currentRotation = Drag.Active ? Drag.CurrentRotation : handleRotation;
+            
             var radius = HandleUtility.GetHandleSize(pivotWorld) * Mathf.Max(0.8f, Mathf.Max(bounds.width, bounds.height));
             radius = Mathf.Max(radius, HandleUtility.GetHandleSize(pivotWorld) * 0.35f);
             var normal = ((RectTransform)image.transform).forward;

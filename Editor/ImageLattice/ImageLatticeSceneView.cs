@@ -233,7 +233,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var eventType = evt.GetTypeForControl(cellDragControl);
             switch (eventType) {
-                case EventType.MouseDrag:
+                case EventType.MouseDrag: {
                     if (!TryGuiPointToWorld(image, evt.mousePosition, out var currentWorld)) {
                         return false;
                     }
@@ -260,13 +260,14 @@ namespace Tripledot.CanvasKit.Editor
                     ApplyDraggedPoints(image, cellDragDestinationPoints);
                     evt.Use();
                     return false;
-
+                }
                 case EventType.MouseUp:
-                case EventType.Ignore:
+                case EventType.Ignore: {
                     EndCellDrag();
                     evt.Use();
                     SceneView.RepaintAll();
                     return true;
+                }
             }
 
             return false;
@@ -282,18 +283,19 @@ namespace Tripledot.CanvasKit.Editor
 
                 var eventType = evt.GetTypeForControl(radiusDragControl);
                 switch (eventType) {
-                    case EventType.MouseDrag:
+                    case EventType.MouseDrag: {
                         ImageLatticeToolState.SoftSelectionRadius = radiusDragStartValue + (evt.mousePosition.x - radiusDragStartGui.x) / RadiusPixelsPerUnit;
                         evt.Use();
                         SceneView.RepaintAll();
                         return true;
-
+                    }
                     case EventType.MouseUp:
-                    case EventType.Ignore:
+                    case EventType.Ignore: {
                         EndRadiusDrag();
                         evt.Use();
                         SceneView.RepaintAll();
                         return true;
+                    }
                 }
 
                 return false;
@@ -319,18 +321,19 @@ namespace Tripledot.CanvasKit.Editor
         {
             var eventType = evt.GetTypeForControl(marqueeControl);
             switch (eventType) {
-                case EventType.MouseDrag:
+                case EventType.MouseDrag: {
                     marqueeCurrentGui = evt.mousePosition;
                     evt.Use();
                     SceneView.RepaintAll();
                     return false;
-
-                case EventType.MouseUp:
+                }
+                case EventType.MouseUp: {
                     ApplyMarqueeSelection(image, localRect, evt.shift);
                     EndMarquee();
                     evt.Use();
                     SceneView.RepaintAll();
                     return true;
+                }
             }
 
             return false;
@@ -476,6 +479,7 @@ namespace Tripledot.CanvasKit.Editor
 
             var min = new Vector2(bounds.xMin, bounds.yMin);
             var max = new Vector2(bounds.xMax, bounds.yMax);
+            
             SelectionCorners[0] = LatticeUvToWorld(image, localRect, min);
             SelectionCorners[1] = LatticeUvToWorld(image, localRect, new Vector2(max.x, min.y));
             SelectionCorners[2] = LatticeUvToWorld(image, localRect, max);
@@ -503,12 +507,11 @@ namespace Tripledot.CanvasKit.Editor
                 }
             }
 
-            for (var i = 0; i < DrawPoints.Count; i++) {
-                DrawPointHandle(image, localRect, DrawPoints[i], hovered, affectedPoints);
+            foreach (var point in DrawPoints) {
+                DrawPointHandle(image, localRect, point, hovered, affectedPoints);
             }
 
-            for (var i = 0; i < affectedPoints.Count; i++) {
-                var index = affectedPoints[i];
+            foreach (var index in affectedPoints) {
                 if (!ImageLatticeToolState.Selection.Contains(index)) {
                     DrawPointHandle(image, localRect, index, hovered, affectedPoints);
                 }
@@ -523,10 +526,13 @@ namespace Tripledot.CanvasKit.Editor
         {
             var x = index % image.ControlPointColumns;
             var y = index / image.ControlPointColumns;
+            
             var point = image.GetLatticePoint(x, y);
             var world = LatticeUvToWorld(image, localRect, point);
+            
             var selected = ImageLatticeToolState.Selection.Contains(index);
             var affected = !selected && affectedPoints.Contains(index);
+            
             var falloffWeight = GetSoftSelectionWeight(index, image.ControlPointColumns, image.ControlPointRows);
             var handleSize = HandleUtility.GetHandleSize(world) * (selected ? SelectedPointHandleSize : PointHandleSize + PointHandleSize * 0.25f * falloffWeight);
 
@@ -563,12 +569,11 @@ namespace Tripledot.CanvasKit.Editor
                 }
             }
 
-            for (var i = 0; i < DrawCells.Count; i++) {
-                DrawCellHandle(image, localRect, cellCenters[DrawCells[i]], DrawCells[i], hovered, affectedCells);
+            foreach (var cell in DrawCells) {
+                DrawCellHandle(image, localRect, cellCenters[cell], cell, hovered, affectedCells);
             }
 
-            for (var i = 0; i < affectedCells.Count; i++) {
-                var index = affectedCells[i];
+            foreach (var index in affectedCells) {
                 if (!ImageLatticeToolState.CellSelection.Contains(index)) {
                     DrawCellHandle(image, localRect, cellCenters[index], index, hovered, affectedCells);
                 }
@@ -677,27 +682,32 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             Handles.BeginGUI();
-            var label = ImageLatticeToolState.SoftSelectionMode == ImageLatticeSoftSelectionMode.Off
-                ? $"Radius {ImageLatticeToolState.SoftSelectionRadius:0.##} (Off)"
-                : $"Radius {ImageLatticeToolState.SoftSelectionRadius:0.##}";
-            var rect = new Rect(Event.current.mousePosition.x + 14f, Event.current.mousePosition.y + 14f, ImageLatticeToolState.SoftSelectionMode == ImageLatticeSoftSelectionMode.Off ? 120f : 88f,
-                22f);
-            EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.72f));
-            GUI.Label(rect, label, EditorStyles.whiteLabel);
+            {
+                var label = ImageLatticeToolState.SoftSelectionMode == ImageLatticeSoftSelectionMode.Off
+                    ? $"Radius {ImageLatticeToolState.SoftSelectionRadius:0.##} (Off)"
+                    : $"Radius {ImageLatticeToolState.SoftSelectionRadius:0.##}";
+            
+                var rect = new Rect(
+                    Event.current.mousePosition.x + 14f, 
+                    Event.current.mousePosition.y + 14f, 
+                    ImageLatticeToolState.SoftSelectionMode == ImageLatticeSoftSelectionMode.Off ? 120f : 88f,
+                    22f);
+            
+                EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.72f));
+                GUI.Label(rect, label, EditorStyles.whiteLabel);
+            }
             Handles.EndGUI();
         }
 
         private static void DrawMarquee()
         {
-            if (marqueeControl == 0) {
-                return;
+            if (marqueeControl != 0) {
+                Handles.BeginGUI();
+                var rect = GetMarqueeRect();
+                EditorGUI.DrawRect(rect, MarqueeFillColor);
+                DrawGuiRectOutline(rect, MarqueeLineColor);
+                Handles.EndGUI();
             }
-
-            Handles.BeginGUI();
-            var rect = GetMarqueeRect();
-            EditorGUI.DrawRect(rect, MarqueeFillColor);
-            DrawGuiRectOutline(rect, MarqueeLineColor);
-            Handles.EndGUI();
         }
 
         private static void DrawGuiRectOutline(Rect rect, Color color)
@@ -715,6 +725,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var bestIndex = -1;
             var bestDistance = PointHitDistance;
+            
             for (var y = 0; y < image.ControlPointRows; y++) {
                 for (var x = 0; x < image.ControlPointColumns; x++) {
                     var index = ImageLatticeSelectionUtility.GetPointIndex(x, y, image.ControlPointColumns);
@@ -737,6 +748,7 @@ namespace Tripledot.CanvasKit.Editor
             var cellCenters = CaptureCellCenters(image);
             var bestIndex = -1;
             var bestDistance = CellHitDistance;
+            
             for (var i = 0; i < cellCenters.Length; i++) {
                 var world = LatticeUvToWorld(image, localRect, cellCenters[i]);
                 var distance = Vector2.Distance(mousePosition, HandleUtility.WorldToGUIPoint(world));
@@ -756,6 +768,7 @@ namespace Tripledot.CanvasKit.Editor
             var cellColumns = image.ControlPointColumns - 1;
             var cellRows = image.ControlPointRows - 1;
             var cellCount = cellColumns * cellRows;
+            
             if (cellCenters.Length != cellCount) {
                 cellCenters = new Vector2[cellCount];
             }
@@ -775,6 +788,7 @@ namespace Tripledot.CanvasKit.Editor
             var cellColumns = image.ControlPointColumns - 1;
             var x = cellIndex % cellColumns;
             var y = cellIndex / cellColumns;
+            
             CellFillCorners[0] = LatticeUvToWorld(image, localRect, image.GetLatticePoint(x, y));
             CellFillCorners[1] = LatticeUvToWorld(image, localRect, image.GetLatticePoint(x + 1, y));
             CellFillCorners[2] = LatticeUvToWorld(image, localRect, image.GetLatticePoint(x + 1, y + 1));
@@ -785,11 +799,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private static int GetRadiusAnchorCell(int hoveredCell)
         {
-            if (hoveredCell >= 0) {
-                return hoveredCell;
-            }
-
-            return ImageLatticeToolState.ActiveCellIndex;
+            return hoveredCell >= 0 ? hoveredCell : ImageLatticeToolState.ActiveCellIndex;
         }
 
         private static float GetSoftSelectionWeight(int index, int controlPointColumns, int controlPointRows)
@@ -822,6 +832,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var rectTransform = (RectTransform)image.transform;
             var ray = HandleUtility.GUIPointToWorldRay(mousePosition);
+            
             var plane = new Plane(rectTransform.forward, rectTransform.position);
             if (plane.Raycast(ray, out var enter)) {
                 world = ray.GetPoint(enter);

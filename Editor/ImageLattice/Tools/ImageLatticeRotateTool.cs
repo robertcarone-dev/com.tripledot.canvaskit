@@ -15,6 +15,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             var pivot = GetHandlePivot(image, points);
             var pivotWorld = ImageLatticeSceneView.LatticeUvToWorld(image, localRect, pivot);
+            
             var handleRotation = GetHandleRotation(image);
             var currentRotation = Drag.Active ? Drag.CurrentRotation : handleRotation;
 
@@ -25,8 +26,8 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             Drag.Begin(image, "Rotate Lattice Selection", points, pivot, pivotWorld, handleRotation, Vector3.one);
+            
             var angle = GetSignedHandleAngle(image, Drag.StartRotation, nextRotation);
-
             ImageLatticeSelectionUtility.RotatePoints(
                 source: Drag.SourcePoints,
                 destination: Drag.DestinationPoints,

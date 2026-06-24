@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -207,7 +208,7 @@ namespace Tripledot.CanvasKit.Editor
         public static void ResetPoints(Vector2[] source, Vector2[] destination, int controlPointColumns, int controlPointRows, ICollection<int> selected,
             ImageLatticeMirrorMode mirrorMode)
         {
-            System.Array.Copy(source, destination, source.Length);
+            Array.Copy(source, destination, source.Length);
             foreach (var index in selected) {
                 destination[index] = ConstrainCenterline(index, controlPointColumns, controlPointRows, GetIdentityPoint(index, controlPointColumns, controlPointRows), mirrorMode);
             }
@@ -216,7 +217,7 @@ namespace Tripledot.CanvasKit.Editor
         public static void RelaxPoints(Vector2[] source, Vector2[] destination, int controlPointColumns, int controlPointRows, ICollection<int> selected,
             ImageLatticeMirrorMode mirrorMode)
         {
-            System.Array.Copy(source, destination, source.Length);
+            Array.Copy(source, destination, source.Length);
             foreach (var index in selected) {
                 if (!TryCalculateOrthogonalNeighborAverage(source, index, controlPointColumns, controlPointRows, out var average)) {
                     continue;
@@ -305,9 +306,9 @@ namespace Tripledot.CanvasKit.Editor
         }
 
         public static void TransformSelectedPoints(Vector2[] source, Vector2[] destination, int controlPointColumns, int controlPointRows, ICollection<int> selected,
-            ImageLatticeMirrorMode mirrorMode, System.Func<int, Vector2, Vector2> transform)
+            ImageLatticeMirrorMode mirrorMode, Func<int, Vector2, Vector2> transform)
         {
-            System.Array.Copy(source, destination, source.Length);
+            Array.Copy(source, destination, source.Length);
             if (selected.Count == 0) {
                 return;
             }
@@ -336,14 +337,14 @@ namespace Tripledot.CanvasKit.Editor
 
         private static void TransformPointsWithFalloff(Vector2[] source, Vector2[] destination, int controlPointColumns, int controlPointRows, ICollection<int> selected,
             ICollection<int> selectedCells, ImageLatticeMirrorMode mirrorMode, ImageLatticeEditTarget editTarget, ImageLatticeSoftSelectionMode softSelectionMode, float softSelectionRadius,
-            System.Func<int, Vector2, Vector2> transform)
+            Func<int, Vector2, Vector2> transform)
         {
             if (softSelectionMode == ImageLatticeSoftSelectionMode.Off) {
                 TransformSelectedPoints(source, destination, controlPointColumns, controlPointRows, selected, mirrorMode, transform);
                 return;
             }
 
-            System.Array.Copy(source, destination, source.Length);
+            Array.Copy(source, destination, source.Length);
             if (selected.Count == 0) {
                 return;
             }

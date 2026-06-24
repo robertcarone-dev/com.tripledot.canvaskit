@@ -33,13 +33,13 @@ namespace Tripledot.CanvasKit.Editor
             var changed = false;
             AnimationModifications.Clear();
             for (var i = 0; i < pointCount; i++) {
-                var pointProperty = storageProperty.FindPropertyRelative(ImageLattice.GetSerializedPointFieldName(i));
+                var pointProperty = storageProperty.FindPropertyRelative(GetSerializedPointFieldName(i));
                 if (pointProperty == null) {
                     throw new InvalidOperationException("Lattice point serialized property could not be resolved.");
                 }
 
-                var xProperty = pointProperty.FindPropertyRelative(ImageLattice.GetSerializedPointComponentName(i, "x"));
-                var yProperty = pointProperty.FindPropertyRelative(ImageLattice.GetSerializedPointComponentName(i, "y"));
+                var xProperty = pointProperty.FindPropertyRelative(GetSerializedPointComponentName("x"));
+                var yProperty = pointProperty.FindPropertyRelative(GetSerializedPointComponentName("y"));
                 if (xProperty == null || yProperty == null) {
                     throw new InvalidOperationException("Lattice point component serialized properties could not be resolved.");
                 }
@@ -71,15 +71,30 @@ namespace Tripledot.CanvasKit.Editor
 
         public static string GetPointComponentPropertyPath(int pointIndex, string component)
         {
+            return GetSerializedPointComponentPropertyPath(pointIndex, component);
+        }
+
+        internal static string GetSerializedPointFieldName(int pointIndex)
+        {
             if (pointIndex is < 0 or >= ImageLattice.MaxControlPointsPerAxis * ImageLattice.MaxControlPointsPerAxis) {
                 throw new ArgumentOutOfRangeException(nameof(pointIndex));
             }
 
+            return $"point{pointIndex:00}";
+        }
+
+        internal static string GetSerializedPointComponentName(string component)
+        {
             if (component != "x" && component != "y") {
                 throw new ArgumentException("Lattice point component must be x or y.", nameof(component));
             }
 
-            return ImageLattice.GetSerializedPointComponentPropertyPath(pointIndex, component);
+            return component;
+        }
+
+        internal static string GetSerializedPointComponentPropertyPath(int pointIndex, string component)
+        {
+            return $"{LatticePointStoragePropertyName}.{GetSerializedPointFieldName(pointIndex)}.{GetSerializedPointComponentName(component)}";
         }
 
         internal static bool TryGetEditorCurveBinding(ImageLattice image, PropertyModification modification, out EditorCurveBinding binding)

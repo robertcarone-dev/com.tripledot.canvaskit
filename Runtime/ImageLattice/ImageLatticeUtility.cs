@@ -23,6 +23,7 @@ namespace Tripledot.CanvasKit
             var p1 = GetPoint(image, controlPointColumns, controlPointRows, x, y);
             var p2 = GetPoint(image, controlPointColumns, controlPointRows, x + 1, y);
             var p3 = GetPoint(image, controlPointColumns, controlPointRows, x + 2, y);
+            
             return CatmullRom(p0, p1, p2, p3, t);
         }
 
