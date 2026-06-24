@@ -8,10 +8,29 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.CanvasPreview
 {
     internal static class CanvasPreviewRenderer
     {
+        internal sealed class PreviewResult : IDisposable
+        {
+            internal static readonly PreviewResult Empty = new PreviewResult(null);
+
+            internal readonly Texture2D Texture;
+
+            internal PreviewResult(Texture2D texture)
+            {
+                Texture = texture;
+            }
+
+            public void Dispose()
+            {
+                if (Texture != null) {
+                    UnityEngine.Object.DestroyImmediate(Texture);
+                }
+            }
+        }
+        
         private const int PreviewLayer = 31;
         private const float ElementPadding = 5f;
         private static readonly Color PreviewBackgroundColor = new Color(0.12f, 0.12f, 0.12f, 1f);
@@ -24,13 +43,13 @@ namespace Tripledot.CanvasKit.Editor
         private static readonly Vector3[] CornerBuffer = new Vector3[4];
 
         internal static PreviewResult RenderPreviewTexture(
-            GameObject prefabAsset, CanvasPreviewSize previewSize, int width, int height, bool preserveRequestedOutputSize = false)
+            GameObject prefabAsset,
+            CanvasPreviewSize previewSize, 
+            int width, 
+            int height, 
+            bool preserveRequestedOutputSize = false)
         {
-            if (prefabAsset == null || width <= 0 || height <= 0) {
-                return PreviewResult.Empty;
-            }
-
-            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) {
+            if (prefabAsset == null || width <= 0 || height <= 0 || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) {
                 return PreviewResult.Empty;
             }
 
@@ -66,9 +85,7 @@ namespace Tripledot.CanvasKit.Editor
                 var previewRootRect = GetPreviewRootRect(target);
                 var referenceSize = GetReferenceSize(roleResult.Role, previewSize, previewRootRect);
 
-                var environmentCanvas = usesEnvironmentScene
-                    ? CanvasPreviewEnvironment.SelectEnvironmentCanvas(previewScene.GetRootGameObjects(), prefabRoot.transform)
-                    : null;
+                var environmentCanvas = usesEnvironmentScene ? CanvasPreviewEnvironment.SelectEnvironmentCanvas(previewScene.GetRootGameObjects(), prefabRoot.transform) : null;
                 if (environmentCanvas != null) {
                     canvasObject = UnityEngine.Object.Instantiate(environmentCanvas.gameObject);
                     canvasObject.name = environmentCanvas.gameObject.name + " Preview";
@@ -77,13 +94,13 @@ namespace Tripledot.CanvasKit.Editor
                     canvasObject = CreateReferenceCanvas(referenceSize);
                 }
 
-                var canvasRect = canvasObject.GetComponent<RectTransform>();
-                ConfigureBaseCanvasRect(canvasRect, referenceSize);
+                var canvasTransform = canvasObject.GetComponent<RectTransform>();
+                ConfigureBaseCanvasRect(canvasTransform, referenceSize);
                 if (!usesPreset) {
                     ConfigureElementPreviewScalers(canvasObject);
                 }
 
-                PreparePreviewRootRect(previewRootRect, canvasRect, referenceSize, roleResult.Role,
+                PreparePreviewRootRect(previewRootRect, canvasTransform, referenceSize, roleResult.Role,
                     preserveRootRectSettings: target.Kind == CanvasPreviewTargetKind.Canvas);
 
                 cameraObject = new GameObject("Canvas Preview Camera") {
@@ -100,13 +117,13 @@ namespace Tripledot.CanvasKit.Editor
                 }
 
                 using (new SampleScope("CanvasPreview.Layout")) {
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(canvasRect);
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(canvasTransform);
                     Canvas.ForceUpdateCanvases();
                 }
 
                 Bounds contentBounds;
                 using (new SampleScope("CanvasPreview.Bounds")) {
-                    contentBounds = CalculateGraphicBounds(canvasRect, previewRootRect);
+                    contentBounds = CalculateGraphicBounds(canvasTransform, previewRootRect);
                 }
 
                 if (contentBounds.size.x <= 0f || contentBounds.size.y <= 0f) {
@@ -116,16 +133,16 @@ namespace Tripledot.CanvasKit.Editor
                 if (!usesPreset) {
                     var elementRenderSize = GetElementRenderSize(contentBounds);
                     referenceSize = elementRenderSize;
-                    canvasRect.sizeDelta = referenceSize;
+                    canvasTransform.sizeDelta = referenceSize;
                     CenterPreviewRootRect(previewRootRect, contentBounds);
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(canvasRect);
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(canvasTransform);
                     Canvas.ForceUpdateCanvases();
-                    contentBounds = CalculateGraphicBounds(canvasRect, previewRootRect);
+                    contentBounds = CalculateGraphicBounds(canvasTransform, previewRootRect);
                 }
 
                 var frameBounds = ExpandBounds(contentBounds, ElementPadding);
                 var outputSize = usesPreset || preserveRequestedOutputSize ? new Vector2Int(width, height) : GetElementRenderSize(contentBounds);
-                return RenderCanvas(camera: camera, canvasRect: canvasRect, frameBounds: frameBounds, width: outputSize.x, height: outputSize.y);
+                return RenderCanvas(camera: camera, canvasRect: canvasTransform, frameBounds: frameBounds, width: outputSize.x, height: outputSize.y);
             } catch {
                 return PreviewResult.Empty;
             } finally {
@@ -151,8 +168,7 @@ namespace Tripledot.CanvasKit.Editor
             PrefabUtility.LoadPrefabContentsIntoPreviewScene(prefabPath, previewScene);
             var currentRoots = previewScene.GetRootGameObjects();
 
-            for (var i = 0; i < currentRoots.Length; i++) {
-                var root = currentRoots[i];
+            foreach (var root in currentRoots) {
                 if (root != null && Array.IndexOf(existingRoots, root) < 0) {
                     return root;
                 }
@@ -169,8 +185,7 @@ namespace Tripledot.CanvasKit.Editor
 
             prefabRoot.GetComponentsInChildren(true, TransformBuffer);
             try {
-                for (var i = 0; i < TransformBuffer.Count; i++) {
-                    var transform = TransformBuffer[i];
+                foreach (var transform in TransformBuffer) {
                     if (transform == null) {
                         continue;
                     }
@@ -189,8 +204,7 @@ namespace Tripledot.CanvasKit.Editor
                     }
                 }
 
-                for (var i = 0; i < PrefabInstanceRootBuffer.Count; i++) {
-                    var instanceRoot = PrefabInstanceRootBuffer[i];
+                foreach (var instanceRoot in PrefabInstanceRootBuffer) {
                     if (instanceRoot != null) {
                         PrefabUtility.UnpackPrefabInstance(instanceRoot, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
                     }
@@ -208,6 +222,7 @@ namespace Tripledot.CanvasKit.Editor
                 components: new[] { typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler) }) {
                 hideFlags = HideFlags.HideAndDontSave
             };
+            
             SetLayerRecursively(canvasObject, PreviewLayer);
 
             var canvas = canvasObject.GetComponent<Canvas>();
@@ -248,14 +263,11 @@ namespace Tripledot.CanvasKit.Editor
             root.GetComponentsInChildren(true, ScalerBuffer);
 
             try {
-                for (var i = 0; i < ScalerBuffer.Count; i++) {
-                    var scaler = ScalerBuffer[i];
-                    if (scaler == null) {
-                        continue;
+                foreach (var scaler in ScalerBuffer) {
+                    if (scaler != null) {
+                        scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+                        scaler.scaleFactor = 1f;
                     }
-
-                    scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
-                    scaler.scaleFactor = 1f;
                 }
             } finally {
                 ScalerBuffer.Clear();
@@ -264,8 +276,8 @@ namespace Tripledot.CanvasKit.Editor
 
         private static RectTransform GetPreviewRootRect(CanvasPreviewTarget target)
         {
-            return target.PrefabRoot != null && target.PrefabRoot.TryGetComponent(out RectTransform rootRect)
-                ? rootRect
+            return target.PrefabRoot != null && target.PrefabRoot.TryGetComponent(out RectTransform rootTransform)
+                ? rootTransform
                 : target.RectTransform;
         }
 
@@ -339,8 +351,7 @@ namespace Tripledot.CanvasKit.Editor
             rootRect.anchoredPosition += offset;
         }
 
-        private static PreviewResult RenderCanvas(
-            Camera camera, RectTransform canvasRect, Bounds frameBounds, int width, int height)
+        private static PreviewResult RenderCanvas(Camera camera, RectTransform canvasRect, Bounds frameBounds, int width, int height)
         {
             var renderTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
             var previousActive = RenderTexture.active;
@@ -385,14 +396,11 @@ namespace Tripledot.CanvasKit.Editor
         {
             root.GetComponentsInChildren(true, CanvasBuffer);
             try {
-                for (var i = 0; i < CanvasBuffer.Count; i++) {
-                    var canvas = CanvasBuffer[i];
-                    if (canvas == null) {
-                        continue;
+                foreach (var canvas in CanvasBuffer) {
+                    if (canvas != null) {
+                        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                        canvas.worldCamera = camera;
                     }
-
-                    canvas.renderMode = RenderMode.ScreenSpaceCamera;
-                    canvas.worldCamera = camera;
                 }
             } finally {
                 CanvasBuffer.Clear();
@@ -427,8 +435,7 @@ namespace Tripledot.CanvasKit.Editor
 
             root.GetComponentsInChildren(true, GraphicBuffer);
             try {
-                for (var i = 0; i < GraphicBuffer.Count; i++) {
-                    var graphic = GraphicBuffer[i];
+                foreach (var graphic in GraphicBuffer) {
                     if (graphic == null || !graphic.isActiveAndEnabled || graphic.color.a <= 0f) {
                         continue;
                     }
@@ -439,8 +446,8 @@ namespace Tripledot.CanvasKit.Editor
                     }
 
                     rectTransform.GetWorldCorners(CornerBuffer);
-                    for (var cornerIndex = 0; cornerIndex < CornerBuffer.Length; cornerIndex++) {
-                        var localCorner = relativeTo.InverseTransformPoint(CornerBuffer[cornerIndex]);
+                    foreach (var point in CornerBuffer) {
+                        var localCorner = relativeTo.InverseTransformPoint(point);
                         if (!hasBounds) {
                             bounds = new Bounds(localCorner, Vector3.zero);
                             hasBounds = true;
@@ -468,8 +475,8 @@ namespace Tripledot.CanvasKit.Editor
         {
             root.GetComponentsInChildren(true, TransformBuffer);
             try {
-                for (var i = 0; i < TransformBuffer.Count; i++) {
-                    TransformBuffer[i].gameObject.layer = layer;
+                foreach (var transform in TransformBuffer) {
+                    transform.gameObject.layer = layer;
                 }
             } finally {
                 TransformBuffer.Clear();
@@ -486,25 +493,6 @@ namespace Tripledot.CanvasKit.Editor
             public void Dispose()
             {
                 Profiler.EndSample();
-            }
-        }
-
-        internal sealed class PreviewResult : IDisposable
-        {
-            internal static readonly PreviewResult Empty = new PreviewResult(null);
-
-            internal readonly Texture2D Texture;
-
-            internal PreviewResult(Texture2D texture)
-            {
-                Texture = texture;
-            }
-
-            public void Dispose()
-            {
-                if (Texture != null) {
-                    UnityEngine.Object.DestroyImmediate(Texture);
-                }
             }
         }
     }

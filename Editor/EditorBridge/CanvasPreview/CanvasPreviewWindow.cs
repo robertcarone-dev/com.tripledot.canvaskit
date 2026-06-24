@@ -4,16 +4,41 @@ using UnityEditor;
 using UnityEngine;
 using UnityObject = UnityEngine.Object;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.CanvasPreview
 {
-    internal static class CanvasPreview
+    internal enum CanvasPreviewTargetKind
+    {
+        None,
+        Canvas,
+        RectTransform
+    }
+
+    internal readonly struct CanvasPreviewTarget
+    {
+        public static readonly CanvasPreviewTarget Empty = default;
+
+        public readonly CanvasPreviewTargetKind Kind;
+        public readonly GameObject PrefabRoot;
+        public readonly Canvas Canvas;
+        public readonly RectTransform RectTransform;
+
+        public CanvasPreviewTarget(CanvasPreviewTargetKind kind, GameObject prefabRoot, Canvas canvas, RectTransform rectTransform)
+        {
+            Kind = kind;
+            PrefabRoot = prefabRoot;
+            Canvas = canvas;
+            RectTransform = rectTransform;
+        }
+    }
+    
+    internal static class CanvasPreviewWindow
     {
         private static readonly GUIContent PreviewTitle = new GUIContent("Canvas Preview");
         private static readonly string[] SizeLabels = CreateSizeLabels();
         private static readonly Dictionary<string, PreviewState> StateCache = new Dictionary<string, PreviewState>();
         private static readonly StaticPreviewCache ProjectPreviewCache = new StaticPreviewCache(32);
 
-        static CanvasPreview()
+        static CanvasPreviewWindow()
         {
             EditorApplication.projectChanged += ClearPreviewCache;
         }
@@ -25,10 +50,6 @@ namespace Tripledot.CanvasKit.Editor
 
         public static bool CanPreview(UnityObject[] targets)
         {
-            if (targets == null || targets.Length == 0) {
-                return false;
-            }
-
             foreach (var target in targets) {
                 if (!CanPreview(target)) {
                     return false;
@@ -40,9 +61,10 @@ namespace Tripledot.CanvasKit.Editor
 
         public static bool TryGetPreviewTarget(UnityObject target, UnityObject[] targets, out GameObject prefab)
         {
+            prefab = null;
+            
             if (targets is { Length: > 1 }) {
                 if (!CanPreview(targets)) {
-                    prefab = null;
                     return false;
                 }
 
@@ -60,7 +82,6 @@ namespace Tripledot.CanvasKit.Editor
                 return true;
             }
 
-            prefab = null;
             return false;
         }
 
@@ -91,7 +112,7 @@ namespace Tripledot.CanvasKit.Editor
                 : "Canvas Preview - " + roleName;
         }
 
-        public static Texture2D RenderStaticPreview(UnityObject target, string assetPath, UnityObject[] subAssets, int width, int height)
+        public static Texture2D RenderStaticPreview(UnityObject target, int width, int height)
         {
             if (target is not GameObject prefabAsset || !CanPreview(prefabAsset)) {
                 return null;
@@ -181,8 +202,7 @@ namespace Tripledot.CanvasKit.Editor
             }
 
             var settingsRevision = CanvasPreviewSettings.Revision;
-            if (StateCache.TryGetValue(assetPath, out state)
-                && state.SettingsRevision == settingsRevision) {
+            if (StateCache.TryGetValue(assetPath, out state) && state.SettingsRevision == settingsRevision) {
                 return state.CanPreview;
             }
 
@@ -194,11 +214,11 @@ namespace Tripledot.CanvasKit.Editor
 
             var sourceRenderMode = targetInfo.Canvas != null ? targetInfo.Canvas.renderMode : RenderMode.ScreenSpaceCamera;
             state = new PreviewState(
-                true,
-                CanvasPreviewRoleResolver.Resolve(gameObject, targetInfo),
-                targetInfo.Kind,
-                sourceRenderMode,
-                settingsRevision);
+                canPreview: true,
+                role: CanvasPreviewRoleResolver.Resolve(gameObject, targetInfo),
+                targetKind: targetInfo.Kind,
+                sourceRenderMode: sourceRenderMode,
+                settingsRevision: settingsRevision);
             StateCache[assetPath] = state;
             return true;
         }
@@ -210,8 +230,7 @@ namespace Tripledot.CanvasKit.Editor
 
         private static int NormalizeSizeIndex(int selectedSizeIndex)
         {
-            return selectedSizeIndex >= 0 &&
-                   selectedSizeIndex < CanvasPreviewSize.StandardSizes.Length
+            return selectedSizeIndex >= 0 && selectedSizeIndex < CanvasPreviewSize.StandardSizes.Length
                 ? selectedSizeIndex
                 : CanvasPreviewSize.DefaultIndex;
         }
@@ -390,92 +409,6 @@ namespace Tripledot.CanvasKit.Editor
                     Texture = texture;
                 }
             }
-        }
-    }
-
-    internal sealed class CanvasPreviewCache
-    {
-        internal const int MaxPreviewTextureSize = 512;
-
-        private Texture2D previewTexture;
-        private int previewWidth;
-        private int previewHeight;
-        private int previewSizeIndex;
-        private Hash128 previewHash;
-        private string previewAssetPath;
-        private int previewSettingsRevision;
-        private CanvasPreviewEnvironmentKey previewEnvironmentKey;
-
-        public Texture2D EnsurePreviewTexture(
-            GameObject prefabAsset, CanvasPreviewSize previewSize, int selectedSizeIndex, int width, int height)
-        {
-            if (width <= 0 || height <= 0 || prefabAsset == null) {
-                ReleasePreviewTexture();
-                return null;
-            }
-
-            var assetPath = AssetDatabase.GetAssetPath(prefabAsset);
-            var assetHash = !string.IsNullOrEmpty(assetPath) ? AssetDatabase.GetAssetDependencyHash(assetPath) : default;
-            var settingsRevision = CanvasPreviewSettings.Revision;
-            var environmentKey = CanvasPreviewEnvironment.CreateCacheKey();
-            var renderSize = GetRenderSize(previewSize);
-
-            if (previewTexture != null
-                && previewWidth == renderSize.x
-                && previewHeight == renderSize.y
-                && previewSizeIndex == selectedSizeIndex
-                && previewHash == assetHash
-                && previewAssetPath == assetPath
-                && previewSettingsRevision == settingsRevision
-                && previewEnvironmentKey == environmentKey) {
-                return previewTexture;
-            }
-
-            ReleasePreviewTexture();
-            var result = CanvasPreviewRenderer.RenderPreviewTexture(prefabAsset, previewSize, renderSize.x, renderSize.y);
-            if (result.Texture == null) {
-                return null;
-            }
-
-            previewTexture = result.Texture;
-            previewTexture.hideFlags = HideFlags.HideAndDontSave;
-            previewWidth = renderSize.x;
-            previewHeight = renderSize.y;
-            previewSizeIndex = selectedSizeIndex;
-            previewHash = assetHash;
-            previewAssetPath = assetPath;
-            previewSettingsRevision = settingsRevision;
-            previewEnvironmentKey = environmentKey;
-
-            return previewTexture;
-        }
-
-        public void ReleasePreviewTexture()
-        {
-            if (previewTexture != null) {
-                UnityObject.DestroyImmediate(previewTexture);
-            }
-
-            previewTexture = null;
-            previewWidth = 0;
-            previewHeight = 0;
-            previewSizeIndex = CanvasPreviewSize.DefaultIndex;
-            previewHash = default;
-            previewAssetPath = null;
-            previewSettingsRevision = 0;
-            previewEnvironmentKey = default;
-        }
-
-        private static Vector2Int GetRenderSize(CanvasPreviewSize previewSize)
-        {
-            var width = Mathf.Max(1, previewSize.Width);
-            var height = Mathf.Max(1, previewSize.Height);
-            var max = Mathf.Max(1, MaxPreviewTextureSize);
-            var scale = Mathf.Min(1f, max / (float)Mathf.Max(width, height));
-
-            return new Vector2Int(
-                Mathf.Max(1, Mathf.RoundToInt(width * scale)),
-                Mathf.Max(1, Mathf.RoundToInt(height * scale)));
         }
     }
 }

@@ -2,8 +2,36 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.CanvasPreview
 {
+    internal enum CanvasPreviewRole
+    {
+        Screen,
+        Popup,
+        Element
+    }
+
+    internal enum CanvasPreviewRoleSource
+    {
+        None,
+        Name,
+        Structure
+    }
+
+    internal readonly struct CanvasPreviewRoleResult
+    {
+        internal readonly CanvasPreviewRole Role;
+        internal readonly CanvasPreviewRoleSource Source;
+        internal readonly string MatchedKeyword;
+
+        internal CanvasPreviewRoleResult(CanvasPreviewRole role, CanvasPreviewRoleSource source, string matchedKeyword)
+        {
+            Role = role;
+            Source = source;
+            MatchedKeyword = matchedKeyword;
+        }
+    }
+    
     internal static class CanvasPreviewRoleResolver
     {
         internal static CanvasPreviewRole Resolve(GameObject prefabAsset, CanvasPreviewTarget target)
@@ -39,17 +67,18 @@ namespace Tripledot.CanvasKit.Editor
 
         private static CanvasPreviewRoleResult ResolveFromStructure(CanvasPreviewTarget target)
         {
-            if (target.Kind == CanvasPreviewTargetKind.Canvas && target.Canvas != null) {
-                var role = target.Canvas.renderMode is RenderMode.ScreenSpaceOverlay or RenderMode.ScreenSpaceCamera ? CanvasPreviewRole.Screen : CanvasPreviewRole.Element;
-                return new CanvasPreviewRoleResult(role, CanvasPreviewRoleSource.Structure, string.Empty);
+            switch (target.Kind) {
+                case CanvasPreviewTargetKind.Canvas when target.Canvas != null: {
+                    var role = target.Canvas.renderMode is RenderMode.ScreenSpaceOverlay or RenderMode.ScreenSpaceCamera ? CanvasPreviewRole.Screen : CanvasPreviewRole.Element;
+                    return new CanvasPreviewRoleResult(role, CanvasPreviewRoleSource.Structure, string.Empty);
+                }
+                case CanvasPreviewTargetKind.RectTransform when target.RectTransform != null: {
+                    var role = HasStretchAnchors(target.RectTransform) ? CanvasPreviewRole.Popup : CanvasPreviewRole.Element;
+                    return new CanvasPreviewRoleResult(role, CanvasPreviewRoleSource.Structure, string.Empty);
+                }
+                default:
+                    return new CanvasPreviewRoleResult(CanvasPreviewRole.Element, CanvasPreviewRoleSource.Structure, string.Empty);
             }
-
-            if (target.Kind == CanvasPreviewTargetKind.RectTransform && target.RectTransform != null) {
-                var role = HasStretchAnchors(target.RectTransform) ? CanvasPreviewRole.Popup : CanvasPreviewRole.Element;
-                return new CanvasPreviewRoleResult(role, CanvasPreviewRoleSource.Structure, string.Empty);
-            }
-
-            return new CanvasPreviewRoleResult(CanvasPreviewRole.Element, CanvasPreviewRoleSource.Structure, string.Empty);
         }
 
         private static bool TryResolveFromName(string assetName, out CanvasPreviewRoleResult result)
@@ -77,8 +106,7 @@ namespace Tripledot.CanvasKit.Editor
         private static bool TryMatchRole(string[] assetTokens, CanvasPreviewRole role, out string matchedKeyword)
         {
             var keywords = CanvasPreviewSettings.GetKeywords(role);
-            for (var i = 0; i < keywords.Length; i++) {
-                var keyword = keywords[i];
+            foreach (var keyword in keywords) {
                 if (KeywordMatches(assetTokens, Tokenize(keyword))) {
                     matchedKeyword = keyword;
                     return true;
@@ -122,8 +150,7 @@ namespace Tripledot.CanvasKit.Editor
             var count = 0;
             var previousWasLowerOrDigit = false;
 
-            for (var i = 0; i < value.Length; i++) {
-                var c = value[i];
+            foreach (var c in value) {
                 if (char.IsUpper(c) && previousWasLowerOrDigit) {
                     buffer[count++] = ' ';
                 }
@@ -137,8 +164,7 @@ namespace Tripledot.CanvasKit.Editor
                 }
             }
 
-            return new string(buffer, 0, count)
-                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return new string(buffer, 0, count).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
         private static string GetAssetName(GameObject prefabAsset)
@@ -151,8 +177,8 @@ namespace Tripledot.CanvasKit.Editor
 
         private static bool HasStretchAnchors(RectTransform rectTransform)
         {
-            return !Mathf.Approximately(rectTransform.anchorMin.x, rectTransform.anchorMax.x)
-                   || !Mathf.Approximately(rectTransform.anchorMin.y, rectTransform.anchorMax.y);
+            return !Mathf.Approximately(rectTransform.anchorMin.x, rectTransform.anchorMax.x) || 
+                   !Mathf.Approximately(rectTransform.anchorMin.y, rectTransform.anchorMax.y);
         }
     }
 }

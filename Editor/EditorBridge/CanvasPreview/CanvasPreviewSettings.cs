@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.CanvasPreview
 {
     [FilePath("ProjectSettings/CanvasKitCanvasPreviewSettings.asset", FilePathAttribute.Location.ProjectFolder)]
     internal sealed class CanvasPreviewSettings : ScriptableSingleton<CanvasPreviewSettings>
@@ -105,7 +105,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.legacyKeywordRulesMigrated = true;
 
             Revision++;
-            CanvasPreview.ClearPreviewCache();
+            CanvasPreviewWindow.ClearPreviewCache();
 
             if (save) {
                 settings.Save(true);
@@ -120,7 +120,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.scalerReferencePixelsPerUnit = SanitizeReferencePixelsPerUnit(referencePixelsPerUnit);
 
             Revision++;
-            CanvasPreview.ClearPreviewCache();
+            CanvasPreviewWindow.ClearPreviewCache();
 
             if (save) {
                 settings.Save(true);
@@ -133,7 +133,7 @@ namespace Tripledot.CanvasKit.Editor
             settings.selectedReferenceSizeIndex = NormalizeReferenceSizeIndex(selectedSizeIndex);
 
             Revision++;
-            CanvasPreview.ClearPreviewCache();
+            CanvasPreviewWindow.ClearPreviewCache();
 
             if (save) {
                 settings.Save(true);
@@ -174,8 +174,8 @@ namespace Tripledot.CanvasKit.Editor
 
             var sanitized = new string[keywords.Length];
             var count = 0;
-            for (var i = 0; i < keywords.Length; i++) {
-                var keyword = keywords[i]?.Trim().ToLowerInvariant();
+            foreach (var rawKeyword in keywords) {
+                var keyword = rawKeyword?.Trim().ToLowerInvariant();
                 if (string.IsNullOrEmpty(keyword)) {
                     continue;
                 }
@@ -233,43 +233,6 @@ namespace Tripledot.CanvasKit.Editor
             Array.Copy(firstKeywords, merged, firstKeywords.Length);
             Array.Copy(secondKeywords, 0, merged, firstKeywords.Length, secondKeywords.Length);
             return SanitizeKeywords(merged);
-        }
-    }
-
-    internal static class CanvasPreviewSettingsProvider
-    {
-        [SettingsProvider]
-        private static SettingsProvider CreateSettingsProvider()
-        {
-            return new SettingsProvider("Project/CanvasKit/Canvas Preview", SettingsScope.Project) {
-                label = "Canvas Preview",
-                guiHandler = _ => DrawSettings()
-            };
-        }
-
-        private static void DrawSettings()
-        {
-            var settings = CanvasPreviewSettings.instance;
-            EditorGUILayout.LabelField("Asset Name Role Keywords", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Asset names are checked using these case-insensitive keywords, then structural fallback is used.", MessageType.None);
-
-            var screen = EditorGUILayout.TextField("Screen", CanvasPreviewSettings.JoinKeywords(settings.ScreenKeywords));
-            var popup = EditorGUILayout.TextField("Popup", CanvasPreviewSettings.JoinKeywords(settings.PopupKeywords));
-            var element = EditorGUILayout.TextField("Element", CanvasPreviewSettings.JoinKeywords(settings.ElementKeywords));
-
-            if (GUILayout.Button("Save Canvas Preview Keywords")) {
-                CanvasPreviewSettings.SaveKeywordRules(screen, popup, element);
-            }
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Reference Canvas Scaler", EditorStyles.boldLabel);
-            var scaleMode = (CanvasScaler.ScaleMode)EditorGUILayout.EnumPopup("UI Scale Mode", settings.ScalerUiScaleMode);
-            var referenceResolution = EditorGUILayout.Vector2Field("Reference Resolution", settings.ScalerReferenceResolution);
-            var referencePixelsPerUnit = EditorGUILayout.FloatField("Reference Pixels Per Unit", settings.ScalerReferencePixelsPerUnit);
-
-            if (GUILayout.Button("Save Canvas Preview Scaler Defaults")) {
-                CanvasPreviewSettings.SaveScalerDefaults(scaleMode, referenceResolution, referencePixelsPerUnit);
-            }
         }
     }
 }

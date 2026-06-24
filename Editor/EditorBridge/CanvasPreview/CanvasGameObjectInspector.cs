@@ -1,19 +1,23 @@
-using Tripledot.CanvasKit.Editor;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
-namespace Tripledot.CanvasKit.InternalEditorBridge
+namespace Tripledot.CanvasKit.Editor.CanvasPreview
 {
     [CustomEditor(typeof(GameObject))]
     [CanEditMultipleObjects]
     internal class CanvasGameObjectInspector : GameObjectInspector
     {
         private readonly CanvasPreviewCache canvasPreviewCache = new CanvasPreviewCache();
-        private Object[] cachedTargets;
-        private Object[] singleTargetArray;
-        private Object cachedSingleTarget;
         private int selectedSizeIndex = CanvasPreviewSize.DefaultIndex;
         private bool selectedSizeIndexInitialized;
+
+        protected new void OnDisable()
+        {
+            base.OnDisable();
+            selectedSizeIndexInitialized = false;
+            canvasPreviewCache.ReleasePreviewTexture();
+        }
 
         public override void ReloadPreviewInstances()
         {
@@ -23,35 +27,34 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
         public override bool HasPreviewGUI()
         {
-            return CanvasPreview.HasPreviewGUI(target, RefreshCachedTargets(), false) || base.HasPreviewGUI();
+            return CanvasPreviewWindow.HasPreviewGUI(target, targets, false) || base.HasPreviewGUI();
         }
 
         public override GUIContent GetPreviewTitle()
         {
-            return CanvasPreview.TryGetPreviewTarget(target, RefreshCachedTargets(), out _)
-                ? CanvasPreview.GetPreviewTitle(target, GetCachedTargets(), GUIContent.none)
+            return CanvasPreviewWindow.TryGetPreviewTarget(target, targets, out _)
+                ? CanvasPreviewWindow.GetPreviewTitle(target, targets, GUIContent.none)
                 : base.GetPreviewTitle();
         }
 
         public override string GetInfoString()
         {
-            return CanvasPreview.TryGetPreviewTarget(target, RefreshCachedTargets(), out _)
-                ? CanvasPreview.GetInfoString(target, GetCachedTargets(), GetSelectedSizeIndex(), string.Empty)
+            return CanvasPreviewWindow.TryGetPreviewTarget(target, targets, out _)
+                ? CanvasPreviewWindow.GetInfoString(target, targets, GetSelectedSizeIndex(), string.Empty)
                 : base.GetInfoString();
         }
 
         public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height)
         {
-            var preview = CanvasPreview.RenderStaticPreview(target, assetPath, subAssets, width, height);
+            var preview = CanvasPreviewWindow.RenderStaticPreview(target, width, height);
             return preview != null ? preview : base.RenderStaticPreview(assetPath, subAssets, width, height);
         }
 
         public override void OnPreviewSettings()
         {
-            var currentTargets = RefreshCachedTargets();
-            if (CanvasPreview.CanPreview(currentTargets)) {
+            if (CanvasPreviewWindow.CanPreview(targets)) {
                 EnsureSelectedSizeIndexInitialized();
-                CanvasPreview.OnPreviewSettings(target, currentTargets, ref selectedSizeIndex, canvasPreviewCache.ReleasePreviewTexture);
+                CanvasPreviewWindow.OnPreviewSettings(target, targets, ref selectedSizeIndex, canvasPreviewCache.ReleasePreviewTexture);
             } else {
                 base.OnPreviewSettings();
             }
@@ -59,21 +62,11 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
         public override void OnPreviewGUI(Rect r, GUIStyle background)
         {
-            if (CanvasPreview.OnPreviewGUI(target, GetCachedTargets(), r, background, canvasPreviewCache, GetSelectedSizeIndex())) {
+            if (CanvasPreviewWindow.OnPreviewGUI(target, targets, r, background, canvasPreviewCache, GetSelectedSizeIndex())) {
                 return;
             }
 
             base.OnPreviewGUI(r, background);
-        }
-
-        protected new void OnDisable()
-        {
-            base.OnDisable();
-            cachedTargets = null;
-            singleTargetArray = null;
-            cachedSingleTarget = null;
-            selectedSizeIndexInitialized = false;
-            canvasPreviewCache.ReleasePreviewTexture();
         }
 
         private int GetSelectedSizeIndex()
@@ -84,65 +77,10 @@ namespace Tripledot.CanvasKit.InternalEditorBridge
 
         private void EnsureSelectedSizeIndexInitialized()
         {
-            if (selectedSizeIndexInitialized) {
-                return;
+            if (!selectedSizeIndexInitialized) {
+                selectedSizeIndex = CanvasPreviewSettings.SelectedReferenceSizeIndex;
+                selectedSizeIndexInitialized = true;
             }
-
-            selectedSizeIndex = CanvasPreviewSettings.SelectedReferenceSizeIndex;
-            selectedSizeIndexInitialized = true;
-        }
-
-        private Object[] RefreshCachedTargets()
-        {
-            var currentTargets = targets;
-            if (currentTargets is not { Length: > 0 }) {
-                cachedTargets = GetSingleTargetArray();
-                return cachedTargets;
-            }
-
-            if (!TargetsMatch(cachedTargets, currentTargets)) {
-                cachedTargets = (Object[])currentTargets.Clone();
-            }
-
-            return cachedTargets;
-        }
-
-        private Object[] GetCachedTargets()
-        {
-            return cachedTargets is { Length: > 0 }
-                ? cachedTargets
-                : GetSingleTargetArray();
-        }
-
-        private Object[] GetSingleTargetArray()
-        {
-            if (target == null) {
-                singleTargetArray = null;
-                cachedSingleTarget = null;
-                return System.Array.Empty<Object>();
-            }
-
-            if (singleTargetArray == null || cachedSingleTarget != target) {
-                cachedSingleTarget = target;
-                singleTargetArray = new[] { target };
-            }
-
-            return singleTargetArray;
-        }
-
-        private static bool TargetsMatch(Object[] cached, Object[] current)
-        {
-            if (cached == null || current == null || cached.Length != current.Length) {
-                return false;
-            }
-
-            for (var i = 0; i < current.Length; i++) {
-                if (cached[i] != current[i]) {
-                    return false;
-                }
-            }
-
-            return true;
         }
     }
 }

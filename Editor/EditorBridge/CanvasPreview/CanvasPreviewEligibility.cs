@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.CanvasPreview
 {
     internal static class CanvasPreviewEligibility
     {
@@ -14,11 +14,8 @@ namespace Tripledot.CanvasKit.Editor
         public static bool TryGetPreviewTarget(GameObject gameObject, out CanvasPreviewTarget target)
         {
             target = CanvasPreviewTarget.Empty;
-            if (!IsPrefabAssetRoot(gameObject)) {
-                return false;
-            }
-
-            return TryGetPreviewTargetInHierarchy(gameObject, out target);
+            return IsPrefabAssetRoot(gameObject) &&
+                   TryGetPreviewTargetInHierarchy(gameObject, out target);
         }
 
         public static bool TryGetPreviewTargetInHierarchy(GameObject root, out CanvasPreviewTarget target)
@@ -30,8 +27,7 @@ namespace Tripledot.CanvasKit.Editor
 
             root.GetComponentsInChildren(true, CanvasBuffer);
             try {
-                for (var i = 0; i < CanvasBuffer.Count; i++) {
-                    var canvas = CanvasBuffer[i];
+                foreach (var canvas in CanvasBuffer) {
                     if (canvas == null || !IsHierarchyActive(canvas.transform) || !canvas.TryGetComponent(out RectTransform canvasRect)) {
                         continue;
                     }
@@ -43,18 +39,17 @@ namespace Tripledot.CanvasKit.Editor
                 CanvasBuffer.Clear();
             }
 
-            var rootRect = root.GetComponent<RectTransform>();
-            if (rootRect != null && HasVisibleGraphic(rootRect)) {
-                target = new CanvasPreviewTarget(CanvasPreviewTargetKind.RectTransform, root, null, rootRect);
+            var rootTransform = root.GetComponent<RectTransform>();
+            if (rootTransform != null && HasVisibleGraphic(rootTransform)) {
+                target = new CanvasPreviewTarget(CanvasPreviewTargetKind.RectTransform, root, null, rootTransform);
                 return true;
             }
 
             root.GetComponentsInChildren(true, RectTransformBuffer);
             try {
-                for (var i = 0; i < RectTransformBuffer.Count; i++) {
-                    var rect = RectTransformBuffer[i];
-                    if (rect != null && HasVisibleGraphic(rect)) {
-                        target = new CanvasPreviewTarget(CanvasPreviewTargetKind.RectTransform, root, null, rect);
+                foreach (var transform in RectTransformBuffer) {
+                    if (transform != null && HasVisibleGraphic(transform)) {
+                        target = new CanvasPreviewTarget(CanvasPreviewTargetKind.RectTransform, root, null, transform);
                         return true;
                     }
                 }
@@ -79,8 +74,7 @@ namespace Tripledot.CanvasKit.Editor
         {
             root.GetComponentsInChildren(true, GraphicBuffer);
             try {
-                for (var i = 0; i < GraphicBuffer.Count; i++) {
-                    var graphic = GraphicBuffer[i];
+                foreach (var graphic in GraphicBuffer) {
                     if (graphic == null || !graphic.enabled || graphic.color.a <= 0f || !IsHierarchyActive(graphic.transform)) {
                         continue;
                     }
@@ -99,7 +93,7 @@ namespace Tripledot.CanvasKit.Editor
         private static bool HasRenderableRect(RectTransform rectTransform)
         {
             var rect = rectTransform.rect;
-            return (rect.width > 0f && rect.height > 0f)
+            return rect is { width: > 0f, height: > 0f }
                    || !Mathf.Approximately(rectTransform.anchorMin.x, rectTransform.anchorMax.x)
                    || !Mathf.Approximately(rectTransform.anchorMin.y, rectTransform.anchorMax.y);
         }

@@ -4,49 +4,9 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
-namespace Tripledot.CanvasKit.Editor
+namespace Tripledot.CanvasKit.Editor.CanvasPreview
 {
-    internal readonly struct CanvasPreviewEnvironmentKey : IEquatable<CanvasPreviewEnvironmentKey>
-    {
-        public readonly string ScenePath;
-        public readonly Hash128 SceneHash;
-
-        public CanvasPreviewEnvironmentKey(string scenePath, Hash128 sceneHash)
-        {
-            ScenePath = scenePath ?? string.Empty;
-            SceneHash = sceneHash;
-        }
-
-        public bool Equals(CanvasPreviewEnvironmentKey other)
-        {
-            return ScenePath == other.ScenePath && SceneHash == other.SceneHash;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is CanvasPreviewEnvironmentKey other && Equals(other);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked {
-                return ((ScenePath != null ? ScenePath.GetHashCode() : 0) * 397) ^ SceneHash.GetHashCode();
-            }
-        }
-
-        public static bool operator ==(CanvasPreviewEnvironmentKey left, CanvasPreviewEnvironmentKey right)
-        {
-            return left.Equals(right);
-        }
-
-        public static bool operator !=(CanvasPreviewEnvironmentKey left, CanvasPreviewEnvironmentKey right)
-        {
-            return !left.Equals(right);
-        }
-    }
-
     internal static class CanvasPreviewEnvironment
     {
         private static readonly List<Canvas> CanvasBuffer = new List<Canvas>(8);
@@ -59,11 +19,9 @@ namespace Tripledot.CanvasKit.Editor
         public static CanvasPreviewEnvironmentKey CreateCacheKey(SceneAsset sceneAsset)
         {
             var scenePath = sceneAsset != null ? AssetDatabase.GetAssetPath(sceneAsset) : string.Empty;
-            if (string.IsNullOrEmpty(scenePath)) {
-                return default;
-            }
-
-            return new CanvasPreviewEnvironmentKey(scenePath, AssetDatabase.GetAssetDependencyHash(scenePath));
+            return string.IsNullOrEmpty(scenePath) 
+                ? default 
+                : new CanvasPreviewEnvironmentKey(scenePath, AssetDatabase.GetAssetDependencyHash(scenePath));
         }
 
         public static Scene OpenPreviewScene(out bool usesEnvironmentScene)
@@ -103,16 +61,14 @@ namespace Tripledot.CanvasKit.Editor
                 return null;
             }
 
-            for (var i = 0; i < sceneRoots.Length; i++) {
-                var root = sceneRoots[i];
+            foreach (var root in sceneRoots) {
                 if (root == null || (previewRoot != null && root.transform == previewRoot)) {
                     continue;
                 }
 
                 root.GetComponentsInChildren(true, CanvasBuffer);
                 try {
-                    for (var canvasIndex = 0; canvasIndex < CanvasBuffer.Count; canvasIndex++) {
-                        var canvas = CanvasBuffer[canvasIndex];
+                    foreach (var canvas in CanvasBuffer) {
                         if (!IsUsableEnvironmentCanvas(canvas)) {
                             continue;
                         }
