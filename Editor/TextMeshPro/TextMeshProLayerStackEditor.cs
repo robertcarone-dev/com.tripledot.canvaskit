@@ -42,6 +42,7 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
 
         public override void OnInspectorGUI()
         {
+            Stack.EnsurePresetOverrideSlots();
             serializedObject.Update();
 
             DrawPresetField();
@@ -97,7 +98,15 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
             var buttonRect = new Rect(rect.xMax - Styles.PresetActionButtonWidth, rect.y, Styles.PresetActionButtonWidth, rect.height);
             var fieldRect = new Rect(rect.x, rect.y, Mathf.Max(0f, rect.width - actionWidth - Styles.PresetFieldGap), rect.height);
 
+            EditorGUI.BeginChangeCheck();
             EditorGUI.PropertyField(fieldRect, preset, Styles.LayerPreset);
+            if (EditorGUI.EndChangeCheck()) {
+                Undo.RegisterCompleteObjectUndo(Stack, "Assign TextMeshPro Layer Preset");
+                serializedObject.ApplyModifiedProperties();
+                Stack.EnsurePresetOverrideSlots();
+                serializedObject.Update();
+                layerInspector.ClearLinkedPresetCache();
+            }
 
             if (assignedPreset) {
                 var cloneRect = new Rect(buttonRect.x - Styles.PresetFieldGap - Styles.PresetActionButtonWidth, rect.y, Styles.PresetActionButtonWidth, rect.height);
@@ -129,7 +138,7 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
                 return;
             }
 
-            preset.objectReferenceValue = layerPreset;
+            serializedObject.Update();
             layerInspector.ClearLinkedPresetCache();
         }
 
@@ -152,6 +161,7 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
 
         private void ClearPreset()
         {
+            Undo.RegisterCompleteObjectUndo(Stack, "Clear TextMeshPro Layer Preset");
             preset.objectReferenceValue = null;
             layerInspector.ClearLinkedPresetCache();
         }

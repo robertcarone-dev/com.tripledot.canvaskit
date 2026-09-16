@@ -14,7 +14,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
     [RequireComponent(typeof(TextMeshProUGUI))]
     [AddComponentMenu("UI (Canvas)/TextMeshPro - Layer Stack", 11)]
     [MovedFrom("Tripledot.CanvasKit")]
-    public sealed class TextMeshProLayerStack : UIBehaviour
+    public sealed class TextMeshProLayerStack : UIBehaviour, ISerializationCallbackReceiver, IClippable
     {
         [SerializeField]
         private TextMeshProLayerPreset preset;
@@ -22,6 +22,13 @@ namespace Tripledot.CanvasKit.TextMeshPro
         private List<TextMeshProLayerData> localLayers = new List<TextMeshProLayerData>();
         [SerializeField]
         private List<LayerOverride> presetLayerOverrides = new List<LayerOverride>();
+
+        [SerializeField]
+        [HideInInspector]
+        private TextMeshProLayerPreset overridePreset;
+        [SerializeField]
+        [HideInInspector]
+        private bool overrideIdsInitialized;
 
         private readonly List<ResolvedLayer> resolvedLayers = new List<ResolvedLayer>();
         private readonly List<TextMeshProLayerData> resolvedLayerData = new List<TextMeshProLayerData>();
@@ -36,7 +43,13 @@ namespace Tripledot.CanvasKit.TextMeshPro
         private TextMeshProLayerChange pendingChange = TextMeshProLayerChange.Geometry;
         private bool hasPaintBounds;
         private bool hasAssignedMesh;
-        private bool rebuildQueued;
+        private bool hasSourceGeometry;
+        private float sourceScaleY;
+        private RectMask2D clipParent;
+        private Rect clipRect;
+        private bool validClipRect;
+        private Vector2 clipSoftness;
+        private bool wasMaskable;
         private bool rebuilding;
         
         private const AdditionalCanvasShaderChannels RequiredCanvasChannels =
@@ -47,6 +60,9 @@ namespace Tripledot.CanvasKit.TextMeshPro
             get => preset;
             set {
                 if (value != preset) {
+                    presetLayerOverrides.Clear();
+                    overridePreset = value;
+                    overrideIdsInitialized = true;
                     preset = value;
                     NotifyChanged(TextMeshProLayerChange.Geometry);
                 }
@@ -76,7 +92,6 @@ namespace Tripledot.CanvasKit.TextMeshPro
         internal void NotifyChanged(TextMeshProLayerChange change)
         {
             pendingChange = CombineChanges(pendingChange, change);
-            QueueRebuild();
         }
 
         internal bool TryGetCurrentPaintBounds(out Vector4 bounds)
@@ -85,9 +100,17 @@ namespace Tripledot.CanvasKit.TextMeshPro
             return hasPaintBounds && paintBounds.z > 0f && paintBounds.w > 0f;
         }
 
-        internal void ReplaceLocalLayers(IList<TextMeshProLayerData> layers)
+        public void ReplaceLocalLayers(IList<TextMeshProLayerData> layers)
         {
-            preset = null;
+            if (layers == null) {
+                throw new ArgumentNullException(nameof(layers));
+            }
+            for (var i = 0; i < layers.Count; i++) {
+                if (layers[i] == null) {
+                    throw new ArgumentException("Layers must not contain null entries.", nameof(layers));
+                }
+            }
+            Preset = null;
             localLayers.Clear();
             foreach (var layer in layers) {
                 localLayers.Add(layer.Clone());
@@ -96,26 +119,102 @@ namespace Tripledot.CanvasKit.TextMeshPro
             NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
-        internal void AddLocalLayer(TextMeshProLayerData layer)
+        public void AddLocalLayer(TextMeshProLayerData layer)
         {
-            localLayers.Add(layer);
+            RequireLocalLayers();
+            if (layer == null) {
+                throw new ArgumentNullException(nameof(layer));
+            }
+            localLayers.Add(layer.Clone());
             NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
-        internal bool IsPresetLayerInstance(int index)
+        public int LayerCount => preset != null ? preset.LayerCount : localLayers.Count;
+
+        public TextMeshProLayerData GetLayerCopy(int index)
         {
-            EnsurePresetOverrideSlots();
-            return index >= 0 && index < presetLayerOverrides.Count && presetLayerOverrides[index].OverrideLayer;
+            ValidateLayerIndex(index);
+            return (preset != null ? GetEffectivePresetLayer(index) : localLayers[index]).Clone();
         }
 
-        internal void SetPresetLayerInstance(int index, bool instance)
+        /// <summary>Copies a layer into this object. Preset rows become local overrides; the asset is not modified.</summary>
+        public void SetLayer(int index, TextMeshProLayerData layer)
         {
-            EnsurePresetOverrideSlots();
-            if (index < 0 || index >= presetLayerOverrides.Count) {
+            ValidateLayerIndex(index);
+            if (layer == null) {
+                throw new ArgumentNullException(nameof(layer));
+            }
+            var previous = preset != null ? GetEffectivePresetLayer(index) : localLayers[index];
+            var change = previous.HasSameGeometry(layer) ? TextMeshProLayerChange.Material : TextMeshProLayerChange.Geometry;
+            if (preset == null) {
+                localLayers[index] = layer.Clone();
+            } else {
+                EnsurePresetOverrideSlots();
+                var slot = presetLayerOverrides[GetPresetLayerOverrideIndex(index)];
+                slot.CopyFromPreset(layer);
+                slot.OverrideLayer = true;
+            }
+            NotifyChanged(change);
+        }
+
+        /// <summary>Updates opacity without cloning layer data each frame. A shared row becomes an instance on first edit.</summary>
+        public void SetLayerOpacity(int index, float opacity)
+        {
+            ValidateLayerIndex(index);
+            var layer = preset != null ? GetEffectivePresetLayer(index) : localLayers[index];
+            opacity = Mathf.Clamp01(opacity);
+            if (layer.Opacity == opacity) {
                 return;
             }
+            if (preset != null) {
+                var slot = presetLayerOverrides[GetPresetLayerOverrideIndex(index)];
+                if (!slot.OverrideLayer) {
+                    slot.CopyFromPreset(layer);
+                    slot.OverrideLayer = true;
+                }
+                layer = slot.Layer;
+            }
+            layer.Opacity = opacity;
+            NotifyChanged(TextMeshProLayerChange.Material);
+        }
 
-            var layerOverride = presetLayerOverrides[index];
+        public void RemoveLocalLayer(int index)
+        {
+            RequireLocalLayers();
+            ValidateLayerIndex(index);
+            localLayers.RemoveAt(index);
+            NotifyChanged(TextMeshProLayerChange.Geometry);
+        }
+
+        private void RequireLocalLayers()
+        {
+            if (preset != null) {
+                throw new InvalidOperationException("Replace the preset with local layers before changing layer composition.");
+            }
+        }
+
+        private void ValidateLayerIndex(int index)
+        {
+            if (index < 0 || index >= LayerCount) {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+        }
+
+        public bool IsPresetLayerInstance(int index)
+        {
+            ValidateLayerIndex(index);
+            EnsurePresetOverrideSlots();
+            return preset != null && presetLayerOverrides[GetPresetLayerOverrideIndex(index)].OverrideLayer;
+        }
+
+        public void SetPresetLayerInstance(int index, bool instance)
+        {
+            EnsurePresetOverrideSlots();
+            if (preset == null || index < 0 || index >= preset.LayerCount) {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            var layerOverride = presetLayerOverrides[GetPresetLayerOverrideIndex(index)];
             if (layerOverride.OverrideLayer == instance) {
                 return;
             }
@@ -138,9 +237,8 @@ namespace Tripledot.CanvasKit.TextMeshPro
             }
 
             EnsurePresetOverrideSlots();
-            return presetLayerOverrides[index].OverrideLayer
-                ? presetLayerOverrides[index].Layer
-                : preset.GetLayer(index);
+            var slot = presetLayerOverrides[GetPresetLayerOverrideIndex(index)];
+            return slot.OverrideLayer ? slot.Layer : preset.GetLayer(index);
         }
 
         internal void CopyEffectivePresetLayersTo(IList<TextMeshProLayerData> destination)
@@ -160,12 +258,13 @@ namespace Tripledot.CanvasKit.TextMeshPro
             }
         }
 
-        internal void ClearPresetLayerInstances()
+        public void ClearPresetLayerInstances()
         {
             EnsurePresetOverrideSlots();
-            for (var i = 0; i < presetLayerOverrides.Count; i++) {
-                presetLayerOverrides[i].OverrideLayer = false;
-                presetLayerOverrides[i].EnsureLayerCopy(preset.GetLayer(i));
+            for (var i = 0; i < (preset != null ? preset.LayerCount : 0); i++) {
+                var slot = presetLayerOverrides[GetPresetLayerOverrideIndex(i)];
+                slot.OverrideLayer = false;
+                slot.EnsureLayerCopy(preset.GetLayer(i));
             }
 
             NotifyChanged(TextMeshProLayerChange.Geometry);
@@ -179,16 +278,23 @@ namespace Tripledot.CanvasKit.TextMeshPro
 
             text = GetComponent<TextMeshProUGUI>();
             RegisterCallbacks();
+            hasSourceGeometry = false;
+            UpdateClipParent();
+            // Initialize/register both owning update managers before our render callback.
+            text.SetVerticesDirty();
+            TMP_UpdateManager.RegisterTextElementForGraphicRebuild(text);
+            Canvas.willRenderCanvases += OnWillRenderCanvases;
             TextMeshProLayerPreset.Changed += OnPresetChanged;
             NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
         protected override void OnDisable()
         {
-            CancelQueuedRebuild();
+            Canvas.willRenderCanvases -= OnWillRenderCanvases;
             UnregisterCallbacks();
             TextMeshProLayerPreset.Changed -= OnPresetChanged;
             RestoreDefaultRendering();
+            RemoveClipParent();
             ReleaseResources();
             pendingChange = TextMeshProLayerChange.Geometry;
 
@@ -197,8 +303,9 @@ namespace Tripledot.CanvasKit.TextMeshPro
 
         protected override void OnDestroy()
         {
-            CancelQueuedRebuild();
+            Canvas.willRenderCanvases -= OnWillRenderCanvases;
             UnregisterCallbacks();
+            RemoveClipParent();
             TextMeshProLayerPreset.Changed -= OnPresetChanged;
             ReleaseResources();
 
@@ -213,6 +320,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
 
         protected override void OnTransformParentChanged()
         {
+            UpdateClipParent();
             NotifyChanged(TextMeshProLayerChange.Material);
             base.OnTransformParentChanged();
         }
@@ -225,6 +333,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
 
         protected override void OnCanvasHierarchyChanged()
         {
+            UpdateClipParent();
             NotifyChanged(TextMeshProLayerChange.Material);
             base.OnCanvasHierarchyChanged();
         }
@@ -232,7 +341,6 @@ namespace Tripledot.CanvasKit.TextMeshPro
 #if UNITY_EDITOR
         protected override void OnValidate()
         {
-            EnsurePresetOverrideSlots();
             NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
@@ -254,6 +362,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
             text.RegisterDirtyVerticesCallback(OnTextVerticesDirty);
             text.RegisterDirtyMaterialCallback(OnTextMaterialDirty);
             text.RegisterDirtyLayoutCallback(OnTextLayoutDirty);
+            text.OnPreRenderText += OnTextGenerated;
         }
 
         private void UnregisterCallbacks()
@@ -265,6 +374,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
             text.UnregisterDirtyVerticesCallback(OnTextVerticesDirty);
             text.UnregisterDirtyMaterialCallback(OnTextMaterialDirty);
             text.UnregisterDirtyLayoutCallback(OnTextLayoutDirty);
+            text.OnPreRenderText -= OnTextGenerated;
         }
 
         private void OnTextVerticesDirty()
@@ -274,6 +384,9 @@ namespace Tripledot.CanvasKit.TextMeshPro
 
         private void OnTextMaterialDirty()
         {
+            if (wasMaskable != text.maskable) {
+                UpdateClipParent();
+            }
             NotifyChanged(TextMeshProLayerChange.Material);
         }
 
@@ -289,34 +402,125 @@ namespace Tripledot.CanvasKit.TextMeshPro
             }
         }
 
-        private void QueueRebuild()
+        private void OnTextGenerated(TMP_TextInfo textInfo)
         {
-            if (!isActiveAndEnabled || text == null || !text.enabled || rebuilding || rebuildQueued) {
-                return;
-            }
-
-            rebuildQueued = true;
-            Canvas.willRenderCanvases += OnWillRenderCanvases;
-        }
-
-        private void CancelQueuedRebuild()
-        {
-            if (!rebuildQueued) {
-                return;
-            }
-
-            rebuildQueued = false;
-            Canvas.willRenderCanvases -= OnWillRenderCanvases;
+            hasSourceGeometry = true;
+            NotifyChanged(TextMeshProLayerChange.Geometry);
         }
 
         private void OnWillRenderCanvases()
         {
-            CancelQueuedRebuild();
-            if (!isActiveAndEnabled || !text.enabled || rebuilding) {
+            if (!isActiveAndEnabled || text == null || !text.isActiveAndEnabled || text.canvas == null || rebuilding) {
+                return;
+            }
+            if (text.font == null) {
+                RestoreDefaultRendering();
+                ReleaseResources();
                 return;
             }
 
-            Rebuild();
+            if (!hasSourceGeometry || text.havePropertiesChanged) {
+                text.ForceMeshUpdate();
+                hasSourceGeometry = true;
+                NotifyChanged(TextMeshProLayerChange.Geometry);
+            }
+
+            if (pendingChange != TextMeshProLayerChange.None) {
+                Rebuild();
+            }
+            // TMP's scale-only upload has no notification. Copy just its updated SDF
+            // scale channel, without rebuilding layer geometry, materials or text layout.
+            var scaleY = text.rectTransform.lossyScale.y;
+            if (hasAssignedMesh && sourceScaleY != scaleY) {
+                meshBuilder.UpdateSdfScale(mesh, text.textInfo);
+                text.canvasRenderer.SetMesh(mesh);
+            }
+            sourceScaleY = scaleY;
+            if (clipParent != null) {
+                CullText();
+            }
+        }
+
+        RectTransform IClippable.rectTransform => text.rectTransform;
+        void IClippable.RecalculateClipping()
+        {
+            UpdateClipParent();
+        }
+
+        void IClippable.Cull(Rect value, bool validRect)
+        {
+        }
+
+        void IClippable.SetClipRect(Rect value, bool validRect)
+        {
+            clipRect = value;
+            validClipRect = validRect;
+            // RectMask2D dispatches ordinary IClippable targets before MaskableGraphics.
+            // Remove TMP from the latter set before that iteration starts, including when
+            // TMP re-registers itself after a hierarchy or mask change. This stack forwards
+            // clipping and runs TMP's culling once, after the styled bounds are available.
+            if (text != null) {
+                clipParent.RemoveClippable(text);
+                text.SetClipRect(value, validRect);
+            }
+        }
+
+        void IClippable.SetClipSoftness(Vector2 value)
+        {
+            if (text != null) {
+                text.SetClipSoftness(value);
+            }
+            if (clipSoftness != value) {
+                clipSoftness = value;
+                NotifyChanged(TextMeshProLayerChange.Material);
+            }
+        }
+
+        private void UpdateClipParent()
+        {
+            wasMaskable = text != null && text.maskable;
+            var next = isActiveAndEnabled && text != null && text.maskable ? MaskUtilities.GetRectMaskForClippable(text) : null;
+            if (next == clipParent) {
+                return;
+            }
+            RemoveClipParent();
+            clipParent = next;
+            if (clipParent != null) {
+                clipParent.AddClippable(this);
+            }
+        }
+
+        private void RemoveClipParent()
+        {
+            if (clipParent != null) {
+                clipParent.RemoveClippable(this);
+                if (text != null) {
+                    text.RecalculateClipping();
+                }
+            }
+            clipParent = null;
+            validClipRect = false;
+        }
+
+        private void CullText()
+        {
+            if (!hasAssignedMesh) {
+                text.Cull(clipRect, validClipRect);
+                return;
+            }
+
+            // TMP remains the authority for culling events, rebuild notification and
+            // submesh propagation. Supply the styled primary bounds only for this call.
+            var sourceMesh = text.mesh;
+            var sourceBounds = sourceMesh.bounds;
+            try {
+                sourceMesh.bounds = mesh.bounds;
+                text.Cull(clipRect, validClipRect);
+            } finally {
+                if (sourceMesh != null) {
+                    sourceMesh.bounds = sourceBounds;
+                }
+            }
         }
 
         private void Rebuild()
@@ -329,6 +533,8 @@ namespace Tripledot.CanvasKit.TextMeshPro
             pendingChange = TextMeshProLayerChange.None;
             rebuilding = true;
             try {
+                ResolveRenderableLayers();
+                EnsureLayerRuntimeStates(resolvedLayers.Count);
                 if ((change & TextMeshProLayerChange.Geometry) != 0) {
                     RebuildGeometry();
                 }
@@ -341,29 +547,26 @@ namespace Tripledot.CanvasKit.TextMeshPro
                 if ((change & (TextMeshProLayerChange.Geometry | TextMeshProLayerChange.Material)) != 0) {
                     ApplyMaterials();
                 }
+            } catch {
+                RestoreDefaultRendering();
+                ReleaseResources();
+                throw;
             } finally {
                 rebuilding = false;
-            }
-
-            if (pendingChange != TextMeshProLayerChange.None) {
-                QueueRebuild();
             }
         }
 
         private void RebuildGeometry()
         {
-            ResolveRenderableLayers();
-            EnsureLayerRuntimeStates(resolvedLayers.Count);
             if (resolvedLayers.Count == 0) {
                 return;
             }
 
             CanvasUtility.EnsureChannels(text.canvas, RequiredCanvasChannels);
-            text.ForceMeshUpdate();
             RefreshLayerPaddingBudget();
 
             var targetMesh = GetMesh();
-            meshBuilder.Build(targetMesh, text.textInfo, GetResolvedLayerData(), appliedGeometryPaddingLimit);
+            meshBuilder.Build(targetMesh, text.textInfo, GetResolvedLayerData(), appliedGeometryPaddingLimit, text.geometrySortingOrder == VertexSortingOrder.Reverse);
             RefreshPaintBounds(targetMesh);
         }
 
@@ -374,9 +577,8 @@ namespace Tripledot.CanvasKit.TextMeshPro
             var materialContext = TextMeshProLayerMaterialContext.Capture(text, sourceMaterial, renderMaterial, appliedEffectPaddingBudget);
             var canvasRenderer = text.canvasRenderer;
 
-            canvasRenderer.cull = false;
             canvasRenderer.SetMesh(mesh);
-            canvasRenderer.materialCount = resolvedLayers.Count;
+            canvasRenderer.materialCount = resolvedLayers.Count + (meshBuilder.HasDecorations ? 1 : 0);
             canvasRenderer.SetTexture(materialContext.FontAtlas);
             hasAssignedMesh = true;
 
@@ -384,6 +586,9 @@ namespace Tripledot.CanvasKit.TextMeshPro
                 var resolvedLayer = GetRenderLayerForSlot(materialSlot);
                 var material = layerRuntimeStates[materialSlot].GetOrCreateMaterial(resolvedLayer, materialContext, name);
                 canvasRenderer.SetMaterial(material, materialSlot);
+            }
+            if (meshBuilder.HasDecorations) {
+                canvasRenderer.SetMaterial(renderMaterial, resolvedLayers.Count);
             }
         }
 
@@ -404,7 +609,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
             EnsurePresetOverrideSlots();
             for (var i = 0; i < preset.LayerCount; i++) {
                 var presetLayer = preset.GetLayer(i);
-                var layerOverride = presetLayerOverrides[i];
+                var layerOverride = presetLayerOverrides[GetPresetLayerOverrideIndex(i)];
                 var layer = layerOverride.OverrideLayer ? layerOverride.Layer : presetLayer;
                 if (layer.Enabled) {
                     resolvedLayers.Add(layerOverride.OverrideLayer
@@ -424,21 +629,70 @@ namespace Tripledot.CanvasKit.TextMeshPro
             return resolvedLayerData;
         }
 
-        private void EnsurePresetOverrideSlots()
+        public void OnBeforeSerialize()
         {
+        }
+
+        public void OnAfterDeserialize()
+        {
+            // Legacy IDs are deterministic so unloaded scenes still map to their original
+            // preset layers after the preset has been reordered and saved.
+            if (!overrideIdsInitialized) {
+                overridePreset = preset;
+                for (var i = 0; i < presetLayerOverrides.Count; i++) {
+                    presetLayerOverrides[i].LayerId = "legacy:" + i;
+                }
+                overrideIdsInitialized = true;
+            }
+        }
+
+        internal bool EnsurePresetOverrideSlots()
+        {
+            var changed = !overrideIdsInitialized;
+            if (overridePreset != preset) {
+                presetLayerOverrides.Clear();
+                overridePreset = preset;
+                changed = true;
+            }
+            overrideIdsInitialized = true;
             var count = preset != null ? preset.LayerCount : 0;
-            while (presetLayerOverrides.Count < count) {
-                presetLayerOverrides.Add(new LayerOverride());
-            }
-
             for (var i = 0; i < count; i++) {
-                presetLayerOverrides[i] ??= new LayerOverride();
-                presetLayerOverrides[i].EnsureLayerCopy(preset.GetLayer(i));
+                var source = preset.GetLayer(i);
+                if (GetPresetLayerOverrideIndex(i) < 0) {
+                    var slot = new LayerOverride { LayerId = source.Id };
+                    slot.CopyFromPreset(source);
+                    presetLayerOverrides.Add(slot);
+                    changed = true;
+                }
             }
+            foreach (var slot in presetLayerOverrides) {
+                if (string.IsNullOrEmpty(slot.LayerId)) {
+                    continue;
+                }
+                var exists = false;
+                for (var i = 0; i < count; i++) {
+                    exists |= preset.GetLayer(i).Id == slot.LayerId;
+                }
+                if (!exists) {
+                    // Keep an empty slot so animation paths for surviving rows never shift.
+                    slot.LayerId = null;
+                    slot.OverrideLayer = false;
+                    slot.CopyFromPreset(TextMeshProLayerData.Default());
+                    changed = true;
+                }
+            }
+            return changed;
+        }
 
-            if (presetLayerOverrides.Count > count) {
-                presetLayerOverrides.RemoveRange(count, presetLayerOverrides.Count - count);
+        internal int GetPresetLayerOverrideIndex(int layerIndex)
+        {
+            var id = preset.GetLayer(layerIndex).Id;
+            for (var i = 0; i < presetLayerOverrides.Count; i++) {
+                if (presetLayerOverrides[i].LayerId == id) {
+                    return i;
+                }
             }
+            return -1;
         }
 
         private void RefreshLayerPaddingBudget()
@@ -489,6 +743,8 @@ namespace Tripledot.CanvasKit.TextMeshPro
             ReleaseLayerRuntimeStates();
             ReleaseMesh();
             resolvedLayers.Clear();
+            resolvedLayerData.Clear();
+            meshBuilder.Clear();
             hasPaintBounds = false;
             hasAssignedMesh = false;
         }
@@ -542,15 +798,29 @@ namespace Tripledot.CanvasKit.TextMeshPro
                 return;
             }
 
-            text.SetVerticesDirty();
-            text.SetMaterialDirty();
+            if (!hasAssignedMesh) {
+                return;
+            }
+            var renderer = text.canvasRenderer;
+            if (!text.isActiveAndEnabled) {
+                renderer.Clear();
+                hasAssignedMesh = false;
+                return;
+            }
+            renderer.SetMesh(text.textInfo.characterCount == 0 ? null : text.mesh);
+            renderer.materialCount = 1;
+            renderer.SetMaterial(text.materialForRendering, 0);
+            renderer.SetTexture(text.mainTexture);
+            hasAssignedMesh = false;
+            if (clipParent != null) {
+                text.Cull(clipRect, validClipRect);
+            }
         }
 
         private void ClearLayerRendering()
         {
-            ReleaseResources();
             RestoreDefaultRendering();
-            pendingChange = TextMeshProLayerChange.Geometry;
+            ReleaseResources();
         }
 
         private ResolvedLayer GetRenderLayerForSlot(int materialSlot)
@@ -574,6 +844,14 @@ namespace Tripledot.CanvasKit.TextMeshPro
         [Serializable]
         private sealed class LayerOverride
         {
+            [SerializeField]
+            private string layerId;
+
+            public string LayerId {
+                get => layerId;
+                set => layerId = value;
+            }
+
             [SerializeField]
             private bool overrideLayer;
 

@@ -170,6 +170,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overridePreset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -330,7 +332,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Shadow
@@ -490,7 +493,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Fine Stroke
@@ -650,7 +654,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Face
@@ -961,6 +966,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overridePreset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -1121,7 +1128,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Additive Glow
@@ -1281,7 +1289,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 9
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Soft Drop Shadow
@@ -1441,7 +1450,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Outside Stroke
@@ -1601,7 +1611,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:3
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Gradient Face
@@ -1912,6 +1923,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overridePreset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -2072,7 +2085,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Shadow
@@ -2232,7 +2246,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Fine Stroke
@@ -2392,7 +2407,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Face
@@ -2705,6 +2721,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overridePreset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -2865,7 +2883,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Shadow
@@ -3025,7 +3044,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Fine Stroke
@@ -3185,7 +3205,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Face
@@ -3496,6 +3517,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 0}
+  overridePreset: {fileID: 0}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Multiply Backplate
@@ -4123,6 +4146,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overridePreset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -4283,7 +4308,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Additive Glow
@@ -4443,7 +4469,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 9
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Soft Drop Shadow
@@ -4603,7 +4630,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Outside Stroke
@@ -4763,7 +4791,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:3
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Gradient Face
@@ -5142,6 +5171,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overridePreset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -5302,7 +5333,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Shadow
@@ -5462,7 +5494,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Fine Stroke
@@ -5622,7 +5655,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Face
@@ -5933,6 +5967,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overridePreset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -6093,7 +6129,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Additive Glow
@@ -6253,7 +6290,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 9
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Soft Drop Shadow
@@ -6413,7 +6451,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Outside Stroke
@@ -6573,7 +6612,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 1
+  - layerId: legacy:3
+    overrideLayer: 1
     layer:
       enabled: 1
       label: Instance Radial Face
@@ -7074,6 +7114,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overridePreset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -7234,7 +7276,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Additive Glow
@@ -7394,7 +7437,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 9
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Soft Drop Shadow
@@ -7554,7 +7598,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Outside Stroke
@@ -7714,7 +7759,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:3
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Gradient Face
@@ -8025,6 +8071,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overridePreset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -8185,7 +8233,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Shadow
@@ -8345,7 +8394,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Fine Stroke
@@ -8505,7 +8555,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Face
@@ -8816,6 +8867,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overridePreset: {fileID: 11400000, guid: ea02c7a8fed5c4728977b09a185ce3df, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -8976,7 +9029,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Additive Glow
@@ -9136,7 +9190,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 9
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Soft Drop Shadow
@@ -9296,7 +9351,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Outside Stroke
@@ -9456,7 +9512,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 5.5
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:3
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Gradient Face
@@ -9767,6 +9824,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overridePreset: {fileID: 11400000, guid: 4d82b0833577c4473bbf048e1982a2d0, type: 2}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Layer
@@ -9927,7 +9986,8 @@ MonoBehaviour:
       Blur: 4
       BlurUnit: 0
   presetLayerOverrides:
-  - overrideLayer: 0
+  - layerId: legacy:0
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Shadow
@@ -10087,7 +10147,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:1
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Fine Stroke
@@ -10247,7 +10308,8 @@ MonoBehaviour:
         SpreadUnit: 0
         Blur: 4
         BlurUnit: 0
-  - overrideLayer: 0
+  - layerId: legacy:2
+    overrideLayer: 0
     layer:
       enabled: 1
       label: Editorial Face
@@ -10558,6 +10620,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Tripledot.CanvasKit::Tripledot.CanvasKit.TextMeshProLayerStack
   preset: {fileID: 0}
+  overridePreset: {fileID: 0}
+  overrideIdsInitialized: 1
   localLayers:
   - enabled: 1
     label: Outside Stroke

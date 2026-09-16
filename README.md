@@ -345,7 +345,7 @@ The upgrade workflow creates an editable layer setup from compatible face, outli
 
 The TextMeshPro Layer Stack is built for richer styling, but every visual choice still has rendering cost.
 
-Each visual layer is rendered as its own mesh. Adding more layers usually means more mesh data, more materials, and more draw calls. A simple fill is cheaper than a stack with fill, multiple strokes, shadows, glow, texture paints, and custom blend modes.
+Each visual layer occupies a submesh in one combined mesh. Adding more layers usually means more mesh data, more materials, and more draw calls. Primary-material underline, strikethrough, and highlight geometry is preserved in an additional submesh using the original TMP material. A simple fill is cheaper than a stack with fill, multiple strokes, shadows, glow, texture paints, and custom blend modes.
 
 Batching can be affected by:
 
@@ -358,6 +358,40 @@ Batching can be affected by:
 - Different fonts, materials, or paint resources
 
 Shared presets are useful for consistency and predictable authoring, but they do not make complex visuals free. Use the simplest layer stack that achieves the intended look, especially for repeated text, scrolling lists, counters, and frequently animated UI.
+
+#### Runtime Editing and Ownership
+
+Use the stack API to edit appearance without choosing dirty flags:
+
+```csharp
+var layer = stack.GetLayerCopy(0);
+var face = layer.Face;
+face.Paint = CanvasPaint.Solid(Color.yellow);
+layer.Face = face;
+stack.SetLayer(0, layer);
+
+// Suitable for repeated opacity animation; no layer copy on subsequent edits.
+stack.SetLayerOpacity(0, 0.5f);
+
+// Return a preset row to its shared appearance.
+stack.SetPresetLayerInstance(0, false);
+```
+
+`LayerCount` and `GetLayerCopy(index)` inspect the effective stack. `SetLayer` copies the supplied data, including mutable gradients, and automatically chooses a material or geometry update. When a preset is assigned, editing a row creates an instance override and leaves the shared asset unchanged. `SetLayerOpacity` avoids repeated layer/gradient copying for opacity animation.
+
+`AddLocalLayer` and `RemoveLocalLayer` change a local stack. `ReplaceLocalLayers` copies a complete list and clears the assigned preset. Assigning a different `Preset` clears previous instance overrides; assigning null returns to the stored local layers. Invalid indices and null layer inputs throw argument exceptions. Preset `Layers` returns a snapshot; prefer `LayerCount` and `GetLayerCopy` when only one row is needed.
+
+An empty stack, or one with every row disabled, renders ordinary TMP text. Disabling/removing the stack restores TMP's own mesh and material before releasing owned resources. The stack uses TMP's completed geometry for layer-only changes. Scale changes update the SDF scale channel without repeating text layout. While the stack is active, it forwards RectMask2D clipping and softness to TMP and runs TMP's culling once with the expanded layer bounds. Disabling the stack restores TMP's normal mask registration.
+
+Underline, strikethrough, and highlight retain their original TMP material and vertex colors. They are rendered once after the styled glyph layers and do not inherit individual layer paint, offsets, or opacity. Fallback and additional-atlas rendering retain the limitations below.
+
+External scripts that modify TMP vertex buffers directly must call `SetLayerStackDirty()` after uploading their changes. Standard TMP property changes and `OnPreRenderText` modifications are observed automatically. Mesh edits should keep TMP's character-to-quad mapping intact.
+
+#### Preset Identity Migration
+
+Preset layers have serialized identities. Instance overrides follow those identities when the preset is reordered. Removing a preset layer clears its override data but retains an empty storage slot, preserving animation property paths for surviving rows. New rows append new slots. Replacing the entire preset clears these slots; animation clips authored for the previous preset should be rebound.
+
+Existing presets and stacks migrate their index-based identities when deserialized. Legacy identities are deterministic, so scenes that have not yet been opened still resolve the original layers after a migrated preset is reordered and saved. The new fields persist when the assets/scenes are next saved normally; no bulk asset save is performed. Shipped samples include the identity fields. Preset Inspector edits that add, remove, or replace layer identities record loaded dependent stacks for Undo; only stacks whose override data changes are marked dirty and recorded as prefab modifications. Preview, paint, and reorder edits do not record dependent stacks.
 
 #### Limitations
 

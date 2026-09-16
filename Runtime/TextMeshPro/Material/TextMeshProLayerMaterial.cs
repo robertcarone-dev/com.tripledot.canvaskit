@@ -164,8 +164,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
             material.SetVector(transform1Id, new Vector4(transform.Scale.x, transform.Scale.y, transform.Rotation, (float)transform.WrapMode));
         }
 
-        private static bool SetGradientAtlas(Material material, int rectId, CanvasPaint paint, bool resourcesEnabled,
-            CanvasGradientAtlas.Lease gradientLease)
+        private static bool SetGradientAtlas(Material material, int rectId, CanvasPaint paint, bool resourcesEnabled, CanvasGradientAtlas.Lease gradientLease)
         {
             if (CanvasGradientAtlas.TryGetEntry(paint, resourcesEnabled, gradientLease, out var entry)) {
                 material.SetTexture(ShaderIds.GradientAtlas, entry.Texture);

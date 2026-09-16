@@ -41,8 +41,14 @@ namespace Tripledot.CanvasKit.TextMeshPro
             material.name = (key.Preset != null ? key.Preset.name : "Preset") + " (TextLayerCore Shared)";
 
             entry = new Entry(key, material);
-            TextMeshProLayerMaterial.ApplyLayer(material, layer, context, entry.GradientState);
-            Entries.Add(key, entry);
+            try {
+                TextMeshProLayerMaterial.ApplyLayer(material, layer, context, entry.GradientState);
+                Entries.Add(key, entry);
+            } catch {
+                entry.GradientState.Release();
+                CoreUtils.Destroy(material);
+                throw;
+            }
             return entry;
         }
 
@@ -54,7 +60,9 @@ namespace Tripledot.CanvasKit.TextMeshPro
 
             entry.ReferenceCount--;
             if (entry.ReferenceCount <= 0) {
-                Entries.Remove(entry.Key);
+                if (Entries.TryGetValue(entry.Key, out var current) && ReferenceEquals(current, entry)) {
+                    Entries.Remove(entry.Key);
+                }
                 entry.GradientState.Release();
                 CoreUtils.Destroy(entry.Material);
             }

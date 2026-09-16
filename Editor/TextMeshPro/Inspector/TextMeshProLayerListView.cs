@@ -209,11 +209,8 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
 
         private void DrawLayerModeControl(Rect rect, int index)
         {
-            var layerOverride = state.PresetLayerOverrides.GetArrayElementAtIndex(index);
-            var overrideEnabled = layerOverride.FindPropertyRelative("overrideLayer");
-
             EditorGUI.BeginChangeCheck();
-            var instance = DrawPresetInstanceSegmentedControl(rect, overrideEnabled.boolValue);
+            var instance = DrawPresetInstanceSegmentedControl(rect, state.IsLinkedPresetInstanceLayer(index));
             if (EditorGUI.EndChangeCheck()) {
                 state.SetInstanceMode(index, instance);
             }

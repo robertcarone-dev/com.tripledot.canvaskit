@@ -8,6 +8,16 @@ namespace Tripledot.CanvasKit.TextMeshPro
     public sealed class TextMeshProLayerData
     {
         [SerializeField]
+        [HideInInspector]
+        private string id;
+
+        internal string Id => id;
+        internal void SetId(string value)
+        {
+            id = value;
+        }
+
+        [SerializeField]
         [NotKeyable]
         private bool enabled = true;
         [SerializeField]
@@ -121,7 +131,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
         public void CopyFrom(TextMeshProLayerData source)
         {
             if (source == null) {
-                return;
+                throw new ArgumentNullException(nameof(source));
             }
 
             enabled = source.enabled;
@@ -132,6 +142,30 @@ namespace Tripledot.CanvasKit.TextMeshPro
             face = source.face;
             stroke = source.stroke;
             shadow = source.shadow;
+            face.Paint = CopyPaint(source.face.Paint);
+            stroke.Paint = CopyPaint(source.stroke.Paint);
+            shadow.Paint = CopyPaint(source.shadow.Paint);
+        }
+
+        private static CanvasPaint CopyPaint(CanvasPaint paint)
+        {
+            if (paint.Gradient != null) {
+                var gradient = new Gradient { mode = paint.Gradient.mode, colorSpace = paint.Gradient.colorSpace };
+                gradient.SetKeys(paint.Gradient.colorKeys, paint.Gradient.alphaKeys);
+                paint.Gradient = gradient;
+            }
+
+            return paint;
+        }
+
+        internal bool HasSameGeometry(TextMeshProLayerData other)
+        {
+            return enabled == other.enabled && offset == other.offset
+                && face.Enabled == other.face.Enabled && face.Dilate == other.face.Dilate
+                && stroke.Enabled == other.stroke.Enabled && stroke.Position == other.stroke.Position
+                && stroke.Width == other.stroke.Width && stroke.Feather == other.stroke.Feather && stroke.Offset == other.stroke.Offset
+                && shadow.Enabled == other.shadow.Enabled && shadow.Spread == other.shadow.Spread
+                && shadow.Blur == other.shadow.Blur && shadow.Offset == other.shadow.Offset;
         }
 
         internal Vector2 GeometryOffset => offset;

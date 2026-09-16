@@ -63,7 +63,7 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
             EditorGUILayout.Space();
             layerInspector.Draw();
 
-            var appliedProperties = serializedObject.ApplyModifiedProperties();
+            var appliedProperties = TextMeshProLayerPresetUtility.ApplyProperties(serializedObject);
 
             if (appliedProperties) {
                 EditorUtility.SetDirty(target);

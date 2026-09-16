@@ -172,19 +172,9 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
             linkedPresetLayers = linkedPresetObject.FindProperty("layers");
         }
 
-        public void EnsureOverrideArraySize(int size)
-        {
-            if (PresetLayerOverrides.arraySize == size) {
-                return;
-            }
-
-            PresetLayerOverrides.arraySize = size;
-            serializedObject.ApplyModifiedProperties();
-        }
-
         public void ApplyLinkedPresetProperties(TextMeshProLayerPreset assignedPreset)
         {
-            if (linkedPresetObject.ApplyModifiedProperties()) {
+            if (TextMeshProLayerPresetUtility.ApplyProperties(linkedPresetObject)) {
                 EditorUtility.SetDirty(assignedPreset);
             }
         }
@@ -212,19 +202,22 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
 
         public void SetInstanceMode(int index, bool instance)
         {
-            var overrideEnabled = PresetLayerOverrides.GetArrayElementAtIndex(index).FindPropertyRelative("overrideLayer");
+            var overrideEnabled = PresetLayerOverrides.GetArrayElementAtIndex(stack.GetPresetLayerOverrideIndex(index)).FindPropertyRelative("overrideLayer");
             if (overrideEnabled.boolValue == instance) {
                 return;
             }
 
             PresetLayerOverrides.serializedObject.ApplyModifiedProperties();
+            Undo.RecordObject(stack, "Change TextMeshPro Layer Instance");
             stack.SetPresetLayerInstance(index, instance);
+            EditorUtility.SetDirty(stack);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(stack);
             PresetLayerOverrides.serializedObject.Update();
         }
 
         private SerializedProperty GetLinkedRowLayer(int index, SerializedProperty sourceLayer)
         {
-            var layerOverride = PresetLayerOverrides.GetArrayElementAtIndex(index);
+            var layerOverride = PresetLayerOverrides.GetArrayElementAtIndex(stack.GetPresetLayerOverrideIndex(index));
             var overrideEnabled = layerOverride.FindPropertyRelative("overrideLayer");
             return overrideEnabled.boolValue ? layerOverride.FindPropertyRelative("layer") : sourceLayer;
         }

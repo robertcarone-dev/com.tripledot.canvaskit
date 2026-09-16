@@ -15,7 +15,8 @@ MonoBehaviour:
   fontAsset: {fileID: 11400000, guid: 4f66b8b8714e34e609105ee749b92c16, type: 2}
   previewText: LAYER STACK
   layers:
-  - enabled: 1
+  - id: legacy:0
+    enabled: 1
     label: Additive Glow
     blendMode: 2
     opacity: 0.72
@@ -173,7 +174,8 @@ MonoBehaviour:
       SpreadUnit: 0
       Blur: 9
       BlurUnit: 0
-  - enabled: 1
+  - id: legacy:1
+    enabled: 1
     label: Soft Drop Shadow
     blendMode: 0
     opacity: 0.82
@@ -331,7 +333,8 @@ MonoBehaviour:
       SpreadUnit: 0
       Blur: 5.5
       BlurUnit: 0
-  - enabled: 1
+  - id: legacy:2
+    enabled: 1
     label: Outside Stroke
     blendMode: 0
     opacity: 1
@@ -489,7 +492,8 @@ MonoBehaviour:
       SpreadUnit: 0
       Blur: 5.5
       BlurUnit: 0
-  - enabled: 1
+  - id: legacy:3
+    enabled: 1
     label: Gradient Face
     blendMode: 0
     opacity: 1

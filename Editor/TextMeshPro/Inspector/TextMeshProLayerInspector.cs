@@ -62,7 +62,6 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
         {
             state.EnsureLinkedPresetCache(assignedPreset);
             state.LinkedPresetObject.Update();
-            state.EnsureOverrideArraySize(state.LinkedPresetLayers.arraySize);
             listView.Draw(state.LinkedPresetLayers, TextMeshProLayerSource.LinkedPreset);
             state.ApplyLinkedPresetProperties(assignedPreset);
         }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -33,30 +34,38 @@ namespace Tripledot.CanvasKit.TextMeshPro
         private readonly List<Vector4> uv2Upload = new List<Vector4>(256);
         private readonly List<List<int>> submeshTriangles = new List<List<int>>();
         private readonly List<VisibleGlyph> visibleGlyphs = new List<VisibleGlyph>(128);
+        private readonly List<int> decorationQuads = new List<int>();
+        private bool[] characterQuads = Array.Empty<bool>();
 
         private Vector3 boundsMin;
         private Vector3 boundsMax;
         private bool hasBounds;
+        private int layerVertexCount;
+        private bool reverseGeometry;
 
-        public void Build(Mesh mesh, TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit)
+        public bool HasDecorations {
+            get;
+            private set;
+        }
+
+        public void Build(Mesh mesh, TMP_TextInfo textInfo, IList<TextMeshProLayerData> layers, float sdfPaddingLimit, bool reverseGeometry)
         {
+            this.reverseGeometry = reverseGeometry;
             mesh.Clear(false);
 
-            vertices.Clear();
-            normals.Clear();
-            colors.Clear();
-            uv0Upload.Clear();
-            uv1Upload.Clear();
-            uv2Upload.Clear();
-            visibleGlyphs.Clear();
-            hasBounds = false;
+            Clear();
 
             CollectVisibleGlyphs(textInfo);
 
-            var expectedVertexCount = visibleGlyphs.Count * layers.Count * 4;
+            var primaryMesh = textInfo.meshInfo[0];
+            CollectDecorationQuads(primaryMesh);
+            var decorationVertexCount = decorationQuads.Count * 4;
+            HasDecorations = decorationVertexCount > 0;
+            var submeshCount = layers.Count + (HasDecorations ? 1 : 0);
+            var expectedVertexCount = visibleGlyphs.Count * layers.Count * 4 + decorationVertexCount;
             mesh.indexFormat = expectedVertexCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
             EnsureUploadCapacity(expectedVertexCount);
-            EnsureTriangleBuffers(layers.Count);
+            EnsureTriangleBuffers(submeshCount);
 
             for (var materialSlot = 0; materialSlot < layers.Count; materialSlot++) {
                 var layer = GetRenderLayerForSlot(layers, materialSlot);
@@ -69,21 +78,120 @@ namespace Tripledot.CanvasKit.TextMeshPro
                 }
             }
 
+            BuildPaintUVs();
+            layerVertexCount = vertices.Count;
+            if (HasDecorations) {
+                AppendDecorations(primaryMesh, submeshTriangles[layers.Count]);
+            }
+
             mesh.SetVertices(vertices);
             mesh.SetNormals(normals);
             mesh.SetColors(colors);
-
-            BuildPaintUVs();
             mesh.SetUVs(0, uv0Upload);
             mesh.SetUVs(1, uv1Upload);
             mesh.SetUVs(2, uv2Upload);
 
-            mesh.subMeshCount = layers.Count;
-            for (var i = 0; i < layers.Count; i++) {
+            mesh.subMeshCount = submeshCount;
+            for (var i = 0; i < submeshCount; i++) {
                 mesh.SetTriangles(submeshTriangles[i], i, false);
             }
 
             mesh.bounds = hasBounds ? new Bounds((boundsMin + boundsMax) * 0.5f, boundsMax - boundsMin) : default;
+        }
+
+        public void Clear()
+        {
+            vertices.Clear();
+            normals.Clear();
+            colors.Clear();
+            uv0Upload.Clear();
+            uv1Upload.Clear();
+            uv2Upload.Clear();
+            visibleGlyphs.Clear();
+            decorationQuads.Clear();
+            hasBounds = false;
+
+            layerVertexCount = 0;
+            HasDecorations = false;
+        }
+
+        public void UpdateSdfScale(Mesh mesh, TMP_TextInfo textInfo)
+        {
+            var vertex = 0;
+            while (vertex < layerVertexCount) {
+                foreach (var glyph in visibleGlyphs) {
+                    for (var corner = 0; corner < 4; corner++) {
+                        var uv = uv0Upload[vertex];
+                        uv.w = glyph.MeshInfo.uvs0[glyph.Character.vertexIndex + corner].w;
+                        uv0Upload[vertex++] = uv;
+                    }
+                }
+            }
+            for (var i = layerVertexCount; i < uv0Upload.Count; i++) {
+                var uv = uv0Upload[i];
+                var decorationOffset = i - layerVertexCount;
+                var sourceIndex = decorationQuads[decorationOffset / 4] + decorationOffset % 4;
+                uv.w = textInfo.meshInfo[0].uvs0[sourceIndex].w;
+                uv0Upload[i] = uv;
+            }
+            mesh.SetUVs(0, uv0Upload);
+        }
+
+        private int GetSourceQuadIndex(TMP_MeshInfo source, int index)
+        {
+            return reverseGeometry ? source.vertexCount - 4 - index : index;
+        }
+
+        private void CollectDecorationQuads(TMP_MeshInfo source)
+        {
+            var quadCount = source.vertexCount / 4;
+            if (characterQuads.Length < quadCount) {
+                Array.Resize(ref characterQuads, Mathf.NextPowerOfTwo(quadCount));
+            }
+            Array.Clear(characterQuads, 0, quadCount);
+            foreach (var glyph in visibleGlyphs) {
+                characterQuads[glyph.Character.vertexIndex / 4] = true;
+            }
+
+            // Decorations have no character entry. Inspect unclaimed source quads instead
+            // of assuming an offset: highlights may exist even on whitespace-only text.
+            for (var i = 0; i < quadCount; i++) {
+                if (characterQuads[i]) {
+                    continue;
+                }
+                var vertex = i * 4;
+                if (source.vertices[vertex].Equals(source.vertices[vertex + 1]) &&
+                    source.vertices[vertex].Equals(source.vertices[vertex + 2]) &&
+                    source.vertices[vertex].Equals(source.vertices[vertex + 3])) {
+                    continue;
+                }
+                decorationQuads.Add(vertex);
+            }
+        }
+
+        private void AppendDecorations(TMP_MeshInfo source, List<int> triangles)
+        {
+            triangles.Clear();
+            EnsureTriangleCapacity(triangles, decorationQuads.Count * 6);
+            foreach (var quad in decorationQuads) {
+                var start = vertices.Count;
+                for (var corner = 0; corner < 4; corner++) {
+                    var index = quad + corner;
+                    vertices.Add(source.vertices[index]);
+                    Encapsulate(source.vertices[index]);
+                    normals.Add(source.normals[index]);
+                    colors.Add(source.colors32[index]);
+                    uv0Upload.Add(source.uvs0[index]);
+                    uv1Upload.Add(source.uvs2[index]);
+                    uv2Upload.Add(Vector4.zero);
+                }
+                triangles.Add(start);
+                triangles.Add(start + 1);
+                triangles.Add(start + 2);
+                triangles.Add(start + 2);
+                triangles.Add(start + 3);
+                triangles.Add(start);
+            }
         }
 
         private void CollectVisibleGlyphs(TMP_TextInfo textInfo)
@@ -95,6 +203,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
                 }
 
                 var meshInfo = textInfo.meshInfo[character.materialReferenceIndex];
+                character.vertexIndex = GetSourceQuadIndex(meshInfo, character.vertexIndex);
                 var vertexIndex = character.vertexIndex;
                 if (meshInfo.vertices == null || meshInfo.uvs0 == null || meshInfo.vertices.Length < vertexIndex + 4 || meshInfo.uvs0.Length < vertexIndex + 4) {
                     continue;

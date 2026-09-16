@@ -13,7 +13,7 @@ namespace Tripledot.CanvasKit.TextMeshPro
         Geometry = 1 << 1
     }
 
-    public sealed class TextMeshProLayerPreset : ScriptableObject
+    public sealed class TextMeshProLayerPreset : ScriptableObject, ISerializationCallbackReceiver
     {
         [SerializeField]
         private TMP_FontAsset fontAsset;
@@ -26,10 +26,27 @@ namespace Tripledot.CanvasKit.TextMeshPro
         public static event Action<TextMeshProLayerPreset, TextMeshProLayerChange> Changed;
 
         public TMP_FontAsset FontAsset => fontAsset;
-        public IReadOnlyList<TextMeshProLayerData> Layers => layers;
+        // Snapshots prevent callers from mutating a shared preset without invalidation.
+        public IReadOnlyList<TextMeshProLayerData> Layers {
+            get {
+                var result = new TextMeshProLayerData[layers.Count];
+                for (var i = 0; i < result.Length; i++) {
+                    result[i] = layers[i].Clone();
+                }
+                return result;
+            }
+        }
 
-        internal int LayerCount => layers.Count;
+        public int LayerCount => layers.Count;
         internal int Version => version;
+
+        public TextMeshProLayerData GetLayerCopy(int index)
+        {
+            if (index < 0 || index >= layers.Count) {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+            return layers[index].Clone();
+        }
 
         internal TextMeshProLayerData GetLayer(int index)
         {
@@ -47,7 +64,9 @@ namespace Tripledot.CanvasKit.TextMeshPro
             fontAsset = sourceFontAsset;
 
             foreach (var data in sourceLayers) {
-                layers.Add(data.Clone());
+                var copy = data.Clone();
+                copy.SetId(Guid.NewGuid().ToString("N"));
+                layers.Add(copy);
             }
 
             NotifyChanged();
@@ -55,7 +74,9 @@ namespace Tripledot.CanvasKit.TextMeshPro
 
         internal void AddLayer(TextMeshProLayerData layer)
         {
-            layers.Add(layer);
+            var copy = layer.Clone();
+            copy.SetId(Guid.NewGuid().ToString("N"));
+            layers.Add(copy);
             NotifyChanged();
         }
 
@@ -77,9 +98,34 @@ namespace Tripledot.CanvasKit.TextMeshPro
             NotifyChanged();
         }
 
+        public void OnBeforeSerialize()
+        {
+        }
+
+        public void OnAfterDeserialize()
+        {
+            EnsureLayerIds();
+        }
+
+        private void EnsureLayerIds()
+        {
+            for (var i = 0; i < layers.Count; i++) {
+                if (string.IsNullOrEmpty(layers[i].Id)) {
+                    layers[i].SetId("legacy:" + i);
+                }
+                for (var j = 0; j < i; j++) {
+                    if (layers[j].Id == layers[i].Id) {
+                        layers[i].SetId(Guid.NewGuid().ToString("N"));
+                        break;
+                    }
+                }
+            }
+        }
+
         private void OnValidate()
         {
 #if UNITY_EDITOR
+            EnsureLayerIds();
             NotifyChanged();
 #endif
         }

@@ -15,7 +15,8 @@ MonoBehaviour:
   fontAsset: {fileID: 11400000, guid: 4f66b8b8714e34e609105ee749b92c16, type: 2}
   previewText: Reusable preset preview text
   layers:
-  - enabled: 1
+  - id: legacy:0
+    enabled: 1
     label: Editorial Shadow
     blendMode: 0
     opacity: 0.6
@@ -173,7 +174,8 @@ MonoBehaviour:
       SpreadUnit: 0
       Blur: 4
       BlurUnit: 0
-  - enabled: 1
+  - id: legacy:1
+    enabled: 1
     label: Fine Stroke
     blendMode: 0
     opacity: 0.88
@@ -331,7 +333,8 @@ MonoBehaviour:
       SpreadUnit: 0
       Blur: 4
       BlurUnit: 0
-  - enabled: 1
+  - id: legacy:2
+    enabled: 1
     label: Editorial Face
     blendMode: 0
     opacity: 0.96

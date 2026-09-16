@@ -8,6 +8,54 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
     {
         private static readonly List<TextMeshProLayerData> LayerBuffer = new List<TextMeshProLayerData>();
 
+        internal static bool ApplyProperties(SerializedObject serializedPreset)
+        {
+            if (!serializedPreset.hasModifiedProperties) {
+                return false;
+            }
+            var preset = (TextMeshProLayerPreset)serializedPreset.targetObject;
+            if (!ChangesLayerIdentities(serializedPreset, preset)) {
+                return serializedPreset.ApplyModifiedProperties();
+            }
+            var stacks = UnityEngine.Resources.FindObjectsOfTypeAll<TextMeshProLayerStack>();
+            foreach (var stack in stacks) {
+                if (stack.Preset == preset) {
+                    Undo.RegisterCompleteObjectUndo(stack, "Edit TextMeshPro Layer Preset");
+                }
+            }
+            var changed = serializedPreset.ApplyModifiedProperties();
+            foreach (var stack in stacks) {
+                if (stack.Preset == preset) {
+                    if (stack.EnsurePresetOverrideSlots()) {
+                        EditorUtility.SetDirty(stack);
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(stack);
+                    }
+                }
+            }
+            return changed;
+        }
+
+        private static bool ChangesLayerIdentities(SerializedObject serializedPreset, TextMeshProLayerPreset preset)
+        {
+            var layers = serializedPreset.FindProperty("layers");
+            if (layers.arraySize != preset.LayerCount) {
+                return true;
+            }
+            // Reordering changes rendering order, but does not move identity-based override slots.
+            var ids = new HashSet<string>();
+            for (var i = 0; i < layers.arraySize; i++) {
+                if (!ids.Add(layers.GetArrayElementAtIndex(i).FindPropertyRelative("id").stringValue)) {
+                    return true;
+                }
+            }
+            for (var i = 0; i < preset.LayerCount; i++) {
+                if (!ids.Contains(preset.GetLayer(i).Id)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         internal static TextMeshProLayerPreset CreateFromLocalLayers(TextMeshProLayerStack stack, string assetPath)
         {
             if (stack == null || string.IsNullOrEmpty(assetPath)) {
@@ -19,7 +67,10 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
             layerPreset.CopyFrom(LayerBuffer, GetStackFontAsset(stack));
             AssetDatabase.CreateAsset(layerPreset, assetPath);
             AssetDatabase.SaveAssets();
+            Undo.RecordObject(stack, "Assign TextMeshPro Layer Preset");
             stack.Preset = layerPreset;
+            stack.EnsurePresetOverrideSlots();
+            PrefabUtility.RecordPrefabInstancePropertyModifications(stack);
             EditorUtility.SetDirty(stack);
             return layerPreset;
         }
@@ -37,7 +88,10 @@ namespace Tripledot.CanvasKit.TextMeshPro.Editor
             AssetDatabase.CreateAsset(layerPreset, assetPath);
             AssetDatabase.SaveAssets();
 
+            Undo.RecordObject(stack, "Assign TextMeshPro Layer Preset");
             stack.Preset = layerPreset;
+            stack.EnsurePresetOverrideSlots();
+            PrefabUtility.RecordPrefabInstancePropertyModifications(stack);
             stack.ClearPresetLayerInstances();
             EditorUtility.SetDirty(stack);
 
