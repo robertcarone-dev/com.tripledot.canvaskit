@@ -125,11 +125,13 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
                 return;
             }
 
+            CanvasBlendShaderGUI.GetBlendFactors(BlendMode, out var srcBlend, out var dstBlend, out var srcBlendAlpha, out var dstBlendAlpha);
+
             AddHiddenFloatProperty(collector, Property.BlendMode, (float)BlendMode, HLSLDeclaration.UnityPerMaterial);
-            AddHiddenFloatProperty(collector, Property.SrcBlend, 1.0f);
-            AddHiddenFloatProperty(collector, Property.DstBlend, 0.0f);
-            AddHiddenFloatProperty(collector, Property.SrcBlendAlpha, 1.0f);
-            AddHiddenFloatProperty(collector, Property.DstBlendAlpha, 0.0f);
+            AddHiddenFloatProperty(collector, Property.SrcBlend, (float)srcBlend);
+            AddHiddenFloatProperty(collector, Property.DstBlend, (float)dstBlend);
+            AddHiddenFloatProperty(collector, Property.SrcBlendAlpha, (float)srcBlendAlpha);
+            AddHiddenFloatProperty(collector, Property.DstBlendAlpha, (float)dstBlendAlpha);
         }
 
         public override void GetPropertiesGUI(ref TargetPropertyGUIContext context, Action onChange, Action<string> registerUndo)
