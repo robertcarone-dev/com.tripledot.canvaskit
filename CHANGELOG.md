@@ -5,14 +5,13 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Fixed
-- Fixed `KeyframeInterpolation` curve saves to batch animation curve writes per clip while preserving current selection.
+## [0.4.8-preview] - 2026-10-22
 
 ### Changed
-- Removed percentage unity from `TextMeshProLayerStack` as it was convoluting the code and inspector. Might add back in the future if requested.
-- Refactored code to be more modular, easier to maintain, and more efficient.
+- Moved `KeyframeInterpolation` window to an internal host package.
+- Moved `CanvasPreview` window to an internal host package.
+- Moved advanced canvas shader graph target to an internal host package.
+
 
 ## [0.4.7-preview] - 2026-06-11
 
